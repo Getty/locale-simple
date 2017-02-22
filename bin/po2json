@@ -81,10 +81,10 @@ sub main
             my $qmsgstr = $po->msgstr;
             my $cur = $po->dequote( $qmsgstr );
             my %cur;
-            foreach my $h (split(/\\n/, $cur))
+            foreach my $h (split(/\n/s, $cur))
             {
                 next unless length($h);
-                my @h = split(':', $h, 2);
+                my @h = split(': ', $h, 2);
 
                 if (length($cur{$h[0]})) {
                     warn "SKIPPING DUPLICATE HEADER LINE: $h\n";
