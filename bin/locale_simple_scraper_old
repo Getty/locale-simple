@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-# PODNAME: locale_simple_scraper_old_old
+# PODNAME: locale_simple_scraper_old
 # ABSTRACT: Old Command line tool for finding tokens in code
 
 =head1 SYNOPSIS
