@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 package Locale::Simple::Scraper::ParserShortcuts;
-our $VERSION = '0.104';
+our $VERSION = '0.105';
 # ABSTRACT: LSS::Parser methods that are generic shortcuts to P::MGC functionality
 
 use Moo::Role;
