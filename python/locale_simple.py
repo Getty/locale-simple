@@ -5,7 +5,7 @@ except ImportError:
     bind_textdomain_codeset = None
 import os, sys, re
 
-__version__ = "0.021"
+__version__ = "0.104"
 
 __all__ = [
     'l_nolocales',
