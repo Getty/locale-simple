@@ -1,5 +1,7 @@
 Revision history for Locale-Simple
 
+{{$NEXT}}
+
 0.103     2026-04-22 02:32:20Z
 
  - Modernize build: [@Author::GETTY] bundle, cpanfile, drop weaver.ini/setup.py
