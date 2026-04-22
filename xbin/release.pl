@@ -2,10 +2,13 @@
 use strict;
 use warnings;
 
-# Usage: xbin/release.pl python <perl-version>
+# Usage:
+#   xbin/release.pl python-prep   <perl-version>   (run_before_release)
+#   xbin/release.pl python-upload                  (run_after_release)
 #
-# Called from dist.ini's run_after_release hook. Bumps Python's version file
-# to match the Perl version, builds the wheel/sdist, and uploads to PyPI.
+# Split so the Python version bump happens in run_before_release — that way
+# Git::Commit (AfterRelease) includes the bumped locale_simple.py in the
+# release commit instead of leaving it dirty in the working tree forever.
 #
 # JS is intentionally NOT handled here — it is published by
 # .github/workflows/publish-js.yml on tag push using npm Trusted Publishing
@@ -14,10 +17,9 @@ use warnings;
 use File::Spec;
 use FindBin qw($Bin);
 
-my ( $target, $perl_version ) = @ARGV;
-die "usage: $0 python <perl-version>\n" unless $target and $perl_version;
-die "unknown target: $target (only 'python' is handled here; JS is in CI)\n"
-    unless $target eq 'python';
+my ( $action, $perl_version ) = @ARGV;
+die "usage: $0 python-prep <perl-version> | python-upload\n"
+    unless $action and ( $action eq 'python-prep' or $action eq 'python-upload' );
 
 my $root = File::Spec->rel2abs( "$Bin/.." );
 
@@ -29,21 +31,28 @@ sub run {
 
 chdir "$root/python" or die "chdir python: $!";
 
-my $file = 'locale_simple.py';
-open my $in,  '<', $file or die "read $file: $!";
-my @lines = <$in>;
-close $in;
-for ( @lines ) {
-    s/__version__ = .*/__version__ = "$perl_version"/;
+if ( $action eq 'python-prep' ) {
+    die "python-prep needs a version argument\n" unless $perl_version;
+
+    my $file = 'locale_simple.py';
+    open my $in,  '<', $file or die "read $file: $!";
+    my @lines = <$in>;
+    close $in;
+    for ( @lines ) {
+        s/__version__ = .*/__version__ = "$perl_version"/;
+    }
+    open my $out, '>', $file or die "write $file: $!";
+    print $out @lines;
+    close $out;
+
+    run( 'rm', '-rf', 'dist' );
+    run( 'python', '-m', 'build' );
+    run( 'twine', 'check', glob 'dist/*' );
 }
-open my $out, '>', $file or die "write $file: $!";
-print $out @lines;
-close $out;
-
-run( 'rm', '-rf', 'dist' );
-run( 'python', '-m', 'build' );
-
-opendir my $dh, 'dist' or die "opendir dist: $!";
-my @dist = grep { !/^\./ } readdir $dh;
-closedir $dh;
-run( 'twine', 'upload', map { "dist/$_" } @dist );
+elsif ( $action eq 'python-upload' ) {
+    opendir my $dh, 'dist' or die "opendir dist: $! (did python-prep run?)";
+    my @dist = grep { !/^\./ } readdir $dh;
+    closedir $dh;
+    die "no files in python/dist/\n" unless @dist;
+    run( 'twine', 'upload', map { "dist/$_" } @dist );
+}
