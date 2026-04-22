@@ -1,21 +1,24 @@
 {
   "name": "locale-simple",
   "version": "0.0.21",
-  "description": "Translation system based on gettext, same API in Perl, Python and JavaScript",
+  "description": "Tiny gettext wrapper with sprintf-style helpers (l, ln, lp, ld, …) — same API as the Perl and Python siblings, so one .po file feeds all three runtimes. ESM + CJS + types, zero runtime deps.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     }
   },
+  "sideEffects": false,
   "files": [
     "dist",
-    "src"
+    "src",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "rollup -c",
@@ -32,10 +35,19 @@
     "internationalization",
     "localization",
     "l10n",
-    "translation"
+    "translation",
+    "locale",
+    "po",
+    "po2json",
+    "sprintf",
+    "polyglot",
+    "esm"
   ],
   "author": "Torsten Raudssus <torsten@raudssus.de>",
   "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "bugs": {
     "url": "https://github.com/Getty/locale-simple/issues"
   },
