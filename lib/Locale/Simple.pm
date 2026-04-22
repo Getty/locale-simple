@@ -111,6 +111,7 @@ sub ldnp {
 			push @save, 'msgid_plural "'.gettext_escape($idp).'"' if $idp;
 			wd(@save);
 		}
+		no warnings 'redundant';
 		$return = sprintf($idp && $n != 1 ? $idp : $id, @args);
 	} else {
 		# L::TD handles msg ids as bytes internally
@@ -118,6 +119,7 @@ sub ldnp {
 		my $gt = dnpgettext($td, $ctxt, $id, $idp, $n);
 		# Fixing bad utf8 handling
 		utf8::decode($gt);
+		no warnings 'redundant';
 		$return = sprintf($gt,@args);
 	}
 	return $return;
