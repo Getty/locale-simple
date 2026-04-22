@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 package Locale::Simple::Scraper;
-our $VERSION = '0.107';
+our $VERSION = '0.108';
 # ABSTRACT: scraper to find translation tokens in a directory
 
 use Exporter 'import';

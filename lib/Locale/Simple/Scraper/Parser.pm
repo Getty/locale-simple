@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 package Locale::Simple::Scraper::Parser;
-our $VERSION = '0.107';
+our $VERSION = '0.108';
 # ABSTRACT: parser to finds translation tokens in a code file
 
 use base qw( Parser::MGC );
