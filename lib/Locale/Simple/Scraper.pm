@@ -224,6 +224,96 @@ sub get_func_params {
     return $2;
 }
 
+=encoding utf8
+
+=head1 SYNOPSIS
+
+  use Locale::Simple::Scraper 'scrape';
+
+  # Parse @ARGV-style options; emits a .pot template to STDOUT.
+  scrape(
+      '--ignore', 'node_modules',
+      '--ignore', 'build',
+      '--output', 'po',
+  );
+
+=head1 DESCRIPTION
+
+C<Locale::Simple::Scraper> walks the current working directory, parses
+recognised source files with L<Parser::MGC>, extracts every
+C<l()>/C<ln()>/C<lp()>/C<lnp()>/C<ld()>/C<ldn()>/C<ldp()>/C<ldnp()> call
+it can resolve statically, and writes a C<.pot> (gettext template) or one
+of a few alternative output formats.
+
+Usually invoked through C<bin/locale_simple_scraper>; the C<scrape>
+function is exported so build tools can drive it directly.
+
+=head1 EXPORTED FUNCTIONS
+
+=head2 scrape(@argv)
+
+Run the scraper. C<@argv> is parsed with L<Getopt::Long>. Reads files
+from the current working directory recursively and prints to STDOUT.
+
+=head1 OPTIONS
+
+=over 4
+
+=item C<--js=EXT>, C<--pl=EXT>, C<--py=EXT>, C<--tx=EXT>
+
+Comma-separated list of extra file extensions to recognise as the given
+language. The built-in defaults (C<.js>; C<.pl>/C<.pm>/C<.t>; C<.py>;
+C<.tx>) are always included.
+
+=item C<--ignore=REGEX>
+
+Skip any file whose path matches this regex. Repeatable.
+
+=item C<--only=REGEX>
+
+Process only files whose path matches one of the given regexes.
+Repeatable; combines with C<--ignore>.
+
+=item C<--output=FORMAT>
+
+Output format — C<po> (default), C<perl> (L<Data::Dumper>),
+C<json> (requires L<JSON>) or C<yaml> (requires L<YAML>).
+
+=item C<--md5>
+
+Hash filenames with MD5 before writing them — useful when paths may
+contain sensitive information. Requires L<Digest::MD5>.
+
+=item C<--no_line_numbers>
+
+Omit C<#:> source-location comments from the C<.pot>.
+
+=back
+
+=head1 SUPPORTED CALLS
+
+Recognised call shapes (identical across Perl, Python and JavaScript):
+
+  l( msgid, ... )
+  ln( msgid, msgid_plural, n, ... )
+  lp( msgctxt, msgid, ... )
+  lnp( msgctxt, msgid, msgid_plural, n, ... )
+  ld( domain, msgid, ... )
+  ldn( domain, msgid, msgid_plural, n, ... )
+  ldp( domain, msgctxt, msgid, ... )
+  ldnp( domain, msgctxt, msgid, msgid_plural, n, ... )
+
+Strings must be statically resolvable — literal strings and static
+concatenation (C<"a" . "b"> in Perl/Python, C<"a" + "b"> in JS,
+C<"a" ~ "b"> in Xslate Kolon). Runtime interpolation is not extracted;
+keep msgids constant and pass dynamic data as sprintf arguments.
+
+=head1 SEE ALSO
+
+L<Locale::Simple>, L<Locale::Simple::Scraper::Parser>.
+
+=cut
+
 sub parse_params {
     my ( $params, $type, $argc ) = @_;
     my @chars = split( '', $params );

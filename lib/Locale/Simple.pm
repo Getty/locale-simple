@@ -142,26 +142,16 @@ sub ltd {
 
   use Locale::Simple;
 
-  l_dir('data/locale');
-  ltd('test');
-  l_lang('de_DE');
+  l_dir('share/locale');   # dir containing <lang>/LC_MESSAGES/<domain>.mo
+  ltd('myapp');            # text domain
+  l_lang('de_DE');         # active language
 
-  print l("Hello"); # "Hallo"
-  print ln("You have %d message","You have %d messages",4); # 'Du hast 4 Nachrichten'
+  print l("Hello");                                        # "Hallo"
+  print ln("You have %d message",
+           "You have %d messages", 4);                     # "Du hast 4 Nachrichten"
+  print lp("menu", "Open");                                # context-specific lookup
 
-Usage in JavaScript:
-
-  <script language="javascript" src="../../share/js/sprintf.js"></script>
-  <script language="javascript" src="../../share/js/gettext/Gettext.js"></script>
-  <script language="javascript" src="../../share/js/locale_simple.js"></script>
-  <script language="javascript" src="locale/de_DE/LC_MESSAGES/test.json"></script>
-
-  ltd('test');
-
-  l("Hello");
-  ln("You have %d message","You have %d messages",4);
-
-Sample PO file, in this case data/locale/test.po
+Sample PO file (C<share/locale/de_DE/LC_MESSAGES/myapp.po>):
 
   msgid ""
   msgstr ""
@@ -171,39 +161,136 @@ Sample PO file, in this case data/locale/test.po
   "Content-Transfer-Encoding: 8bit\n"
   "Plural-Forms: nplurals=2; plural=n != 1;"
 
+  msgid "Hello"
+  msgstr "Hallo"
+
   msgid "You have %d message"
   msgid_plural "You have %d messages"
   msgstr[0] "Du hast %d Nachricht"
   msgstr[1] "Du hast %d Nachrichten"
 
-  msgid "Hello"
-  msgstr "Hallo"
+Compile to C<.mo>:
+
+  msgfmt share/locale/de_DE/LC_MESSAGES/myapp.po \
+         -o share/locale/de_DE/LC_MESSAGES/myapp.mo
 
 =head1 DESCRIPTION
 
-This is a small wrapper around Gettext functionality that integrates sprintf and makes
-it a bit more easy to setup the internationalization. It ONLY supports UTF8 data, and in
-or output, that is a fixed setup (and always will be).
+C<Locale::Simple> is a thin wrapper over L<Locale::TextDomain> / gettext,
+exporting short function names (C<l>, C<ln>, C<lp>, C<ld>, C<ldn>, C<ldp>,
+C<lnp>, C<ldnp>) that are API-compatible with the matching Python package
+L<locale-simple|https://pypi.org/project/locale-simple/> and the npm package
+L<locale-simple|https://www.npmjs.com/package/locale-simple>. The same msgids
+and the same C<.po> files work across all three languages.
 
-Gettext in Perl requires compiled po files, so called mo files. You can generate those
-with the following command (if you have gettext in general installed on your system):
+The module only supports UTF-8 data, in and out — that is fixed by design.
 
-  msgfmt -o data/locale/test.mo data/locale/test.po
+=head1 SETUP FUNCTIONS
 
-The Gettext implementation in JavaScript which is wrapped, requires a json file to be
-generated out of the po. This can be achieved with po2json which is delivered with
-this package. Sadly it only generates the json and doesnt integrate it into the
-translation storage in the JavaScript. To generate this you can do:
+=head2 l_dir($dir)
 
-  echo -n "locale_data['test'] = " >data/locale/test.json
-  po2json data/locale/test.po >>data/locale/test.json
-  echo ";" >>data/locale/test.json
+Set the locale directory. Structure underneath must follow the standard
+gettext layout: C<< $dir/<lang>/LC_MESSAGES/<domain>.mo >>.
 
-B<WARNING> it could be that the way how to integrate this in JavaScript might change
-in future version. Please check this place here on every upgrade for further informations.
+=head2 ltd($domain)
+
+Set (or switch) the active text domain. Binds the domain to the previously
+set locale directory on first use.
+
+=head2 l_lang($lang)
+
+Set the active language (e.g. C<'de_DE'>, C<'pt_BR'>). Sets C<$ENV{LANGUAGE}>,
+C<$ENV{LANG}>, C<$ENV{LC_ALL}>, C<$ENV{LC_MESSAGES}> and calls C<setlocale>.
+
+=head2 l_dry($file, $nowrite)
+
+Enable dry-run mode. While active, every translation call appends its msgid
+in C<.po> format to C<$file> and still returns the formatted result. Useful
+for harvesting msgids from a running system. Pass a truthy C<$nowrite> to
+suppress the file output but keep dry semantics.
+
+=head2 l_nolocales($bool)
+
+Disable the sanity check that requires L</l_dir> to have been called. Lets
+you use the module in pure sprintf mode (no gettext lookup) — handy in
+tests, scripts and the string-extraction pipeline.
+
+=head1 TRANSLATION FUNCTIONS
+
+All translation functions take sprintf-style format arguments after the
+required positional arguments. Perl positional-argument syntax
+(C<%1$s>, C<%2$d>) is supported and recommended for anything that needs to
+be reordered during translation.
+
+=head2 l($msgid, @args)
+
+Plain translation.
+
+=head2 ln($msgid, $msgid_plural, $n, @args)
+
+Plural-aware translation; C<$n> selects between singular and plural forms.
+C<$n> is implicitly passed as the first sprintf argument.
+
+=head2 lp($msgctxt, $msgid, @args)
+
+Context-aware translation. Use when the same msgid needs different
+translations in different UI contexts (e.g. C<lp("menu", "Open")> vs.
+C<lp("state", "Open")>).
+
+=head2 lnp($msgctxt, $msgid, $msgid_plural, $n, @args)
+
+Context + plural. The full gettext C<p_gettext_n> shape.
+
+=head2 ld($domain, $msgid, @args)
+
+Translation from a specific domain without switching the current domain.
+
+=head2 ldn($domain, $msgid, $msgid_plural, $n, @args)
+
+Domain + plural.
+
+=head2 ldp($domain, $msgctxt, $msgid, @args)
+
+Domain + context.
+
+=head2 ldnp($domain, $msgctxt, $msgid, $msgid_plural, $n, @args)
+
+All four: domain, context, plural, arguments. The other functions are
+convenience wrappers around this one.
+
+=head1 STRING EXTRACTION
+
+The distribution ships C<bin/locale_simple_scraper>, a static-analysis tool
+that walks your source tree and writes a C<.pot> template. It understands
+C<.pl>, C<.pm>, C<.t>, C<.py>, C<.js> and C<.tx> files uniformly, so one
+extraction run covers a polyglot project.
+
+  locale_simple_scraper --ignore node_modules --ignore build \
+                        > po/myapp.pot
+
+See L<Locale::Simple::Scraper> for the programmatic interface and supported
+options.
 
 =head1 SEE ALSO
 
-L<Locale::Messages>
+=over 4
 
+=item *
 
+L<Locale::TextDomain> — the underlying gettext binding.
+
+=item *
+
+L<Locale::Messages> — the lower-level layer.
+
+=item *
+
+L<https://pypi.org/project/locale-simple/> — Python sibling.
+
+=item *
+
+L<https://www.npmjs.com/package/locale-simple> — JavaScript sibling.
+
+=back
+
+=cut
