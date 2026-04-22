@@ -1,6 +1,6 @@
 Revision history for Locale-Simple
 
-{{$NEXT}}
+0.105     2026-04-22 03:39:25Z
 
  - Modernize build: [@Author::GETTY] bundle, cpanfile, drop weaver.ini/setup.py
  - Python: fix save.push->append, make bind_textdomain_codeset optional, drop
