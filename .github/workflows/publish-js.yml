@@ -39,6 +39,9 @@ jobs:
         working-directory: js
         run: npm version "${{ steps.ver.outputs.npm_version }}" --no-git-tag-version --allow-same-version
 
+      - name: Copy Changes into js/CHANGELOG.md
+        run: cp Changes js/CHANGELOG.md
+
       - name: Install + build + test
         working-directory: js
         run: |

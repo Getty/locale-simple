@@ -8,6 +8,7 @@ dist/
 cover_db
 js/node_modules/
 js/dist/
+js/CHANGELOG.md
 
 # Claude Code — commit: skills/, agents/, hooks/, settings.json
 # Ignore: local overrides, credentials, session data
