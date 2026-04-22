@@ -35,15 +35,26 @@ cd js && npm run build           # JS bundles into dist/
 
 Release is driven by `dzil release`. The `[@Author::GETTY]` bundle runs:
 
-1. `run_before_release` — Python tests + JS `npm install && npm test`
+1. `run_before_release` — Python tests + JS tests + Python build + JS build smoke
 2. Git tag + `cpan upload` (Perl)
-3. `run_after_release` — bumps `python/locale_simple.py`, builds, `twine upload`;
-   bumps `js/package.json`, `npm run build`, `npm publish`
+3. `run_after_release` — bumps `python/locale_simple.py`, builds, `twine upload`
+4. `git push --tags` — triggers `.github/workflows/publish-js.yml`, which
+   bumps `js/package.json` from the tag, builds, and publishes to npm via
+   **Trusted Publishing (OIDC)** — no npm token, no OTP, fully automated.
+
+Why JS is split off: npm requires OTP for publish from a personal account
+(classic Automation tokens were removed Dec 2025, and the granular-token
+"Bypass 2FA" checkbox is broken for personal accounts — see npm/cli#8869).
+Keeping `npm publish` inside `dzil release` meant a missed OTP would leave
+CPAN/PyPI uploaded but no git tag — corrupt half-state. Now JS publish is
+async via CI and can never poison the dzil release.
 
 Before releasing, ensure:
-- `npm whoami` returns the correct npm account
 - `~/.pypirc` has a valid PyPI token (`__token__` + `pypi-*`)
 - `Changes` has notes under `{{$NEXT}}`
+- npm Trusted Publisher is configured for `locale-simple` →
+  https://www.npmjs.com/package/locale-simple/access (Trusted Publisher:
+  GitHub Actions, repo `Getty/locale-simple`, workflow `publish-js.yml`)
 
 ## Skills in this repo (source of truth)
 
