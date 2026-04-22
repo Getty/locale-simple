@@ -16,7 +16,11 @@ __all__ = [
     'l',
     'ln',
     'lp',
+    'lnp',
+    'ld',
     'ldn',
+    'ldp',
+    'ldnp',
 ]
 
 global dry, nowrite, nolocales, dir 
@@ -26,7 +30,7 @@ tds = {}
 def l_nolocales(x):
     global nolocales
     nolocales = x
-def l_dry(d, n): 
+def l_dry(d, n=False):
     global dry, nowrite, nolocales
     dry, nowrite, nolocales = d, n, bool(d)
 def l_dir(d): 
@@ -64,19 +68,27 @@ def sprintf(string, *args):
     return string % args
 
 def l(id, *args):
-    return ldnp('',None,id,None,None,*args)
+    return ldnp('', None, id, None, None, *args)
 def ln(id, idp, n, *args):
     return ldnp('', None, id, idp, n, *args)
 def lp(ctxt, id, *args):
     return ldnp('', ctxt, id, None, None, *args)
+def lnp(ctxt, id, idp, n, *args):
+    return ldnp('', ctxt, id, idp, n, *args)
+def ld(td, id, *args):
+    return ldnp(td, None, id, None, None, *args)
 def ldn(td, id, idp, n, *args):
-    return ldnp(td,None,id,idp,n,*args)
+    return ldnp(td, None, id, idp, n, *args)
+def ldp(td, ctxt, id, *args):
+    return ldnp(td, ctxt, id, None, None, *args)
 
 def ldnp(td, ctxt, id, idp, n, *args):
     if not len(id): return id
-    if not dir or nolocales: _die("please set a locale directory with l_dir() before using other translate functions")
+    if not dir and not nolocales:
+        _die("please set a locale directory with l_dir() before using other translate functions")
 
-    if idp: args = (n,) + args
+    if idp is not None: args = (n,) + args
+    is_plural = idp is not None
     out = None
     if dry:
         if not nowrite:
@@ -86,18 +98,22 @@ def ldnp(td, ctxt, id, idp, n, *args):
             save.append('msgid "'+gettext_escape(id)+'"')
             if idp: save.append('msgid_plural "'+gettext_escape(idp)+'"')
             wd(save)
-        out = (idp if idp and n != 1 else id) % args
+        out = (idp if is_plural and n != 1 else id) % args
     else:
-        if       td and not ctxt and id and     idp and     n: out = sprintf(dngettext(td, id, idp, n), *args)
-        elif not td and not ctxt and id and     idp and     n: out = sprintf(ngettext(id, idp, n), *args)
-        elif not td and not ctxt and id and not idp and not n: out = sprintf(gettext(id), *args)
-        elif     td and not ctxt and id and not idp and not n: out = sprintf(dgettext(td, id), *args)
+        key = (ctxt + '\x04' + id) if ctxt else id
+        keyp = (ctxt + '\x04' + idp) if ctxt and idp else idp
+        if   td and is_plural:     raw = dngettext(td, key, keyp, n)
+        elif td and not is_plural: raw = dgettext(td, key)
+        elif is_plural:            raw = ngettext(key, keyp, n)
+        else:                      raw = gettext(key)
 
-        # with context magic
-        if       td and     ctxt and id and     idp and     n: out = sprintf(dngettext(td, ctxt+'\x04'+id, ctxt+'\x04'+idp, n), *args)
-        elif not td and     ctxt and id and     idp and     n: out = sprintf(ngettext(ctxt+'\x04'+id, ctxt+'\x04'+idp, n), *args)
-        elif not td and     ctxt and id and not idp and not n: out = sprintf(gettext(ctxt+'\x04'+id), *args)
-        elif     td and     ctxt and id and not idp and not n: out = sprintf(dgettext(td, ctxt+'\x04'+id), *args)
+        # gettext returns the input string untouched when no translation
+        # exists, so for a pgettext-style lookup we have to strip the
+        # "ctxt\x04" prefix ourselves to fall back to the plain msgid.
+        if ctxt and raw.startswith(ctxt + '\x04'):
+            raw = raw[len(ctxt) + 1:]
+
+        out = sprintf(raw, *args)
     return out
 
 def ltd(td):

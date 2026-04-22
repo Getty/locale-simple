@@ -6,6 +6,7 @@ import {
   l_dry,
   ltd,
   loadTranslations,
+  loadLocaleData,
   l,
   ln,
   lp,
@@ -124,6 +125,140 @@ describe('Locale Simple', () => {
       assert.strictEqual(ln('You have %d message', 'You have %d messages', 1), 'You have 1 message');
       assert.strictEqual(ln('You have %d message', 'You have %d messages', 4), 'You have 4 messages');
     });
+  });
+
+  describe('lnp() - context + plural', () => {
+    it('should fall back to msgid forms when context lookup misses', () => {
+      assert.strictEqual(
+        lnp('unknown', 'You have %d message', 'You have %d messages', 1),
+        'You have 1 message'
+      );
+      assert.strictEqual(
+        lnp('unknown', 'You have %d message', 'You have %d messages', 4),
+        'You have 4 messages'
+      );
+    });
+
+    it('should use context-specific translation when available', () => {
+      loadTranslations('test', 'de_DE', {
+        ...testTranslations,
+        'greetHello %d time':  ['Gruss %d mal',  'Gruss %d mal'],
+      });
+      // Plural-only key: singular lookup hits the context form
+      assert.strictEqual(
+        lnp('greet', 'Hello %d time', 'Hello %d times', 1),
+        'Gruss 1 mal'
+      );
+    });
+  });
+
+  describe('ldn() - domain + plural', () => {
+    it('should use plural form from specified domain', () => {
+      loadTranslations('other', 'de_DE', {
+        ...otherTranslations,
+        'You have %d item': ['Du hast %d Sache', 'Du hast %d Sachen'],
+      });
+      assert.strictEqual(
+        ldn('other', 'You have %d item', 'You have %d items', 1),
+        'Du hast 1 Sache'
+      );
+      assert.strictEqual(
+        ldn('other', 'You have %d item', 'You have %d items', 4),
+        'Du hast 4 Sachen'
+      );
+    });
+
+    it('should fall back to msgid forms when domain unknown', () => {
+      assert.strictEqual(
+        ldn('nonexistent', 'One %d', 'Many %d', 0),
+        'Many 0'
+      );
+    });
+  });
+
+  describe('ldp() - domain + context', () => {
+    it('should look up with context in a specific domain', () => {
+      loadTranslations('other', 'de_DE', {
+        ...otherTranslations,
+        'menuOpen': 'Öffnen (Menü)',
+      });
+      assert.strictEqual(ldp('other', 'menu', 'Open'), 'Öffnen (Menü)');
+    });
+
+    it('should fall back to msgid if context not found', () => {
+      assert.strictEqual(ldp('other', 'no_such_ctxt', 'Goodbye'), 'Goodbye');
+    });
+  });
+
+  describe('ldnp() - full form', () => {
+    it('should cover domain + context + plural', () => {
+      loadTranslations('other', 'de_DE', {
+        ...otherTranslations,
+        'cartYou have %d item': ['Warenkorb: %d Sache', 'Warenkorb: %d Sachen'],
+      });
+      assert.strictEqual(
+        ldnp('other', 'cart', 'You have %d item', 'You have %d items', 1),
+        'Warenkorb: 1 Sache'
+      );
+      assert.strictEqual(
+        ldnp('other', 'cart', 'You have %d item', 'You have %d items', 5),
+        'Warenkorb: 5 Sachen'
+      );
+    });
+  });
+
+  describe('language switching lifecycle', () => {
+    it('should switch translations when l_lang changes', () => {
+      loadTranslations('test', 'en_US', { 'Hello': 'Hi there' });
+      assert.strictEqual(l('Hello'), 'Hallo');   // currently de_DE
+      l_lang('en_US');
+      assert.strictEqual(l('Hello'), 'Hi there');
+      l_lang('de_DE');
+      assert.strictEqual(l('Hello'), 'Hallo');
+    });
+
+    it('should fall back to msgid for unknown languages', () => {
+      l_lang('xx_YY');
+      assert.strictEqual(l('Hello'), 'Hello');
+    });
+  });
+});
+
+describe('loadLocaleData() - po2json format', () => {
+  beforeEach(() => {
+    l_lang('de_DE');
+    l_dry(false);
+  });
+
+  it('should import po2json-style data', () => {
+    // Shape emitted by po2json: { domain: { "": header, msgid: [plural_or_null, msgstr...] } }
+    const poJson = {
+      'shop': {
+        '': { 'lang': 'de_DE', 'Plural-Forms': 'nplurals=2; plural=n != 1;' },
+        'Checkout': [null, 'Zur Kasse'],
+        'You have %d item': ['You have %d items', 'Du hast %d Sache', 'Du hast %d Sachen'],
+      },
+    };
+    loadLocaleData('shop', poJson);
+    ltd('shop');
+
+    assert.strictEqual(l('Checkout'), 'Zur Kasse');
+    assert.strictEqual(
+      ln('You have %d item', 'You have %d items', 1),
+      'Du hast 1 Sache'
+    );
+    assert.strictEqual(
+      ln('You have %d item', 'You have %d items', 7),
+      'Du hast 7 Sachen'
+    );
+  });
+
+  it('should no-op for missing domain', () => {
+    // Passing data for domain "xyz" but asking for "abc" — must not crash
+    loadLocaleData('abc', { 'xyz': { '': {}, 'Hello': [null, 'Hallo'] } });
+    // translations.abc should remain unregistered
+    ltd('abc');
+    assert.strictEqual(l('Hello'), 'Hello');
   });
 });
 
