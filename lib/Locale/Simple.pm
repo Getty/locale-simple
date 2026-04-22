@@ -204,17 +204,6 @@ in future version. Please check this place here on every upgrade for further inf
 
 =head1 SEE ALSO
 
-=head2 L<Locale::Messages>
-
-=head1 SUPPORT
-
-Repository
-
-  http://github.com/Getty/p5-locale-simple
-  Pull request and additional contributors are welcome
- 
-Issue Tracker
-
-  http://github.com/Getty/p5-locale-simple/issues
+L<Locale::Messages>
 
 

@@ -64,14 +64,16 @@ sub c_expect {
 sub c_with_ws {
     my ( $self, $code, @args ) = @_;
     return sub {
-        local $self->{patterns}{ws} = qr//;
+        local $self->{patterns}{ws}    = qr//;
+        local $self->{patterns}{_skip} = qr//;
         return $self->$code( @args );
     };
 }
 
 sub with_ws {
     my ( $self, $code, @args ) = @_;
-    local $self->{patterns}{ws} = qr//;
+    local $self->{patterns}{ws}    = qr//;
+    local $self->{patterns}{_skip} = qr//;
     return $self->$code( @args );
 }
 

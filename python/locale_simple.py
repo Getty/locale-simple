@@ -1,7 +1,11 @@
-from gettext import textdomain, lgettext, dngettext, ngettext, bindtextdomain, bind_textdomain_codeset, dgettext, gettext
+from gettext import textdomain, dngettext, ngettext, bindtextdomain, dgettext, gettext
+try:
+    from gettext import bind_textdomain_codeset
+except ImportError:
+    bind_textdomain_codeset = None
 import os, sys, re
 
-__version__ = 0.1
+__version__ = "0.021"
 
 __all__ = [
     'l_nolocales',
@@ -77,10 +81,10 @@ def ldnp(td, ctxt, id, idp, n, *args):
     if dry:
         if not nowrite:
             save = []
-            if td: save.push(' # domain: '+td)
-            if ctxt: save.push('msgctxt: "'+gettext_escape(ctxt)+'"')
-            save.push('msgid "'+gettext_escape(id)+'"')
-            if idp: save.push('msgid_plural "'+gettext_escape(idp)+'"')
+            if td: save.append(' # domain: '+td)
+            if ctxt: save.append('msgctxt: "'+gettext_escape(ctxt)+'"')
+            save.append('msgid "'+gettext_escape(id)+'"')
+            if idp: save.append('msgid_plural "'+gettext_escape(idp)+'"')
             wd(save)
         out = (idp if idp and n != 1 else id) % args
     else:
@@ -97,8 +101,9 @@ def ldnp(td, ctxt, id, idp, n, *args):
     return out
 
 def ltd(td):
-    if not tds.__contains__(td):
-        bindtextdomain(td,dir)
-        bind_textdomain_codeset(td,'utf-8')
+    if td not in tds:
+        bindtextdomain(td, dir)
+        if bind_textdomain_codeset:
+            bind_textdomain_codeset(td, 'utf-8')
         tds[td] = 1
     textdomain(td)

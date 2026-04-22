@@ -1,0 +1,14 @@
+Revision history for Locale-Simple
+
+{{$NEXT}}
+
+ - Modernize build: [@Author::GETTY] bundle, cpanfile, drop weaver.ini/setup.py
+ - Python: fix save.push->append, make bind_textdomain_codeset optional, drop
+   deprecated lgettext, move to pyproject.toml
+ - JavaScript: rewrite as modern ESM/CJS npm package with own sprintf, drop
+   dead Gettext.js dependency
+ - POD cleanup in Locale::Simple (SUPPORT section via bundle)
+
+0.019     2016-12-15
+
+ - Previous CPAN release (see git history for pre-modernization changes)
