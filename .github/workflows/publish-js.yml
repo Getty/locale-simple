@@ -42,7 +42,7 @@ jobs:
       - name: Install + build + test
         working-directory: js
         run: |
-          npm ci
+          npm install --no-audit --no-fund
           npm test
           npm run build
 
