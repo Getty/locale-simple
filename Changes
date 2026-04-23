@@ -1,5 +1,7 @@
 Revision history for Locale-Simple
 
+{{$NEXT}}
+
 0.109     2026-04-23 13:40:35Z
 
  - Deferred-translation markers (N_, Nn_, Np_, Nd_, Ndn_, Ndp_, Nnp_,

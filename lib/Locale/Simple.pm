@@ -1,6 +1,6 @@
 package Locale::Simple;
 # ABSTRACT: Functions for translate text based on gettext data, also in JavaScript
-our $VERSION = '0.109';
+our $VERSION = '0.110';
 use strict;
 use warnings;
 
