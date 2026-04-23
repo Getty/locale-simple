@@ -11,7 +11,7 @@ use Moo;
 use Try::Tiny;
 use curry;
 
-has func_qr => ( is => 'ro', default => sub { qr/\bl(|n|p|np|d|dn|dnp)\b/ } );
+has func_qr => ( is => 'ro', default => sub { qr/\b(?:l(?:|n|p|np|d|dp|dn|dnp)\b|N(?:|n|p|np|d|dp|dn|dnp)_)/ } );
 has found   => ( is => 'ro', default => sub { [] } );
 has type => ( is => 'ro', required => 1 );
 
@@ -77,13 +77,25 @@ sub extra_arguments {
 sub required_args {
     my ( $self, $func ) = @_;
     my %arg_lists = (
-        l    => [qw( tr_token )],
-        ln   => [qw( tr_token    comma  plural_token  comma  plural_count )],
-        lp   => [qw( context_id  comma  tr_token )],
-        lnp  => [qw( context_id  comma  tr_token      comma  plural_token  comma  plural_count )],
-        ld   => [qw( domain_id   comma  tr_token )],
-        ldn  => [qw( domain_id   comma  tr_token      comma  plural_token  comma  plural_count )],
-        ldnp => [qw( domain_id   comma  context_id    comma  tr_token      comma  plural_token  comma  plural_count )],
+        l     => [qw( tr_token )],
+        ln    => [qw( tr_token    comma  plural_token  comma  plural_count )],
+        lp    => [qw( context_id  comma  tr_token )],
+        lnp   => [qw( context_id  comma  tr_token      comma  plural_token  comma  plural_count )],
+        ld    => [qw( domain_id   comma  tr_token )],
+        ldn   => [qw( domain_id   comma  tr_token      comma  plural_token  comma  plural_count )],
+        ldp   => [qw( domain_id   comma  context_id    comma  tr_token )],
+        ldnp  => [qw( domain_id   comma  context_id    comma  tr_token      comma  plural_token  comma  plural_count )],
+
+        # Deferred-translation markers — runtime no-ops, scraper treats
+        # them identically to their l* twins.
+        N_    => [qw( tr_token )],
+        Nn_   => [qw( tr_token    comma  plural_token )],
+        Np_   => [qw( context_id  comma  tr_token )],
+        Nnp_  => [qw( context_id  comma  tr_token      comma  plural_token )],
+        Nd_   => [qw( domain_id   comma  tr_token )],
+        Ndn_  => [qw( domain_id   comma  tr_token      comma  plural_token )],
+        Ndp_  => [qw( domain_id   comma  context_id    comma  tr_token )],
+        Ndnp_ => [qw( domain_id   comma  context_id    comma  tr_token      comma  plural_token )],
     );
     return $self->collect_from( $arg_lists{$func} );
 }

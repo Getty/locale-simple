@@ -74,14 +74,26 @@ sub scrape {
     # 4 = domain
     #
     my %f = (
-        l    => [1],
-        ln   => [ 1, 2 ],
-        ld   => [ 4, 1 ],
-        lp   => [ 3, 1 ],
-        lnp  => [ 3, 1, 2 ],
-        ldn  => [ 4, 1, 2 ],
-        ldp  => [ 4, 3, 1 ],
-        ldnp => [ 4, 3, 1, 2 ],
+        l     => [1],
+        ln    => [ 1, 2 ],
+        ld    => [ 4, 1 ],
+        lp    => [ 3, 1 ],
+        lnp   => [ 3, 1, 2 ],
+        ldn   => [ 4, 1, 2 ],
+        ldp   => [ 4, 3, 1 ],
+        ldnp  => [ 4, 3, 1, 2 ],
+
+        # Deferred-translation markers (see DEFERRED TRANSLATION in
+        # Locale::Simple). Same mapping as their l* twins — identical
+        # .pot output.
+        N_    => [1],
+        Nn_   => [ 1, 2 ],
+        Nd_   => [ 4, 1 ],
+        Np_   => [ 3, 1 ],
+        Nnp_  => [ 3, 1, 2 ],
+        Ndn_  => [ 4, 1, 2 ],
+        Ndp_  => [ 4, 3, 1 ],
+        Ndnp_ => [ 4, 3, 1, 2 ],
     );
 
     my %files;
