@@ -1,0 +1,24 @@
+---
+class: standard
+completed: 2026-08-04
+created: 2026-08-04T17:14:36Z
+id: 3
+priority: high
+status: done
+tags:
+- perl
+- scraper
+- test
+title: 'dzil test is red: 50-scrape.t misses release-changes_has_content.t in ignore
+  list'
+updated: 2026-08-04T17:42:07Z
+---
+
+dzil test fails on t/50-scrape.t subtest 2 (Test::Regression). prove -lr t/ is green, so this only shows up through a dzil build.
+
+Cause: the bundle generates ExtraTests into the build dir. The @default ignore list in t/50-scrape.t already skips release-pod-syntax.t and author-pod-syntax.t, but not release-changes_has_content.t, so the scraper walks it and the reference output no longer matches. Diff shows exactly two extra lines for that file.
+
+Pre-existing, not caused by the current working tree -- reproduced with a clean Changes via git stash.
+
+Fix: add --ignore release-changes_has_content\\.t to @default in t/50-scrape.t. Then regenerate references only if the diff is otherwise empty, and check whether any other bundle-generated ExtraTests file has the same problem.
+Fixed: t/50-scrape.t @default now uses ^t/release- and ^t/author- instead of naming individual ExtraTests files. dzil test green, no reference output regenerated.
