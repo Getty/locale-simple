@@ -1,0 +1,24 @@
+---
+claimed_at: 2026-08-04T18:29:59Z
+claimed_by: locale-simple-js-worker
+class: standard
+completed: 2026-08-04
+created: 2026-08-04T17:00:33Z
+id: 1
+priority: medium
+started: 2026-08-04
+status: done
+tags:
+- js
+- parity
+title: 'JS: l_nolocales missing from exports'
+updated: 2026-08-04T18:32:13Z
+---
+
+Perl (@EXPORT) and Python (__all__) both export l_nolocales; js/src/index.js exports it neither as a named export nor in the default object, and it is absent from index.d.ts and the README.
+
+JS has no locale directory to validate, so the guard has nothing to switch off — but the name is part of the advertised shared API, and the parity table in .claude/rules/tri-language-parity.md lists it as an unresolved asymmetry.
+
+Decide: add a no-op l_nolocales to JS for symmetry, or document it as permanently Perl/Python-only in all three READMEs plus the rule file. Do not leave it undecided.
+Implemented l_nolocales(bool) in js/src/index.js as a genuine no-op (setup-functions section, next to ltd). Added to named exports, default-export object, and index.d.ts (declaration + declare const localeSimple member). Added README.md table row. Added tests in js/test/index.test.js (throws-nothing, translation-unaffected before/after, default-export exposure). Full suite: npm test -> 46/46 pass, 0 fail.
+l_nolocales als No-op zu JS hinzugefuegt (Entscheidung Maintainer: fuer Namens-Paritaet). Export + index.d.ts + README-Eintrag + 3 Tests. npm test: 46/46 gruen.
