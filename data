@@ -1,0 +1,24 @@
+---
+claimed_at: 2026-08-04T18:29:51Z
+claimed_by: locale-simple-worker
+class: standard
+completed: 2026-08-04
+created: 2026-08-04T17:01:19Z
+id: 2
+priority: low
+started: 2026-08-04
+status: done
+tags:
+- perl
+- docs
+title: 'bin/: stale repo path in hand-written SUPPORT POD'
+updated: 2026-08-04T18:30:19Z
+---
+
+Both bin/locale_simple_scraper and bin/locale_simple_scraper_old carry a hand-written =head1 SUPPORT block naming the old repo path Getty/p5-locale-simple (repository and issue tracker links). The repo is Getty/locale-simple today per package.json, pyproject.toml and the publish-js workflow, so both links are dead.
+
+The [@Author::GETTY] bundle already weaves a SUPPORT section from dist metadata. The same cleanup happened for lib/Locale/Simple.pm in 0.108, but the two bin/ scripts were missed.
+
+Fix: drop both hand-written SUPPORT blocks, let PodWeaver supply them, and verify the woven POD in a dzil build before calling it done.
+Removed hand-written =head1 SUPPORT block from bin/locale_simple_scraper and bin/locale_simple_scraper_old. Verified via dzil build: PodWeaver now weaves SUPPORT (with correct https://github.com/Getty/locale-simple/issues link) + CONTRIBUTING/AUTHOR/COPYRIGHT AND LICENSE into both scripts, matching lib/Locale/Simple.pm's post-0.108 handling. prove -lr t/ green (59 tests). dzil clean run, no build artifacts left in repo.
+SUPPORT-POD in bin/locale_simple_scraper und bin/locale_simple_scraper_old entfernt, PodWeaver webt jetzt korrekt mit Getty/locale-simple. Verifiziert via dzil build + prove -lr t/ (59 tests grün). dzil clean ausgeführt.
