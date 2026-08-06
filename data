@@ -1,0 +1,199 @@
+---
+blocked: Ticket 9 (Spec)
+claimed_at: 2026-08-06T04:10:24Z
+claimed_by: general-purpose
+class: standard
+created: 2026-08-05T22:37:32Z
+id: 12
+priority: medium
+started: 2026-08-06
+status: review
+tags:
+- rust
+title: 'Rust-Port: rust/, Crate, Testsuite'
+updated: 2026-08-06T04:40:44Z
+---
+
+Hängt an Ticket 4 (Punkte 5, 7) und Ticket 9 (Spec). Der aufwendigste der drei
+Ports, weil Rust weder variadische Funktionen noch %-Formatstrings kennt.
+
+## Layout
+
+    rust/Cargo.toml
+    rust/src/lib.rs      Zustand, Setup-Funktionen, ldnp-Kern
+    rust/src/mo.rs       .mo-Reader
+    rust/src/plural.rs   Plural-Forms-Evaluator
+    rust/src/sprintf.rs  %1$s-fähiger sprintf
+    rust/src/macros.rs   l! ln! lp! … als macro_rules!
+    rust/tests/          Integrationstests
+    rust/README.md
+
+`cargo publish --manifest-path rust/Cargo.toml` funktioniert aus dem Monorepo,
+crates.io braucht keine Root-Datei. `locale-simple` ist auf crates.io frei
+(geprüft 2026-08-06).
+
+## API
+
+Makros, weil Rust keine variadischen Funktionen hat (Ticket 4 Punkt 5):
+
+    l!("Hello")
+    ln!("%d message", "%d messages", n)
+    ldnp!(domain, ctxt, sg, pl, n, args…)
+
+Die Makros expandieren auf eine Funktion, die `&[&dyn Display]` entgegennimmt.
+Setup-Funktionen bleiben normale Funktionen: `l_dir`, `l_lang`, `l_dry`,
+`l_nolocales`, `ltd`.
+
+Offen bis Ticket 4: heißen die Deferred-Marker `N_!`/`Nn_!` (Parität, aber gegen
+jede Rust-Konvention und mit Linter-Warnung) oder `n_!`/`nn_!` (idiomatisch, aber
+bricht die Namensparität und den Scraper-`func_qr` gleich mit)?
+
+Rückgabetyp durchgehend `String` — nicht `Cow<str>`. Der sprintf-Schritt
+alloziert ohnehin fast immer, und `Cow` würde jede Aufrufstelle verkomplizieren.
+
+## Runtime
+
+- .mo-Reader nach Ticket 9, ohne Dependencies. `std` reicht; `no_std` ist kein
+  Ziel (wir lesen Dateien).
+- Eigener sprintf: `format!` ist ein compile-time-Makro und kann einen zur
+  Laufzeit aus der .mo geladenen Formatstring grundsätzlich nicht verarbeiten.
+  Das ist keine Bequemlichkeitsfrage, sondern die Kernarbeit dieses Ports.
+  Referenzverhalten: `js/src/index.js`, `sprintf()`.
+- Globaler Zustand: dasselbe Thema wie in Go, nur mit strengerem Compiler.
+  `static` + `RwLock` (oder `OnceLock` für die geladenen Kataloge). Ein
+  `Translator`-Struct als idiomatische Ergänzung wäre konsistent mit dem
+  Go-Vorschlag — dann in beiden Sprachen oder in keiner.
+- **Kein `unsafe`**, keine Fremd-Crates in `[dependencies]`. Die
+  Zero-Runtime-Deps-Regel des Projekts gilt hier genauso.
+
+## Cargo.toml Eckdaten
+
+    name = "locale-simple"
+    edition = "2021"
+    license = "MIT"
+    repository = "https://github.com/Getty/locale-simple"
+    description / keywords / categories = ["localization", "internationalization"]
+    version wird von CI aus dem Perl-Tag gesetzt (Ticket 4 Punkt 7)
+
+## Tests
+
+`cargo test --manifest-path rust/Cargo.toml` gegen `../t/data/locale`.
+Testfälle aus `python/test.py` übertragen, plus Plural-Vektoren aus Ticket 9,
+plus `#![deny(warnings)]` im Testlauf.
+
+---
+## Nachtrag 2026-08-06
+
+- Crate-Version kommt aus `rust/Cargo.toml`, von CI aus dem Tag `v0.110.0`
+  gesetzt → Crate-Version `0.110.0`. Ein Schema für alle Registries
+  (Ticket 4).
+- `cargo` ist lokal vorhanden, aber **1.65 / rustc 1.63** (2022er Stand).
+  Edition 2021 funktioniert damit, neuere Sprachfeatures nicht. Vor dem Start
+  klären, ob die Toolchain aktualisiert wird oder `rust-version` im Manifest
+  entsprechend konservativ gesetzt wird.
+- Die Namensfrage der Deferred-Marker (`N_!` vs. `n_!`) ist weiterhin offen
+  und blockiert sowohl dieses Ticket als auch Ticket 8.
+
+---
+## Nachtrag 2026-08-06 — entschieden, entblockt
+
+Deferred-Marker heißen **`n_!`, `nn_!`, `np_!`, `nnp_!`, `nd_!`, `ndn_!`,
+`ndp_!`, `ndnp_!`** — snake_case gewinnt gegen Namensparität. Die
+Übersetzungsmakros bleiben `l!`, `ln!`, `lp!`, `lnp!`, `ld!`, `ldn!`, `ldp!`,
+`ldnp!`.
+
+`rust/README.md` muss die Abweichung sichtbar machen: wer von der Perl-, Python-
+oder JS-Seite kommt, sucht sonst nach `N_!`.
+
+---
+## Nachtrag 2026-08-06 — Translator entschieden
+
+Der `Translator`-Wert kommt **mit dazu**, in Go und Rust gleichermaßen:
+Paketfunktionen (bzw. Makros) bilden die geteilte API ab und arbeiten auf
+globalem Zustand, daneben gibt es einen Wert mit denselben Operationen für
+nebenläufige Nutzung — der Fall, den ein Webserver mit sprachabhängigen
+Requests braucht.
+
+Beide Wege müssen denselben Katalog-Cache teilen, sonst liest jeder
+`Translator` die `.mo` erneut ein. Der globale Zustand bleibt mutex-geschützt
+(Go: `sync.RWMutex`, Rust: `RwLock`), auch wenn der `Translator` existiert —
+die Paketfunktionen bleiben ja benutzbar.
+
+In `.claude/rules/language-parity.md` (Ticket 15) als bewusste, Go/Rust-only
+Erweiterung eintragen. Der Parity-Auditor darf sie nicht als Abweichung melden.
+Implementiert. Dateien: rust/Cargo.toml, rust/src/{lib,mo,plural,sprintf,macros}.rs,
+rust/tests/{api,plural_forms,sprintf,translator}.rs, rust/tests/support/mod.rs,
+rust/README.md.
+
+Build: `cargo build --manifest-path rust/Cargo.toml` sauber (cargo/rustc 1.97.1 lokal,
+rust-version im Manifest konservativ auf 1.65 gesetzt — einziges genutztes Feature
+jenseits von uralt-stabil ist Mutex/RwLock::new als const fn, stabil seit 1.63,
+verifiziert via docs.rs-Changelog).
+
+Test: `cargo test --manifest-path rust/Cargo.toml` grün, 18/18 (1 api + 4 plural_forms
++ 8 sprintf + 5 translator, 0 unit/doctests). Nach `cargo clean` neu gebaut, gleiches
+Ergebnis. `cargo clippy --all-targets` (Toolchain hatte kein clippy, `rustup component
+add clippy` nachinstalliert) meldete 2 Findings (beide in Testcode, beide bewusst):
+`clippy::approx_constant` auf dem aus Python/JS übernommenen Testwert 3.14159, und
+4× `clippy::eq_op` in den n_!/np_!/nd_!/ndp_!-Identitätsassertions (assert_eq!(x,x) IST
+der Test). Beide per `#[allow]` mit Begründung markiert, danach clean. `grep -rn unsafe
+rust/src/` → kein Treffer.
+
+Kernentscheidungen (Spec bindend, aber mehrere Stellen brauchten eine Wahl):
+
+- .mo-Reader + Locale-Fallback-Kette + Lookup-Algorithmus (mo-reader.md §1/§2) 1:1
+  nach Spec, inkl. per-msgid-Fallback (nicht nur per-Datei) und Context+Plural-Key-
+  Kombination (ctxt EOT msgid NUL msgid_plural — Spec zeigt nur die Einzelfälle,
+  Kombination nach echtem gettext-Verhalten ergänzt).
+- Plural-Evaluator (§3): rekursiver Abstiegsparser exakt nach Grammatik, Tiefenlimit
+  100 als Call-Stack-Tiefe (nicht Klammertiefe — deckt sich mit "counting recursive-
+  descent call depth" aus der Spec), Division/Modulo durch 0 → 0, Fallback-Warnung
+  exakt einmal via AtomicBool. Gegen t/data/plural-forms.json getestet (plural_forms +
+  plural_forms_edge_cases + locale_fallback, alle drei Arrays), plus ein Extra-Test mit
+  500 verschachtelten Klammern (muss None liefern, nicht crashen).
+- sprintf (§5): eigener Parser für b c d e f F o s u x X, Flags + - 0 '<char>
+  (Custom-Pad) und Space, Width/Precision, positionale %N$. Args kommen als
+  &[&dyn Display] rein (Makro-Vorgabe) — Zahlenkonvertierung geht über die
+  Display-Textrepräsentation (analog zu JS' parseInt(value,10) auf dem gestringifyten
+  Wert), da &dyn Display den konkreten Zahlentyp nicht mehr hergibt. Bei allen JS-
+  Referenztests (Width-Padding, positional+sequential-Mix, %%-Escape) exakte
+  Übereinstimmung nachgewiesen.
+- API: l!/ln!/lp!/lnp!/ld!/ldn!/ldp!/ldnp! als macro_rules!, expandieren auf
+  öffentliche Funktionen gleichen Namens (Makro und Funktion dürfen in Rust denselben
+  Namen tragen, getrennte Namespaces). Deferred-Marker n_!/nn_!/np_!/nnp_!/nd_!/ndn_!/
+  ndp_!/ndnp_! wie in diesem Ticket entschieden, in rust/README.md prominent als
+  Abweichung von N_/Nn_/… dokumentiert (eigener Abschnitt ganz oben: "If you're coming
+  from Perl, Python or JS: read this first").
+- Translator-Struct wie entschieden: eigener dir/lang/domain/dry-Zustand, teilt sich
+  den Katalog-Cache (statisches RwLock<HashMap<PathBuf,Arc<Catalog>>>) mit den
+  Paketfunktionen. Getestet inkl. Cross-Check (globaler Aufruf und Translator-Aufruf
+  liefern identisches Ergebnis) und #[should_panic] für den fehlkonfigurierten Fall.
+- Globaler Zustand: RwLock<Option<PackageState>>, lazy befüllt beim ersten Zugriff
+  (kein OnceLock/LazyLock — beide erst ab 1.70/1.80 stabil, damit über der gesetzten
+  rust-version). Kein unsafe nötig.
+- l_dry: Signatur (Option<&Pfad>, nowrite) angelehnt an Perl/Python (Datei-Pfad, nicht
+  JS' Boolean+console.debug) — Rust liest wie Perl/Python echte .mo-Dateien, JS' Ansatz
+  passt nicht. l_dry(Some(_)) setzt nolocales unconditional wie Python (bool(d)), nicht
+  Perls "nur auf true setzen, nie zurück" — bewusste Wahl für vorhersagbareres Verhalten,
+  da mo-reader.md dazu nichts vorgibt.
+- "Bitte l_dir() setzen"-Check: panic! (Perl: die, Python: sys.exit(1) — Rückgabetyp ist
+  durchgehend String, kein Result, also ist panic! das einzig passende Äquivalent).
+  l("") ist Sonderfall und läuft VOR diesem Check durch (leerer String → "", exakt wie
+  Python: "if not len(id): return id" vor dem dir-Check).
+
+JSON-Testvektoren (t/data/plural-forms.json): kleiner handgeschriebener Parser in
+rust/tests/support/mod.rs (~120 Zeilen, Object/Array/String/Number/Bool/Null, nur für
+diese eine Fixture-Form). Keine build.rs-Codegen gewählt — bei einer einzigen, kleinen,
+stabilen Fixture-Datei ist ein Parser weniger Mechanik als ein zusätzlicher Build-Schritt,
+und er landet nachweisbar nicht im veröffentlichten Crate (nur unter tests/).
+
+Nebenwirkung außerhalb von rust/, bewusst mitgemacht statt liegen gelassen: rust/target/
+war 83 MB und nicht ignoriert — .gitignore um rust/target/ und rust/Cargo.lock (Lib-
+Crate-Konvention: Cargo.lock nicht committen) ergänzt. t/50-scrape.t bekam einen
+^rust/-Ignore-Eintrag nach demselben Muster wie das bereits vorhandene ^php/ (eigener
+Kommentar mit Begründung inkl. Korrektur einer ersten falschen Analyse — das unanchored
+"js"-Pattern hätte rust/target/doc/*.js von `cargo doc` ohnehin schon geschluckt, das
+ist per perl -e verifiziert, nicht nur behauptet). Volle Perl-Suite (prove -lr t/, 60
+Tests) danach erneut grün.
+
+dist.ini nicht angefasst (Ticket #13).
