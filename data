@@ -1,0 +1,176 @@
+---
+class: standard
+completed: 2026-08-06
+created: 2026-08-05T22:32:33Z
+id: 4
+priority: critical
+status: done
+tags:
+- design
+- php
+- go
+- rust
+- release
+title: 'Entschieden: Rahmen fÃ¼r die PHP/Go/Rust-Ports'
+updated: 2026-08-06T03:40:46Z
+---
+
+Entscheidungen vom 2026-08-06. Die vier Blocker sind beantwortet, ein neuer
+technischer Punkt (Tag-Format) ist dabei aufgeschlagen — siehe unten.
+
+## ENTSCHIEDEN
+
+1. **Packagist-Paketname: `raudssus/locale-simple`.**
+   (`getty` ist auf Packagist von `bSushil` belegt und nicht verfügbar.)
+2. **Monorepo — alles bleibt in diesem Repo.** `composer.json` und `go.mod`
+   kommen ins Wurzelverzeichnis, der Code in `php/`, `go/`, `rust/`.
+3. **Plural-Forms werden aus dem `.mo`-Header ausgewertet**, in allen Runtimes
+   mit eigenem Reader. JS zieht nach → Ticket 14 ist damit verbindlich, nicht
+   optional.
+4. **PHP bekommt einen eigenen `.mo`-Reader**, kein `ext-gettext`.
+5. **Rust-API als Makros** (`l!`), da keine Variadik. Namensfrage der
+   Deferred-Marker (`N_!` vs. `n_!`) bleibt offen → siehe unten.
+6. **Go exportiert großgeschrieben** (`L`, `Ln`, …) — sprachbedingt, keine Wahl.
+
+## NEU AUFGESCHLAGEN: `tag_format = v%v` reicht für Go nicht
+
+Die tag_format-Option im Bundle (0.317) ist die richtige Idee, aber das im
+Vorgespräch gewählte Beispiel liefert nicht, was Go braucht:
+
+    tag_format = v%v      →  Tag "v0.110"      — zweiteilig
+    Go verlangt            vMAJOR.MINOR.PATCH  — dreiteilig, zwingend
+
+Ein zweiteiliger Tag wird vom Go-Command nicht als Modulversion erkannt.
+Funktionierende Variante ohne jede Zusatzlogik:
+
+    tag_format = v%v.0    →  Tag "v0.110.0"
+
+Das ist gültiges SemVer für **alle** Zielregistries gleichzeitig — Go,
+Packagist/Composer, crates.io, npm. Damit fällt die im alten Ticket 13
+geplante CI-Zweit-Tag-Maschinerie komplett weg.
+
+**Folgeentscheidung: ein Versionsschema für alle.** `0.110` (Perl) → `0.110.0`
+(überall sonst). Bisher rechnet `publish-js.yml` `0.110` → `0.1.10`; npm steht
+heute auf `0.1.9`. Der Sprung auf `0.110.0` ist monoton steigend und damit
+zulässig. Die Alternative — vier Registries mit vier verschiedenen Zahlen für
+dasselbe Release — wäre auf Dauer unhaltbar, und `v0.1.10` als Tag ist mit
+`tag_format` gar nicht erreichbar (dzil kann im Format-String nicht rechnen,
+`%v` ist immer die rohe Perl-Version).
+
+⚠️ **Akut, unabhängig von allen Ports:** sobald `tag_format` in `dist.ini`
+gesetzt wird, matcht `publish-js.yml` nicht mehr. Der Trigger steht auf
+`tags: ['[0-9]*']` und die Version-Regex erwartet einen Tag ohne `v`. Beim
+ersten Release nach der Umstellung bliebe der npm-Publish **stillschweigend
+aus**. Muss im selben Commit mitgehen → Ticket 13.
+
+## NEU AUFGESCHLAGEN: go.mod im Root erfasst die Scraper-Fixtures
+
+Mit `module github.com/Getty/locale-simple` im Wurzelverzeichnis gehört jede
+`.go`-Datei im Repo zu diesem Modul — auch die Scraper-Fixtures, die in
+Ticket 7 unter `t/data/n-fixtures/` entstehen. `go build ./...` und `go vet ./...`
+würden versuchen, sie zu übersetzen, und die Fixtures enthalten absichtlich
+Randfälle.
+
+Lösung: `//go:build ignore` als erste Zeile jeder Fixture. Ändert nichts am
+Scraper (der liest roh) und ist der übliche Weg. Gehört in Ticket 7 und 11.
+Rust und PHP haben das Problem nicht — Cargo sieht nur `rust/`, Composer lädt
+nur die eine Datei aus `autoload.files`.
+
+## NOCH OFFEN
+
+- **Rust-Marker-Namen:** `N_!`/`Nn_!` (Parität mit den anderen fünf, aber gegen
+  Rust-Konvention und mit Linter-Warnung) oder `n_!`/`nn_!` (idiomatisch, bricht
+  Parität und den Scraper-`func_qr`)? Blockiert Ticket 8 und 12.
+- **`dzil test` mit fünf Toolchains:** Skip-if-missing-Wrapper plus CI-Matrix,
+  oder harte Voraussetzung? Auf dieser Maschine sind `php` und `composer`
+  nicht installiert, `cargo` ist 1.65 (Edition 2021 ok) und `go` ist 1.19 —
+  beide älter als das, was man 2026 als Mindestversion setzen würde.
+  Empfehlung steht: Wrapper + Matrix.
+- **Globaler Zustand in Go und Rust:** nur Paketfunktionen (API-treu, aber in
+  einem Webserver pro Request falsch) oder zusätzlich ein `Translator`-Wert
+  (idiomatisch, aber eine Erweiterung über die geteilte API hinaus)? Wenn, dann
+  in beiden Sprachen gleich. Blockiert nicht den Start, aber die API-Doku.
+- **`loadTranslations`/`loadLocaleData` bleiben JS-only** — PHP/Go/Rust lesen
+  `.mo` direkt und implementieren `l_dir` echt. Muss als bewusste Asymmetrie in
+  die Parity-Regel (Ticket 15), sonst meldet der Auditor sie als Lücke.
+
+---
+## Beleg für die Tag-Format-Aussage (nachgereicht 2026-08-06)
+
+Die Frage \"akzeptiert Go den Tag `v0.110`?\" ist zweistufig und auf den ersten
+Blick irreführend:
+
+    golang.org/x/mod/semver.IsValid("v0.110")   →  true
+    semver.Canonical("v0.110")                  →  "v0.110.0"
+
+Die Bibliotheksfunktion sagt also \"gültig\". Der **go-Befehl** filtert aber
+strenger. `cmd/go/internal/modfetch/coderepo.go`, in der Versions-Auflistung:
+
+    if v == "" || v != semver.Canonical(v) {
+        // Ignore non-canonical tags
+        continue
+    }
+
+und in `tagToVersion`:
+
+    if v == "" || !strings.HasPrefix(trimmed, v) {
+        return "", false // Invalid or incomplete version (just vX or vX.Y).
+    }
+
+Für `v0.110` ist `Canonical` gleich `v0.110.0`, also `v != Canonical(v)` → der
+Tag wird **übersprungen** und erscheint nicht als Modulversion. Der Kommentar im
+Go-Quelltext nennt \"just vX or vX.Y\" ausdrücklich als unvollständig.
+
+Damit steht fest: `tag_format = v%v` (→ `v0.110`) funktioniert für Go nicht,
+`tag_format = v%v.0` (→ `v0.110.0`) funktioniert. Falls die Frage später erneut
+aufkommt: hier ist sie beantwortet, nicht neu aufrollen.
+
+Nebenbefund aus demselben Test: `v0.110_01.0` ist ungültig. Ein Perl-Trial-Release
+(`0.110_01`) würde also einen unbrauchbaren Tag erzeugen — nur relevant, falls
+hier je mit `--trial` released wird.
+
+---
+## Entschieden 2026-08-06 (Nachtrag 2)
+
+- **Rust-Marker heißen `n_!`, `nn_!`, `np_!`, `nnp_!`, `nd_!`, `ndn_!`, `ndp_!`,
+  `ndnp_!`** — snake_case, also Rust-Konvention statt Namensparität. Die
+  `l*!`-Familie ist davon nicht betroffen (`l!`, `ln!`, … sind ohnehin
+  kleingeschrieben und damit konventionskonform).
+  Konsequenzen: Ticket 8 (`func_qr` für rs), Ticket 12 (Makronamen),
+  Ticket 15 (neue akzeptierte Asymmetrie in der Parity-Regel).
+  Damit ist Ticket 8 und 12 entblockt.
+- **Trial-Releases:** Das `v0.110_01.0`-Problem wird nicht behandelt — hier wird
+  nicht mit `--trial` released. Kein Ticket nötig.
+
+---
+## Entschieden 2026-08-06 (Nachtrag 3) — alle Blocker aufgelöst
+
+- **Toolchain-Wrapper: ja.** `dzil test` bekommt einen Skip-if-missing-Wrapper
+  statt fünf nackter `run_test`-Zeilen, plus CI-Matrix, die alle sechs Suiten
+  zwingend fährt. → Ticket 13, Punkt 5/6.
+- **`Translator`-Wert in Go und Rust: ja, mit dabei.** Paketfunktionen für die
+  API-Parität, zusätzlich ein `Translator`/`struct` für nebenläufige Nutzung.
+  In **beiden** Sprachen, nicht nur einer. → Tickets 11 und 12.
+- **Eigene Locale-Fallback-Liste: ja.** Die vier Runtimes mit eigenem Reader
+  implementieren die Kette (`de_DE` → `de`) explizit, statt sich auf libc-Verhalten
+  zu verlassen, das sie nicht haben. → Ticket 9 spezifiziert sie einmal für alle.
+
+### Toolchains — erledigt
+
+Am 2026-08-06 lokal ins User-Home installiert:
+
+    ~/opt/go        go1.26.5      (System bleibt auf /usr/bin/go = 1.19.8)
+    ~/.cargo        rustc 1.97.1 / cargo 1.97.1   (System: /usr/bin/cargo = 1.65)
+
+**Noch offen: beide sind nicht im PATH.** Die Shell-Config wurde bewusst nicht
+angefasst (rustup lief mit `--no-modify-path`). Zum Aktivieren:
+
+    export PATH="$HOME/opt/go/bin:$HOME/.cargo/bin:$PATH"
+
+Solange das nicht in der Shell-Config steht, greifen Skripte und der
+Test-Wrapper weiterhin die alten Systemversionen ab. Der Wrapper aus Ticket 13
+sollte deshalb nicht nur auf Vorhandensein prüfen, sondern auch auf eine
+Mindestversion — sonst läuft die Suite still gegen go1.19 und meldet Fehler,
+die keine sind.
+
+`php` und `composer` sind weiterhin **nicht** installiert.
