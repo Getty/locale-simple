@@ -1,0 +1,137 @@
+---
+blocked: Ticket 4 (Plural-Forms- und PHP-Reader-Entscheidung)
+claimed_at: 2026-08-06T03:57:23Z
+claimed_by: general-purpose
+class: standard
+created: 2026-08-05T22:35:33Z
+id: 9
+priority: high
+started: 2026-08-06
+status: review
+tags:
+- design
+- php
+- go
+- rust
+- js
+title: 'Gemeinsame Spezifikation: .mo-Reader und Plural-Forms-Auswertung'
+updated: 2026-08-06T04:09:25Z
+---
+
+Hängt an Ticket 4, Punkt 3 (Plural-Forms-Entscheidung) und Punkt 4 (PHP-Reader).
+
+Go, Rust und — nach heutiger Empfehlung — PHP brauchen jeweils einen eigenen
+.mo-Reader. Damit die drei nicht dreimal unterschiedlich falsch werden, wird das
+Verhalten **einmal** spezifiziert und dann dreimal gegen dieselben Fixtures
+getestet. Dieses Ticket produziert das Dokument, nicht den Code.
+
+Ablage: `.claude/rules/mo-reader.md` (pfad-scoped auf `php/**` `go/**` `rust/**`).
+
+## Inhalt der Spec
+
+### 1. MO-Binärformat
+Das Format ist klein und stabil (GNU gettext, Abschnitt \"MO Files\"):
+- Magic `0x950412de` (little endian) oder `0xde120495` (big endian) — beide
+  Byte-Orders müssen gelesen werden, sonst brechen .mo-Dateien von fremden
+  Buildmaschinen.
+- Header: revision, Anzahl Strings, Offset der Original-Tabelle, Offset der
+  Translation-Tabelle, Hash-Tabellen-Größe/-Offset. Die Hash-Tabelle wird
+  **nicht** gebraucht — linear einlesen in eine Map ist für unsere Größenordnung
+  richtig und spart pro Sprache ~80 Zeilen.
+- Kontext: msgid ist `msgctxt \\x04 msgid` (EOT-Trenner). Identisch zu dem, was
+  `js/src/index.js` `lookup()` heute schon mit `'\\u0004'` macht.
+- Plural: msgid ist `msgid \\x00 msgid_plural`, msgstr ist
+  `form0 \\x00 form1 \\x00 …`.
+- Der Eintrag mit leerer msgid ist der Metadaten-Header (RFC-822-artig,
+  `Plural-Forms:`, `Content-Type: … charset=…`).
+
+### 2. Verzeichnis-Auflösung
+`l_dir(d)` + `l_lang(lang)` + `ltd(domain)` →
+`d/<lang>/LC_MESSAGES/<domain>.mo`. Genau das Layout, das `t/data/locale/de_DE/
+LC_MESSAGES/test.mo` schon hat. Fallback-Kette (`de_DE` → `de`) festlegen:
+Perl/Python bekommen sie heute von libc geschenkt, die eigenen Reader müssen sie
+explizit haben, sonst divergiert das Verhalten.
+
+### 3. Plural-Forms-Evaluator
+Falls Ticket 4 Punkt 3 auf \"Header auswerten\" entschieden wird: die Grammatik
+des `plural=`-Ausdrucks ist eine Teilmenge von C —
+`?:`, `||`, `&&`, `==` `!=` `<` `>` `<=` `>=`, `+` `-` `*` `/` `%`, `!`,
+Klammern, die Variable `n`, Integer-Literale. Alles ganzzahlig, keine Seiteneffekte.
+Ein Shunting-Yard- oder Pratt-Parser mit ~15 Operatoren; einmal spezifiziert,
+dreimal übersetzt.
+
+Sicherheitsrelevant: der Ausdruck kommt aus einer .mo-Datei, also aus Daten.
+Kein `eval` in irgendeiner Sprache — auch nicht in PHP, wo es verlockend ist.
+Division durch Null muss definiert enden (Ergebnis 0, kein Panic/Exception),
+und die Rekursionstiefe muss begrenzt sein.
+
+Bei fehlendem oder unparsbarem Header: `n != 1` als Default, plus eine einmalige
+Warnung.
+
+### 4. Gemeinsame Testvektoren
+Eine Tabelle `(plural-forms-string, n, erwarteter Index)` als sprachneutrales
+Fixture, gegen das alle drei Suiten laufen — Format am besten JSON unter
+`t/data/plural-forms.json`, damit Go/Rust/PHP es ohne Extra-Parser lesen.
+Abzudecken mindestens: en/de (nplurals=2), fr (n>1), pl (3 Formen), ru (3 Formen),
+ar (6 Formen), ja (nplurals=1).
+
+### 5. sprintf-Semantik
+Die .po-Dateien enthalten `%s`, `%d`, und positionale `%1$s` (das ist der Grund,
+warum `js/src/index.js` einen eigenen sprintf hat statt eines Fremd-Pakets).
+- PHP: `sprintf()` versteht `%1\$s` nativ → keine Eigenimplementierung.
+- Go: `fmt.Sprintf` versteht `%s`/`%d`, aber positionale Argumente heißen dort
+  `%[1]s`. `%1\$s` ist für Go ein Syntaxfehler und würde als `%!s(…)` im Text
+  landen. **Go braucht einen eigenen sprintf.**
+- Rust: `format!` ist compile-time und kennt `%` überhaupt nicht.
+  **Rust braucht einen eigenen sprintf.**
+Die Menge der zu unterstützenden Konvertierungen ist die aus
+`Locale::Simple::sprintf_compare`: `bcdeufFosxX`, plus Flags `+ - 0 ' `, Breite,
+Präzision und der `N\$`-Positionsindex. `js/src/index.js` hat das bereits
+implementiert und ist die Referenz — auch für die Frage, was bei fehlendem
+Argument passiert (JS gibt den Platzhalter unverändert zurück).
+
+---
+## Nachtrag 2026-08-06 — entschieden
+
+Punkt 3 (Plural-Forms-Evaluator) ist **verbindlich**: der `Plural-Forms:`-Header
+wird ausgewertet, in PHP, Go, Rust und nachträglich in JS (Ticket 14). Die
+Fallback-Variante `n != 1` gilt nur noch für den Fall eines fehlenden oder
+unparsbaren Headers, mit einmaliger Warnung.
+
+Punkt 5, PHP-Zeile bleibt gültig (natives `sprintf` reicht), aber der
+**.mo-Reader** ist für PHP jetzt ebenfalls gesetzt — kein `ext-gettext`.
+
+Damit ist dieses Ticket der Kern der drei Ports: es liefert die einzige
+Spezifikation, gegen die vier Implementierungen geprüft werden. Zuerst
+schreiben, dann implementieren.
+
+---
+## Nachtrag 2026-08-06 — Fallback-Kette entschieden
+
+Punkt 2 wird verbindlich ausspezifiziert: die vier Runtimes mit eigenem Reader
+(PHP, Go, Rust, JS) bekommen eine **eigene, explizit definierte**
+Locale-Fallback-Kette, statt sich auf libc-Verhalten zu verlassen, das sie nicht
+haben. Perl und Python bekommen sie weiterhin von der Systembibliothek.
+
+Genau festzulegen und in den gemeinsamen Testvektoren abzudecken:
+- `de_DE.UTF-8` → `de_DE` → `de`  (Encoding-Suffix abschneiden)
+- `de_AT` → `de`                  (Region abschneiden)
+- `pt_BR` → `pt`                  (auch wenn pt_BR und pt praktisch divergieren)
+- Was passiert bei `C` / `POSIX` / leerem Wert?
+- Wird `LANGUAGE` mit mehreren Einträgen (`de:en`) unterstützt, wie es
+  GNU gettext tut? Perl setzt die Variable in `l_lang` (Simple.pm:97), also
+  kennt die Perl-Seite das Verhalten bereits — hier ist die Gefahr der stillen
+  Divergenz am größten.
+
+Die Kette gehört in dieselbe Fixture-Datei wie die Plural-Vektoren, damit alle
+vier Implementierungen gegen dieselbe Tabelle laufen.
+Spec written: .claude/rules/mo-reader.md (path-scoped php/**, go/**, rust/**), plus t/data/plural-forms.json test vectors.
+
+5 sections, all decided points from the nachtraege incorporated:
+1. MO binary format — header layout table, string-table encoding, context (\x04) and plural (\x00) key encoding, worked byte-for-byte example decoded from the repo's own t/data/locale/de_DE/LC_MESSAGES/test.mo (verified with struct.unpack, not hand-waved).
+2. Directory resolution — de_DE.UTF-8->de_DE->de fallback chain, LANGUAGE colon-list expansion (de:en etc.), C/POSIX/empty -> zero candidates, and the per-msgid fallback across the whole candidate chain (not just per-file) with the empty-msgstr-means-untranslated nuance cited from js/src/index.js's own truthiness checks.
+3. Plural-Forms evaluator — EBNF grammar + precedence table matching GNU gettext's own plural.y, no-eval/div-by-zero=0/max-100-nesting-depth security requirements, single-warning fallback to n!=1.
+4. t/data/plural-forms.json created and all plural-form test vectors verified programmatically (re-implemented each formula in Python and asserted against the fixture) — en/de/fr/pl/ru/ar/ja plus 3 edge cases (missing header, unparsable expr, div-by-zero) plus 13 locale_fallback rows.
+5. sprintf semantics — conversions/flags table from sprintf_compare, per-language notes for PHP (ArgumentCountError must be caught)/Go(no fmt.Sprintf, needs own)/Rust(format! structurally can't do it).
+
+Discrepancy found and resolved while reading js/src/index.js as reference: the parent task summary paraphrased the context-encoding citation as using '' — actual code (js/src/index.js:149) uses '\u0004', matching the ticket's own canonical text. Also flagged in the spec (not a blocker, just documented): JS's sprintf is NOT a complete implementation of the sprintf_compare conversion/flag set this spec mandates (no custom quote-pad flag, no forced + sign, different conversion letters: sdifoxXeEgGcb vs bcdeufFosxX) — ports should implement the full mandated table, matching JS only where JS already covers it.
