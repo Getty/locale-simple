@@ -1,0 +1,79 @@
+---
+blocked: Ticket 5 (String-Literale pro Typ)
+claimed_at: 2026-08-06T04:38:12Z
+claimed_by: locale-simple-scraper-worker
+class: standard
+created: 2026-08-05T22:34:16Z
+id: 7
+priority: medium
+started: 2026-08-06
+status: review
+tags:
+- scraper
+- go
+title: 'Scraper: Go-Support (.go)'
+updated: 2026-08-06T05:06:29Z
+---
+
+Hängt an Ticket 5 (String-Literale pro Typ).
+
+## Aufgabe
+
+`lib/Locale/Simple/Scraper.pm`: `--go=s`, `push @go, 'go'`, `%e`-Eintrag,
+POD-Extension-Liste. Muster wie `--py`.
+
+`lib/Locale/Simple/Scraper/Parser.pm`, Typ `go`:
+- Literale: `"…"` (mit Escapes) und Backtick-Raw-Strings (ohne Escapes).
+  **Kein** `'…'` — das ist ein rune-Literal.
+- `concat_op` = `+`.
+- `func_qr`: Go-Aufrufe sind paketqualifiziert. Aus
+  `import ls \"github.com/Getty/locale-simple/go\"` wird `ls.L(\"Hello\")`.
+  Zwei Probleme auf einmal:
+  1. **Der Paket-Alias ist frei wählbar.** `ls.L`, `locale.L`, `. \"…\"` (Dot-Import,
+     dann nacktes `L(`). Der Scraper kann den Alias nicht auflösen. Pragmatisch:
+     ein optionales `(?:\\w+\\.)?`-Präfix vor dem Funktionsnamen akzeptieren. Das
+     erzeugt False Positives bei fremdem `x.L(...)`, was aber dem heutigen
+     Verhalten in anderen Sprachen entspricht (der Scraper kennt keine Scopes).
+  2. **Groß-/Kleinschreibung.** Go exportiert nur Bezeichner mit Großbuchstaben.
+     `l`, `ln`, `ld` wären paketprivat und aus fremdem Code nicht aufrufbar. Die
+     Namen müssen also `L`, `Ln`, `Lp`, `Lnp`, `Ld`, `Ldn`, `Ldp`, `Ldnp` und
+     `N_`, `Nn_`, … heißen — eine erzwungene Abweichung von der Namensparität,
+     die in `tri-language-parity.md` als akzeptierte Asymmetrie landen muss.
+     Der Scraper braucht dafür einen typabhängigen `func_qr` (heute ein einziges
+     `has func_qr` mit festem Default).
+
+## Tests
+
+`t/data/n-fixtures/l-calls.go` + `N-calls.go` mit allen 16 Formen, jeweils
+paketqualifiziert und (falls Dot-Import unterstützt wird) nackt. Zusätzlich eine
+Fixture mit einem rune-Literal (`for _, c := range \"x\" { if c == 'a' {} }`) direkt
+neben einem `ls.L(...)`-Aufruf — das ist der Regressionstest gegen den
+Single-Quote-Fehler aus Ticket 5.
+
+Referenzausgaben regenerieren und den Diff von Hand prüfen.
+
+Owner: `locale-simple-scraper-worker`.
+
+---
+## Nachtrag 2026-08-06
+
+Die Fixtures `t/data/n-fixtures/l-calls.go` und `N-calls.go` brauchen
+`//go:build ignore` als erste Zeile. Grund: `go.mod` liegt im Repo-Root
+(Entscheidung in Ticket 4), damit gehört jede `.go`-Datei im Repo zum Modul
+und würde von `go build ./...` übersetzt. Die Fixtures sind absichtlich
+grenzwertig und dürfen das nicht.
+Implemented. lib/Locale/Simple/Scraper/Parser.pm: new type go — concat_op='+'; literal_forms gets [", double_quote_string_contents, "] (reused as-is, go's normal double-quote escapes are no different from pl/js/py/tx) + a new go_backtick_string_contents wrapper (raw_string_contents('`') — static close delimiter, so unlike php's heredoc it fits the plain [open,content,close] triple with just a one-line wrapper since raw_string_contents takes its stop as an arg). Deliberately NO single-quote entry — that's the actual fix, not code: the karr #5 rune-literal regression is prevented by omission, not a special case.
+
+func_qr converted from a fixed 'has func_qr' attribute to a per-type method (same style as concat_op/literal_forms): for go it substitutes uppercase L for lowercase l in the alternation ((?:|n|p|np|d|dp|dn|dnp)), N_ family unchanged (already uppercase everywhere). No optional package-alias prefix pattern was needed — verified empirically (against ls.L(...), a bare dot-import L(...), and a foreign x.L(...)) that the leading \b already lands on the '.' separator exactly like it does on PHP's '\\', for the identical reason (not a \w char). Documented alongside the existing php func_qr comment.
+
+New: canonical_func() in Parser.pm, called once in call() right after a func_qr match. Folds go's captured L/Ldnp/... back to lowercase l/ldnp/... (N_ family passed through unchanged) BEFORE required_args() and before storing into found. This means required_args' %arg_lists (Parser.pm) and Scraper.pm's %f (msgid/plural/ctxt/domain position table) needed ZERO go-specific entries — both stay exactly as they were, single source of truth, per the ticket's explicit ask not to triple those tables. Added an explanatory comment above %f in Scraper.pm documenting why it has no go keys.
+
+Scraper.pm: --go=s/$go_ext/push @go,'go'/%e entry mirroring --php exactly; POD extension list + SUPPORTED CALLS section updated, the latter now explicitly notes go's capitalised names as the one accepted name-parity departure (argument shapes/.pot output unaffected).
+
+Fixtures: t/data/n-fixtures/l-calls.go + N-calls.go, both starting with //go:build ignore (verified: 'go build ./t/data/n-fixtures/...' reports 'matched no packages' — the directory is fully invisible to the toolchain, not just excluded-with-warning). 16 forms each (8 canonical shapes × package-qualified 'ls.X(...)' and bare dot-import 'X(...)' styles), one backtick-raw-string literal (domain-only call's msgid), plus the rune-literal regression named in the ticket (for _, c := range "x" { if c == 'a' { ls.L(...) } }) — confirms go's missing single-quote literal_forms entry doesn't let 'a' hijack the string scope before the real call. t/51-scrape-N.t: added go to the language loop, l-calls.go vs N-calls.go produce byte-identical .pot output.
+
+t/50-scrape.t: added --ignore ^go/ (anchored like ^php/, for the same reason — a bare 'go' would swallow the n-fixtures/*.go files, which already have their own ignore entry, but keep the anchor future-proof). This one is load-bearing, not precautionary like ^rust/: since .go is now unconditionally recognised, without it the base test would scrape the real go/ port from karr #11 on every run.
+
+Verification: prove -lr t/ green (10 files, 61 tests). Isolated the go-only delta in t/out/scrape_00_{err,out} by reconstructing the pre-go (php-only) Parser.pm/Scraper.pm/t/50-scrape.t from this session's own earlier reads, regenerating a baseline reference from them, then diffing against the regenerated post-go reference: scrape_00_out is BYTE-IDENTICAL (zero new/changed stdout — go/ and n-fixtures are both excluded from the base scan, so nothing new is ever extracted), scrape_00_err gained ~55 lines, every one of them a graceful 'Expected ("'/'Expected translation token' self-match from the scraper scanning its own edited source (Parser.pm/Scraper.pm are always type=pl) against bounded l/ln/ldnp/N_/Nn_ tokens inside my new comments and the new func_qr method body — traced each block to its exact source line, none of it is a real bug, none of it touches stdout. Found and fixed two of my own instances of the exact self-inflicted trap the php worker flagged in #6 (a comment containing "Ld's msgid" and "Nd_'s msgid" — bounded false-positive matches) before they became noise; left the harmless graceful-failure ones as-is per existing precedent (e.g. the func_qr regex source already self-matched before my change too).
+
+go build ./... and go vet ./... clean from repo root (go1.26.5). Also confirmed the fixtures are invisible to 'go list ./...' — not merely built-and-skipped, genuinely unmatched as packages, which is the actual proof the //go:build ignore lines work.
