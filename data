@@ -1,0 +1,159 @@
+---
+blocked: mindestens ein fertiger Port
+claimed_at: 2026-08-06T05:08:06Z
+claimed_by: general-purpose
+class: standard
+created: 2026-08-05T22:38:25Z
+id: 15
+priority: low
+started: 2026-08-06
+status: review
+tags:
+- design
+- perl
+- python
+- js
+- php
+- go
+- rust
+title: Doku und Agenten-Setup auf sechs Runtimes erweitern
+updated: 2026-08-06T05:27:03Z
+---
+
+Letzter Schritt, nachdem mindestens ein Port steht. Ohne das behaupten die
+Repo-Regeln weiterhin eine Drei-Sprachen-Welt und der Parity-Auditor prüft die
+Hälfte nicht.
+
+## `.claude/rules/tri-language-parity.md`
+
+Datei umbenennen (`language-parity.md`) und inhaltlich erweitern:
+- Die Tabelle \"Was muss in sync bleiben\" um PHP/Go/Rust-Spalten.
+- Regel 2 (\"Der Scraper ist der vierte Consumer\") auf sechs Endungen erweitern:
+  `.pl .pm .t .py .js .tx .php .go .rs`.
+- Neue akzeptierte Asymmetrien eintragen, jeweils mit Begründung:
+  - Go exportiert nur Großgeschriebenes → `L`, `Ln`, … statt `l`, `ln`, …
+  - Rust braucht Makros (`l!`) statt Funktionen, weil es keine Variadik hat.
+  - `loadTranslations`/`loadLocaleData` bleiben JS-only; PHP/Go/Rust lesen .mo
+    direkt und implementieren `l_dir` echt.
+  - `l_nolocales` ist nur in JS ein No-op — die anderen fünf haben ein Verzeichnis.
+  - Perl/Python nutzen System-gettext, die anderen vier einen eigenen .mo-Reader.
+  - Rückgabeform der `N*`-Plural-Marker: Perl Listenkontext, Go Tupel,
+    JS/PHP Array, Rust je nach Makro-Design.
+- Der Verifikationsblock am Ende: sechs Kommandos statt drei.
+
+## `CLAUDE.md`
+
+- Layout-Tabelle um `php/`, `go/`, `rust/` ergänzen.
+- Delegationstabelle um die neuen Owner-Agenten.
+- Build/Test-Block um `composer test`, `go test ./...`,
+  `cargo test --manifest-path rust/Cargo.toml`.
+- Der Satz \"One codebase, three published packages\" stimmt dann nicht mehr.
+
+## Agenten
+
+Drei neue unter `.claude/agents/`, nach dem Muster von
+`locale-simple-python-worker` / `locale-simple-js-worker`:
+`locale-simple-php-worker`, `locale-simple-go-worker`, `locale-simple-rust-worker`.
+Jeder mit passenden `briefing.skills`.
+
+`locale-simple-parity-auditor` und `locale-simple-release-checker` müssen die
+neuen Oberflächen kennen — sonst melden sie nach jedem Port \"alles konsistent\",
+ohne die Hälfte gelesen zu haben.
+
+## Usage-Skills
+
+`.claude/skills/` hat je einen Nutzungs-Skill für Perl/Python/JS, die andere
+Projekte per `manage-skills` hardlinken. Für PHP/Go/Rust dieselbe Struktur
+anlegen. **Achtung:** die bestehenden Skill-Dateien sind Hardlinks — vor jedem
+Edit den `manage-skills`-Skill lesen, `Edit`/`Write` zerreißt die Kette.
+
+## README.md (Repo-Root)
+
+Erwähnt heute CPAN/PyPI/npm. Drei Badges und drei Installationsanweisungen dazu.
+
+---
+## Nachtrag 2026-08-06
+
+Zusätzliche akzeptierte Asymmetrie für die Parity-Regel: **Rust schreibt die
+Deferred-Marker klein** (`n_!` statt `N_`), weil Rust-Makros snake_case sind.
+Die `l*`-Familie ist in allen sechs Runtimes gleich geschrieben, die N-Familie
+in fünf von sechs.
+
+Damit sieht die Marker-Zeile der Parity-Tabelle so aus:
+
+    Perl / Python / JS / PHP   N_   Nn_   Np_   Nnp_   Nd_   …
+    Go                         N_   Nn_   Np_   Nnp_   Nd_   …   (identisch)
+    Rust                       n_!  nn_!  np_!  nnp_!  nd_!  …   (snake_case + !)
+Doku/Agenten-Setup auf sechs Runtimes erweitert. Dateien:
+
+Umbenannt+erweitert: .claude/rules/tri-language-parity.md -> language-parity.md (git mv,
+Historie erhalten). Tabelle jetzt Perl/Python/JS/PHP | Go | Rust (PHP teilt die Namen mit
+Perl/Python/JS, Go/Rust brauchen eigene Spalten wegen Grossschreibung bzw. Makros). Regel 2
+auf neun Endungen erweitert (.pl .pm .t .py .js .tx .php .go .rs, sieben Consumer inkl.
+Scraper). Neue Rueckgabeform-Tabelle fuer N*_/n_! (Perl Listenkontext, Python Tuple, JS/PHP
+Array, Go natives Mehrfachrueckgabe, Rust Tuple) sowie Translator/struct als dokumentierte
+Go+Rust-Erweiterung. Neuer Asymmetrie-Abschnitt: eigener .mo-Reader NUR bei PHP/Go/Rust (JS
+liest JSON von po2json, ruehrt .mo gar nicht an - Praezisierung ggue. Ticket-Text), Go-
+Grossschreibung, Rust-Makros+snake_case-N-Familie (doppelte Abweichung), l_nolocales-No-op
+nur in JS. Verifikationsblock: sechs Einzelbefehle, aber explizit vermerkt dass dzil test
+PHP/Go/Rust NOCH NICHT abdeckt (dist.ini run_test hat nur python+js drin, Ticket 13 Wrapper
+steht noch aus) - bewusst nicht "dzil test deckt alles ab" behauptet, das waere falsch.
+
+CLAUDE.md: Intro-Satz auf sechs Pakete, Rule-Tabelle um language-parity.md (umbenannt) und
+mo-reader.md (php/**, go/**, rust/** scoped) ergaenzt, Delegationstabelle um die drei neuen
+Worker + Auditor/Checker-Beschreibung aktualisiert, Layout-Tabelle um php/go/rust/composer.json/
+go.mod/.gitattributes ergaenzt (.gitattributes existiert noch nicht, als "geplant, Ticket 13"
+vermerkt), Build/Test-Block um die drei Befehle ergaenzt inkl. derselbe dzil-test-Caveat.
+
+3 neue Agenten (.claude/agents/): locale-simple-php-worker, -go-worker, -rust-worker, im
+Ton/Struktur der Python/JS-Worker-Vorlagen. briefing.skills vorerst nur karr (keine Usage-Skills
+vorhanden). Go-Worker haelt fest: go.mod im Repo-Root faengt jede .go-Datei im Repo ein (Scraper-
+Fixtures brauchen //go:build ignore), Package-Name "simple" nicht "go". Rust-Worker haelt die
+doppelte N-Familie-Abweichung und den l("")-Sonderfall vor dem l_dir-Panic-Check fest.
+
+parity-auditor + release-checker: gezielt erweitert (keine Neuschreibung). Auditor bekommt
+sechste Spalte in allen 9 Vergleichspunkten + erweiterte Asymmetrieliste; dabei nebenbei einen
+bestehenden Fehler korrigiert (Text behauptete "l_nolocales missing from JS exports" - stimmt
+nicht, js/src/index.js:511 exportiert es als No-op, jetzt richtig beschrieben). Checker bekommt
+3 neue Checklist-Punkte (composer.json/go.mod/Cargo.toml) + Hinweis dass fuer Packagist/Go-Proxy/
+crates.io aktuell noch KEIN Publish-Workflow existiert (Ticket 13 offen) - Checker soll das
+explizit melden statt nur die drei bestehenden Ziele zu pruefen. Ausserdem Punkt 8 (npm-Version-
+Mapping) mit Verweis auf moegliche Ueberholung durch Ticket 16 markiert (nicht selbst geloest,
+ausserhalb meines Scopes).
+
+README.md (Root): Intro-Satz + drei Installationszeilen (composer require raudssus/locale-simple,
+go get github.com/Getty/locale-simple/go, cargo add locale-simple) ergaenzt, gleiches Format wie
+die bestehenden drei (reine Markdown-Links, keine Badge-Bilder - geprueft).
+
+Nebenbei: das Umbenennen von tri-language-parity.md haette 6 Quelldateien mit stale Pfad-
+Referenzen hinterlassen (php/tests/SimpleTest.php, rust/src/lib.rs, rust/README.md,
+rust/tests/api.rs, go/simple.go, go/simple_test.go) - jeweils die eine Zeile mit dem alten
+Dateinamen korrigiert (reiner Pfad-String in Kommentaren, keine Verhaltensaenderung). Danach
+go build/vet/test und cargo test lokal gegen die editierten Dateien nochmal gruen verifiziert.
+
+Asymmetrien gegen echten Code verifiziert (nicht nur Ticket-Text uebernommen), eine Praezisierung
+gefunden: Ticket-Text sagte "JS/PHP/Go/Rust haben eigenen .mo-Reader" - stimmt fuer PHP/Go/Rust,
+NICHT fuer JS (bin/po2json liest .po, nicht .mo; js/src/index.js beruehrt nie .mo-Bytes, sondern
+liest vorher von po2json erzeugtes JSON). In language-parity.md entsprechend praezisiert statt
+die ungenaue Formulierung zu uebernehmen. Alle anderen Punkte (Go-Grossschreibung, Rust-Makros+
+snake_case, Translator in Go+Rust, Rueckgabeformen, l_nolocales nur in JS No-op) 1:1 am Code
+bestaetigt.
+
+NICHT angefasst (bewusst ausserhalb des Scopes): .claude/skills/ (PHP/Go/Rust-Usage-Skills nicht
+angelegt, wie gefordert - offener Folgepunkt). locale-simple-rules.md nur gelesen, NICHT
+geaendert - enthaelt mehrere "drei Sprachen/drei Runtimes"-Stellen (Zeilen 11,17,21,32,52-54,71),
+Aenderungsbedarf vorhanden, aber ausserhalb des zugewiesenen Scopes. Ebenfalls gefunden, nicht
+angefasst: .claude/rules/release.md ("all three languages"), sowie die drei bestehenden Worker-
+Agenten locale-simple-worker.md/-python-worker.md/-js-worker.md sagen noch "one of three
+implementations" - beide nicht Teil dieses Tickets, aber Folgeticket waere sinnvoll. Auch
+go/README.md und rust/README.md/php/README.md haben je noch "vier Runtimes" bzw. "vier
+Implementierungen"-Reste (vor Fertigstellung der jeweils anderen Ports geschrieben) - gehoert den
+jeweiligen Port-Workern, nicht mir angefasst.
+
+Verifikation: dzil test schlaegt fehl (t/50-scrape.t, 2/9 Subtests) - verifiziert dass das an
+lib/Locale/Simple/Scraper/Parser.pm und t/50-scrape.t liegt, beide aktuell von Ticket 8
+(Rust-Scraper-Support, parallel in Bearbeitung) modifiziert, nicht von meinen Aenderungen
+beruehrt. composer validate: JSON valide. vendor/bin/phpunit lokal nicht ausfuehrbar (fehlende
+ext-dom/ext-xmlwriter auf dieser Maschine, bekanntes Problem aus Ticket 10s Kommentar, kein
+Bezug zu meinen Aenderungen). go build/vet/test ./go/... gruen. cargo test --manifest-path
+rust/Cargo.toml gruen (18/18).
