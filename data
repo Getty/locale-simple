@@ -1,0 +1,97 @@
+---
+claimed_at: 2026-08-06T03:52:36Z
+claimed_by: locale-simple-worker
+class: standard
+completed: 2026-08-06
+created: 2026-08-06T03:38:24Z
+id: 18
+priority: high
+started: 2026-08-06
+status: done
+tags:
+- perl
+- release
+title: 'Fehlende Prereqs im cpanfile (GitHub-Issue #4)'
+updated: 2026-08-06T03:52:36Z
+---
+
+Spiegelt **GitHub-Issue #4** von `eserte` (Slaven Rezić), offen seit 2026-04-22.
+Öffentlicher Bug-Report eines CPAN-Testers — betrifft jeden, der die Distribution
+aus dem Tarball baut statt aus diesem Repo.
+
+**Auf GitHub wurde nichts geschrieben.** Kommentieren oder Schließen erst nach
+ausdrücklicher Freigabe des Maintainers.
+
+## Gemeldet
+
+- Titel: `Test::Regression` ist nicht als Prereq deklariert.
+- Kommentar: `Test::InDistDir` ebenfalls nicht.
+
+## Verifiziert — der Report ist unvollständig, es fehlt mehr
+
+Das `[@Author::GETTY]`-Bundle nutzt `Prereqs::FromCPANfile` und **kein**
+`AutoPrereqs` (GETTY.pm:1232). Das `cpanfile` ist damit die einzige Quelle der
+Wahrheit; was dort nicht steht, fehlt in der Distribution. Lokal fällt es nicht
+auf, weil die Module installiert sind.
+
+### Test-Phase — fehlt komplett
+
+| Modul | benutzt in |
+|---|---|
+| `Test::InDistDir` | `t/50-scrape.t:5`, `t/51-scrape-N.t:5` |
+| `Test::Regression` | `t/50-scrape.t:9` |
+| `Capture::Tiny` | `t/50-scrape.t:6`, `t/51-scrape-N.t:6` |
+
+`Capture::Tiny` steht **nicht** im Issue — zusätzlicher Fund.
+
+### Runtime — `bin/po2json` ist im Tarball unbenutzbar
+
+| Modul | benutzt in |
+|---|---|
+| `JSON` 2.53 | `bin/po2json:25` |
+| `Locale::PO` 0.21 | `bin/po2json:26` |
+
+`bin/po2json` wird als Skript mitinstalliert und stirbt beim ersten Aufruf mit
+\"Can't locate JSON.pm\". Das ist gravierender als die Test-Prereqs, weil es
+nicht beim Bauen auffällt, sondern erst beim Benutzen — und `po2json` ist der
+Weg, auf dem die JS-Seite ihre Daten bekommt.
+
+### Bereits korrekt deklariert
+`Try::Tiny` und `IO::All` stehen als Runtime-Prereqs drin und werden von der
+Test-Phase geerbt — kein Handlungsbedarf. `Cwd`, `File::Temp`, `FindBin`,
+`File::Basename`, `Getopt::Long`, `File::Find`, `POSIX`, `Data::Dumper`,
+`Exporter` sind Core.
+
+## Aufgabe
+
+`cpanfile` ergänzen:
+
+    requires 'JSON', '2.53';
+    requires 'Locale::PO', '0.21';
+
+    on test => sub {
+        requires 'Test::More', '0.98';
+        requires 'Test::InDistDir';
+        requires 'Test::Regression';
+        requires 'Capture::Tiny';
+    };
+
+Versionen der drei Test-Module: keine Mindestversion nötig, sofern nichts
+Spezifisches benutzt wird — vor dem Festschreiben kurz gegenprüfen.
+
+## Zusätzlich prüfen
+
+`lib/Locale/Simple.pm:9` lädt `Locale::gettext_dumb`, deklariert ist aber
+`Locale::TextDomain 1.23` (mit Kommentar, dass das Absicht ist — beide kommen
+aus libintl-perl). Das funktioniert, ist aber eine indirekte Deklaration.
+Erwägen, `Locale::gettext_dumb` direkt zu deklarieren; der CPAN-Indexer löst es
+auf dieselbe Distribution auf. Keine Änderung ohne Grund — der Kommentar im Code
+deutet auf eine bewusste Entscheidung hin.
+
+## Warum das jetzt wichtig ist
+
+Vor jedem Release der PHP/Go/Rust-Ports sollte das gefixt sein. Die neuen
+Runtimes vergrößern die Distribution, und ein CPAN-Tarball, der seine eigenen
+Tests nicht bestehen kann, wird von den Smoke-Testern zuverlässig gemeldet —
+so wie hier geschehen.
+cpanfile ergänzt: JSON 2.53, Locale::PO 0.21 (Runtime); Test::InDistDir, Test::Regression, Capture::Tiny (Test, keine Mindestversion — Testdateien nutzen nur Basis-Imports/-Funktionen, kein versionsspezifisches Feature gefunden). dzil test grün (Perl 59 Tests + Python + JS via bundle), cpanm --installdeps . läuft sauber durch. lib/Locale/Simple.pm:9 unangetastet gelassen wie im Ticket verlangt.
