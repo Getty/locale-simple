@@ -1,0 +1,121 @@
+---
+blocked: Ticket 4 + Ticket 9
+claimed_at: 2026-08-06T04:10:14Z
+claimed_by: general-purpose
+class: standard
+created: 2026-08-05T22:36:28Z
+id: 10
+priority: medium
+started: 2026-08-06
+status: review
+tags:
+- php
+title: 'PHP-Port: php/, Composer-Paket, Testsuite'
+updated: 2026-08-06T04:35:34Z
+---
+
+Hängt an Ticket 4 (Punkte 1, 2, 4) und Ticket 9 (Spec).
+
+## Layout
+
+    php/src/Simple.php        Implementierung
+    php/tests/SimpleTest.php  PHPUnit-Suite
+    php/README.md             API-Doku, Muster: python/README.md
+    composer.json             Ort abhängig von Ticket 4 Punkt 2 (Root vs. Split-Repo)
+
+## API
+
+Namespace `Locale\Simple`, alle 21 Namen als **Funktionen** (nicht als
+Klassenmethoden), damit der Aufrufcode wie in den anderen Runtimes aussieht und
+der Scraper dasselbe Muster sieht:
+
+    l_dir  l_lang  l_dry  l_nolocales  ltd
+    l  ln  lp  lnp  ld  ldn  ldp  ldnp
+    N_  Nn_  Np_  Nnp_  Nd_  Ndn_  Ndp_  Ndnp_
+
+Argumentreihenfolge exakt wie `lib/Locale/Simple.pm`:
+`ldnp(domain, msgctxt, msgid, msgid_plural, n, ...args)`, alle anderen delegieren
+dahin. Variadische Args über `...$args` (PHP 5.6+).
+
+Composer-Autoload: `\"files\": [\"php/src/Simple.php\"]` — Funktionen brauchen
+`files`, PSR-4 lädt nur Klassen.
+
+`N*`-Rückgaben: die Plural-Varianten geben in Perl im Listenkontext `(sg, pl)`
+zurück, in JS ein Array. PHP hat keinen Listenkontext → Array `[sg, pl]`, wie JS.
+Aufrufseite dann `ln(...Nn_('…','…'), $n)`.
+
+`l_dry`: schreibt die .po-artigen Blöcke; Perl hängt an eine Datei an (`wd()`),
+JS schreibt nach `console.debug`. PHP: an Datei anhängen wie Perl — Signatur
+`l_dry($file, $nowrite = false)`.
+
+`l_nolocales`: gleiche Bedeutung wie Perl/Python (schaltet den
+Verzeichnis-Sanity-Check ab), **kein** No-op wie in JS — PHP hat ein Verzeichnis.
+
+## Runtime
+
+Eigener .mo-Reader nach Ticket 9 (Begründung dort und in Ticket 4 Punkt 4).
+`sprintf()` ist nativ ausreichend, inklusive `%1\$s`. Aufpassen: PHP wirft bei
+`sprintf` mit zu wenig Argumenten seit PHP 8 einen `ArgumentCountError` —
+das Verhalten der anderen Runtimes ist \"Platzhalter unverändert stehen lassen\".
+Muss abgefangen und angeglichen werden.
+
+Encoding: PHP-Strings sind Byte-Strings, .mo liefert UTF-8-Bytes. Kein Encode/
+Decode nötig (anders als bei Perl), aber `mb_*` nicht voraussetzen —
+`ext-mbstring` ist optional, und das Paket soll dependency-frei bleiben.
+
+## Tests
+
+`php/tests/` gegen dieselben Fixtures wie die anderen Suiten
+(`t/data/locale/de_DE/LC_MESSAGES/test.mo` und `othertest.mo`). Die Testfälle aus
+`python/test.py` 1:1 übertragen — das ist der Parity-Beweis. Plus die
+Plural-Forms-Vektoren aus Ticket 9.
+
+PHPUnit als require-dev; das Paket selbst behält `\"require\": {\"php\": \">=8.0\"}`
+und sonst nichts.
+
+## composer.json Eckdaten
+
+    name        laut Ticket 4 Punkt 1
+    type        library
+    license     MIT
+    autoload    files: php/src/Simple.php
+    keywords    gettext, i18n, l10n, translation, po, sprintf
+
+---
+## Nachtrag 2026-08-06 — entschieden
+
+- Paketname: **`raudssus/locale-simple`**.
+- `composer.json` liegt im **Repo-Root** (Monorepo, kein Split-Repo),
+  `autoload.files` zeigt auf `php/src/Simple.php`.
+- Eigener .mo-Reader nach Ticket 9, kein `ext-gettext`.
+
+Zusätzlich zu beachten:
+- `.gitattributes` mit `export-ignore` für `lib/ t/ python/ js/ go/ rust/ xbin/
+  bin/ dist.ini cpanfile`, damit ein `composer require` nicht die ganze
+  CPAN-Distribution mitzieht. Composer zieht per Default das GitHub-ZIP, und
+  das respektiert `export-ignore`.
+- Umgekehrt landet `composer.json` durch `Git::GatherDir` im CPAN-Tarball.
+  Das ist harmlos, aber falls es stören soll: das Bundle bietet
+  `gather_exclude_filename` / `gather_exclude_match` als dist.ini-Optionen.
+  Heute sind `python/` und `js/` aus demselben Grund im Tarball — Status quo,
+  keine neue Entscheidung nötig.
+- `php`/`composer` sind auf der Entwicklungsmaschine **nicht installiert**.
+PHP-Port fertig: composer.json (Repo-Root), php/src/Simple.php, php/tests/SimpleTest.php, php/README.md.
+
+Verifikation (alle tatsächlich ausgeführt, nicht nur behauptet):
+- composer install: sauber, 0 Fehler (frisch von 0 getestet: vendor/ + composer.lock geloescht, composer install neu, danach volle Suite nochmal gruen).
+- vendor/bin/phpunit php/tests/SimpleTest.php: OK (93 tests, 155 assertions). Deckt ab: 1:1-Portierung von python/test.py (translate/context_plural/domain_switching/dry_run/nolocales_mode/language_switching_lifecycle/deferred_markers), alle Plural-Vektoren aus t/data/plural-forms.json (plural_forms + plural_forms_edge_cases, data-driven), alle locale_fallback-Vektoren, sprintf-Tabelle (Positional %1$s, Mixed positional/sequential, width/precision, %%, custom-pad-Flag ', +Flag, b/o/x/X-Konvertierungen, fehlendes Argument -> Platzhalter unveraendert).
+- Zusaetzliches manuelles Smoke-Script gegen t/data/locale/{test,othertest}.mo direkt (Uebersetzung, Plural, Kontext, Domain-Switch, %1$s, fehlendes sprintf-Argument) -- alles korrekt.
+
+Bewusste Abweichungen/Entscheidungen (keine davon aendert das oeffentliche API-Verhalten aus Sicht der anderen Runtimes):
+1. l('') kurzschliesst vor jedem Lookup (Python-Vorbild). Notwendig: die leere-msgid-Eintrag in einem .mo ist der Metadaten-Header (mo-reader.md §1) -- ohne den Kurzschluss wuerde ein direkter Map-Lookup fuer '' den Header-Blob zurueckgeben statt ''.
+2. "ist Plural?" wird ueber `$msgid_plural !== null` entschieden (wie Python `is not None`), nicht ueber Perls Wahrheitswert-Check auf $idp. Nur bei leerem String als Plural-Form relevant (Edge-Case, von keiner Suite geprueft).
+3. l_dir() prueft NICHT, ob das Verzeichnis existiert (wie Perl; Python wirft OSError). Bewusst lax gehalten, weil der Reader ueberall sonst schon "Datei fehlt -> naechster Kandidat/Fallback" macht.
+4. Der "please set a locale directory..."-Sanity-Check wirft eine fangbare \RuntimeException (wie Perls die(), catchable), NICHT Pythons sys.exit(1) (killt den Prozess) -- fuer eine eingebettete PHP-Bibliothek waere exit(1) unangemessen destruktiv. Fehlertext ist wortgleich mit Perl.
+5. Kein bindtextdomain/textdomain-Unterbau: ltd() merkt sich nur die "aktuelle Domain" (wie JS' currentDomain), ld(domain,...) loest Pfade immer direkt auf, unabhaengig davon ob ltd(domain) je aufgerufen wurde -- der eigene .mo-Reader braucht diese Indirektionsstufe nicht.
+6. composer.lock + vendor/ zu .gitignore hinzugefuegt (Bibliothekskonvention, analog zu js/package-lock.json in diesem Repo).
+7. PHPUnit-Version: ^11.5 (neuester Zweig, der mit der lokal installierten PHP 8.2.32 laeuft; 12.x verlangt PHP >=8.3, 13.x >=8.4).
+
+Umgebungshinweis (kein Code-/Spec-Abweichen, aber wichtig fuer Reproduzierbarkeit): auf dieser Maschine fehlten ext-dom/ext-xml/ext-xmlwriter/ext-xmlreader/ext-simplexml komplett (PHPUnit-Pflicht, php8.2-xml war nicht installiert, sudo/apt-install ist mir nicht erlaubt). Workaround ohne Root: `apt-get download php8.2-xml` (reiner Download, kein Install), Paket lokal mit `dpkg-deb -x` in ein Scratch-Verzeichnis entpackt, per `PHP_INI_SCAN_DIR=":<scratch>/extra-conf.d"` (mit fuehrendem Doppelpunkt, damit die System-conf.d zusaetzlich geladen wird, nicht ersetzt) eingehaengt. Wer composer install/phpunit hier spaeter erneut faehrt, braucht entweder dieselbe PHP_INI_SCAN_DIR-Umgebungsvariable oder ein echtes `apt install php8.2-xml`.
+
+Nicht angefasst wie gefordert: dist.ini, .gitattributes (beide #13).
