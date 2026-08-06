@@ -1,0 +1,58 @@
+---
+claimed_at: 2026-08-06T03:57:08Z
+claimed_by: locale-simple-worker
+class: standard
+created: 2026-08-06T03:08:06Z
+id: 16
+priority: high
+started: 2026-08-06
+status: review
+tags:
+- release
+- js
+title: 'AKUT: publish-js.yml bricht, sobald tag_format gesetzt wird'
+updated: 2026-08-06T03:59:38Z
+---
+
+Unabhängig von den Sprachports. Muss im selben Commit passieren wie die
+`tag_format`-Zeile in `dist.ini`, sonst fällt der npm-Publish beim nächsten
+Release stumm aus.
+
+## Problem
+
+`.github/workflows/publish-js.yml`:
+
+    on:
+      push:
+        tags:
+          - '[0-9]*'
+
+Sobald `dist.ini` `tag_format = v%v.0` bekommt, heißt der Tag `v0.110.0` und
+matcht dieses Muster nicht mehr. Der Workflow läuft nicht an — kein Fehler,
+keine Meldung, npm bleibt einfach auf 0.1.9 stehen. Zusätzlich würde die
+Version-Regex im Schritt \"Compute npm version from Perl tag\" den Tag ohnehin
+nicht parsen (`^([0-9]+)\.([0-9])([0-9]*)$` kennt kein führendes `v`).
+
+## Aufgabe
+
+1. Trigger auf `v[0-9]*` umstellen.
+2. Den gesamten Konvertierungsblock ersetzen: mit `tag_format = v%v.0` **ist**
+   der Tag schon die npm-Version, das führende `v` muss nur ab. Aus dem
+   Bash-Block wird eine Zeile. Siehe Ticket 4, \"ein Versionsschema für alle\".
+3. Bewusst festhalten, dass npm damit von `0.1.9` auf `0.110.0` springt —
+   monoton steigend, also zulässig, aber der Sprung gehört in `Changes` und in
+   `js/CHANGELOG.md` erklärt.
+4. `dist.ini`: `tag_format = v%v.0` unter `[@Author::GETTY]`.
+   Mindestversion des Bundles ist 0.317 (dort kam die Option dazu).
+   Prüfen, ob das irgendwo festgeschrieben werden sollte — `cpanfile` hat
+   heute keinen `on 'develop'`-Block.
+
+## Vorsicht
+
+Die Umstellung ist erst beim **nächsten echten Release** überprüfbar, und ein
+Fehler dabei kostet eine verbrannte Versionsnummer auf npm. Vor dem ersten
+Release nach der Änderung: den Workflow mit `workflow_dispatch` oder einem
+Wegwerf-Tag in einem Fork trockenlaufen lassen.
+
+Kein `dzil release` ohne ausdrückliche Freigabe.
+Umgesetzt: dist.ini bekommt [@Author::GETTY] tag_format = v%v.0 (Bundle-Version geprüft: installiert 0.317, exakt Mindestversion). publish-js.yml: Trigger auf tags: ['v[0-9]*'] umgestellt, der alte Bash-Konvertierungsblock ('Compute npm version from Perl tag') durch eine Zeile ersetzt (VERSION="${GITHUB_REF_NAME#v}"), da der Tag minus führendem v bereits die npm-Version ist. dzil test lief grün (46 tests, 0 fail) inkl. Python+JS-Suiten via run_test. cpanfile NICHT angefasst (kein on 'develop'-Block ergänzt) - das war in Ticket 4 nur als offene Frage notiert, nicht Teil dieses Tickets; bei Bedarf separat entscheiden. Kein dzil release, kein Tag-Push, kein echter Workflow-Lauf ausgeloest. Hinweis fuer den Release-Commit: naechster npm-Publish springt von 0.1.9 auf 0.110.0 (monoton steigend, zulaessig) - Changes/js/CHANGELOG.md bewusst NICHT vorab angefasst, das gehoert laut Ticket in den eigentlichen Release-Commit.
