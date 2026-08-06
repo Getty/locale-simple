@@ -1,0 +1,53 @@
+---
+claimed_at: 2026-08-06T03:57:13Z
+claimed_by: general-purpose
+class: standard
+created: 2026-08-06T03:10:28Z
+id: 17
+priority: medium
+started: 2026-08-06
+status: review
+tags:
+- release
+title: 'Bundle-POD korrigieren: tag_format-Beispiel v%v ist fÃ¼r Go ungÃ¼ltig'
+updated: 2026-08-06T04:02:40Z
+---
+
+Betrifft **ein anderes Repo**: `~/dev/perl/p5-dist-zilla-pluginbundle-author-getty`
+(aktuell 0.318 unreleased, 0.317 ist auf CPAN).
+
+## Problem
+
+Die im Vorgespräch geschriebene POD zu `tag_format` nennt als Beispiel genau den
+Anwendungsfall, für den das Beispiel nicht funktioniert:
+
+    lib/Dist/Zilla/PluginBundle/Author/GETTY.pm, ~Z.186:
+
+      Override this when a release tag needs to satisfy another ecosystem's
+      tooling, e.g. a Go module published from the same tag, which requires
+      strict vMAJOR.MINOR.PATCH:
+
+        [@Author::GETTY]
+        tag_format = v%v
+
+`%v` ist die rohe Perl-Dezimalversion, also ergibt `v%v` den Tag `v0.110` —
+zweiteilig. Der Text sagt im selben Absatz korrekt \"requires strict
+vMAJOR.MINOR.PATCH\" und liefert dann ein Beispiel, das genau das verfehlt.
+Wer der Doku folgt, bekommt einen Tag, den der Go-Module-Proxy nicht als
+Modulversion erkennt.
+
+## Aufgabe
+
+Beispiel auf `tag_format = v%v.0` ändern (ergibt `v0.110.0`) und in einem Satz
+begründen, warum das `.0` nötig ist: Perls Dezimalversionierung hat zwei Teile,
+SemVer verlangt drei. Der letzte Absatz (\"this option only changes the tag's
+formatting, not the version scheme itself\") bleibt richtig und wird durch die
+Korrektur sogar deutlicher.
+
+Prüfen, ob `t/tag_format.t` einen Fall mit mehrteiligem Format abdeckt — wenn
+nicht, einen ergänzen.
+
+Kein Release des Bundles nötig, nur weil die POD falsch ist; die Korrektur kann
+mit dem nächsten ohnehin anstehenden Release mitgehen. Die Option selbst
+funktioniert korrekt, es ist ausschließlich das Doku-Beispiel.
+POD-Fix + Test in p5-dist-zilla-pluginbundle-author-getty erledigt (separates Repo, unstaged im Working Tree, kein Commit/Release). Diff und Testergebnis siehe Agent-Report.
