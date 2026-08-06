@@ -1,0 +1,149 @@
+---
+claimed_at: 2026-08-06T06:14:53Z
+claimed_by: locale-simple-scraper-worker
+class: standard
+created: 2026-08-05T22:34:45Z
+id: 8
+priority: medium
+started: 2026-08-06
+status: review
+tags:
+- scraper
+- rust
+title: 'Scraper: Rust-Support (.rs)'
+updated: 2026-08-06T06:14:53Z
+---
+
+Hängt an Ticket 5 (String-Literale pro Typ) und an der Makro-Entscheidung in
+Ticket 4, Punkt 5. Der schwierigste der drei Scraper-Ports.
+
+## Aufgabe
+
+`lib/Locale/Simple/Scraper.pm`: `--rs=s`, `push @rs, 'rs'`, `%e`-Eintrag,
+POD-Extension-Liste.
+
+`lib/Locale/Simple/Scraper/Parser.pm`, Typ `rs`:
+- Literale: `\"…\"` mit Escapes; Raw-Strings `r\"…\"`, `r#\"…\"#`, `r##\"…\"##` mit
+  längenabhängiger Terminierung. **Kein** `'…'` — char-Literal. Lifetimes (`&'a str`)
+  liefern sogar ein einzelnes Apostroph ohne Partner, also ist ein
+  Single-Quote-Zweig hier nicht nur falsch, sondern aktiv schädlich.
+- **Kein `concat_op`.** Rust konkateniert String-Literale nicht mit einem Operator
+  (`concat!()` ist ein Makro, `+` verlangt einen `String` links). `constant_string`
+  muss für rs auf ein einzelnes Literal kollabieren — siehe Ticket 5, Punkt 2.
+- `func_qr`: Makroaufrufe, also `l!`, `ln!`, `lp!`, … mit Ausrufezeichen. Zusätzlich
+  pfadqualifiziert möglich: `locale_simple::l!(…)`. Und Makros dürfen mit
+  `l!{…}` oder `l![…]` aufgerufen werden — Rust erlaubt alle drei Klammerarten.
+  `sub arguments` erwartet heute hart `(` und `)` über `$self->op(\"(\")`. Für rs
+  muss das Klammerpaar variabel sein, oder es wird bewusst nur `(…)` unterstützt
+  und in der Doku festgeschrieben. **Empfehlung: nur `(…)`**, dokumentiert — die
+  anderen Formen sind für einen Funktionsaufruf-artigen Makro unüblich.
+- Deferred-Marker: `N_!` ist als Rust-Makroname unkonventionell (Makros sind
+  snake_case). Was hier gewinnt — Namensparität oder Rust-Konvention — steht in
+  Ticket 4 und muss vor diesem Ticket beantwortet sein.
+
+## Fallen
+
+- **`#` ist in Rust auch Attribut-Syntax.** `#[derive(Debug)]` darf nicht als
+  Raw-String-Präfix gelesen werden. Der Raw-String-Zweig darf nur nach einem
+  vorangehenden `r` greifen.
+- **Kommentare.** Rust hat `//`, `/* */` und verschachtelte `/* /* */ */`. Der
+  Scraper überliest Kommentare heute nicht, sondern behandelt sie als Noise —
+  das heißt, ein auskommentierter `// l!(\"foo\")` landet in der .pot. Das ist das
+  bestehende Verhalten für alle Sprachen; hier nicht ändern, aber in der Fixture
+  festhalten, damit die Referenz das dokumentiert.
+
+## Tests
+
+`t/data/n-fixtures/l-calls.rs` + `N-calls.rs`, alle 16 Formen. Zusätzliche Fixture
+mit: Lifetime-Annotation (`fn f<'a>(s: &'a str)`), char-Literal, `r#\"…\"#` mit
+einem `\"` im Inhalt, `#[derive(...)]` direkt vor einem Aufruf.
+
+Referenzausgaben regenerieren, Diff von Hand prüfen.
+
+Owner: `locale-simple-scraper-worker`.
+
+---
+## Nachtrag 2026-08-06 — entschieden, entblockt
+
+Die Deferred-Marker heißen in Rust **`n_!`, `nn_!`, `np_!`, `nnp_!`, `nd_!`,
+`ndn_!`, `ndp_!`, `ndnp_!`** (snake_case). Die `l*!`-Familie bleibt wie in den
+anderen Runtimes.
+
+Für den Scraper heißt das: `func_qr` muss für Typ `rs` **zwei** Muster kennen —
+`l(?:n|p|np|d|dp|dn|dnp)?!` und `n(?:|n|p|np|d|dp|dn|dnp)_!`, also die N-Familie
+kleingeschrieben. Das ist der zweite Grund für einen typabhängigen `func_qr`
+(der erste ist Go mit `L`, `Ln`, …); heute ist es ein einziges `has func_qr`
+mit festem Default.
+
+`%arg_lists` in `required_args` ist nach Funktionsname geschlüsselt (`N_`,
+`Nn_`, …). Mit drei Schreibweisen derselben Funktion (`N_` in Perl/Python/JS/PHP,
+`N_` in Go, `n_` in Rust) muss der Lookup normalisieren, statt die Tabelle zu
+verdreifachen — z.B. Funktionsname vor dem Nachschlagen auf die kanonische Form
+abbilden.
+Implemented. lib/Locale/Simple/Scraper.pm: --rs=s, push @rs,'rs', %e entry,
+POD (OPTIONS + SUPPORTED CALLS, incl. the two accepted name-parity
+departures and the (...)-only decision). No %f changes needed — rs
+canonicalizes to the existing lowercase l*/uppercase N_* keys, same as
+go's L*-folding already does.
+
+Parser.pm, type rs:
+- func_qr: two alternations, both requiring a trailing "!" — l(n|p|np|d|dp|dn|dnp)?!
+  and n(|n|p|np|d|dp|dn|dnp)_! — no path-prefix branch needed for
+  locale_simple::l!(...), ':' isn't \w so noise()'s substring_before
+  already eats it, same mechanism as php's \ and go's . prefixes.
+- canonical_func: strips the "!", then folds only the n_-family up via
+  ucfirst (n_ -> N_, ndnp_ -> Ndnp_); l!/ldnp!/... are already canonical.
+  Opposite direction from go's L->l fold, needed because rs's two
+  families disagree on case within the same file.
+- concat_op: rs => undef (explicit now, constant_string's undef-branch
+  from #5 collapses to a single any_of literal, no concatenation chain).
+- literal_forms: "..." (shared double_quote_string_contents) plus raw
+  strings via new rust_raw_string, a bare-method-name entry (like php's
+  heredoc/nowdoc) since the close pattern isn't static.
+- rust_raw_string: matches r(#*)" , builds close = qr/"\Q$hashes\E/ from
+  the captured hash count, reuses raw_string_contents(close), then
+  expects the same close literally — this is the "dynamically built qr//"
+  piece #5 anticipated but didn't implement. Verified by hand: r"...",
+  r#"..."#, r##"...##"## all round-trip correctly, including embedded
+  quotes and near-terminator sequences with fewer hashes than required.
+  No single-quote branch at all (char literals + lifetimes both produce
+  bare/unpaired apostrophes — confirmed via smoke test that `fn f<'a>`
+  and `'x'` don't desync the parser). arguments()/op() untouched — only
+  (...) supported, {...}/[...] documented as deliberately unsupported.
+
+Fixtures: t/data/n-fixtures/l-calls.rs + N-calls.rs (8 forms each,
+lowercase incl. "!"). t/data/dummy.rs covers the trap list: path-qualified
+call, lifetime annotation, char literal, r#"..."# with an embedded quote,
+r##"...##"## with a near-terminator, #[derive(...)] directly before a
+call, and a commented-out call (documents the existing "comments aren't
+skipped" behavior — it lands in the .pot like a live call, unchanged
+behavior for every language).
+
+t/51-scrape-N.t: added rs to the language loop, passes (l-calls.rs and
+N-calls.rs produce byte-identical .pot payloads).
+
+t/50-scrape.t: ^rust/ ignore was already present (added defensively by
+the rust-port agent before .rs was a recognised extension); updated its
+comment since it's now load-bearing rather than precautionary, same
+transition ^go/ went through for #7. No duplicate entry added.
+
+Reference regen: TEST_REGRESSION_GEN=1 prove -l t/50-scrape.t, then
+md5sum-compared all 9 t/out/scrape_* files before/after. Only
+scrape_00_out and scrape_00_err (the base-test group) changed;
+scrape_00_return and all of scrape_01_*/scrape_02_* are byte-identical.
+Diff of scrape_00_out is purely additive: 6 new Rust msgids from
+dummy.rs in their correct alphabetical slot, nothing existing moved or
+altered. Note: the same diff also surfaced 5 PHP msgids from
+t/data/dummy.php that were apparently never captured in a reference
+regen after #6 landed (dummy.php/l-calls.php/N-calls.php are untracked
+in git status, php support is uncommitted) — that gap predates this
+ticket and isn't from any code change here (confirmed via git diff that
+no php/go-shared logic was touched), but since scrape_00_out is one
+shared file across all languages, regenerating for rs necessarily
+picked it up too. Flagging in case #6 wants a heads-up.
+
+Verification: prove -lr t/ green (10 files, 62 tests). cargo build
+--manifest-path rust/Cargo.toml clean, and git status confirms cargo
+wrote nothing under t/ — the new fixtures aren't picked up by the Rust
+crate.
+Root cause of the t/50-scrape.t red-under-dzil-test issue, confirmed: it was never a scraper/grammar bug and never a stale reference. t/data/dummy.php, t/data/dummy.rs, and t/data/n-fixtures/{N,l}-calls.{go,php,rs} were created on disk but never `git add`ed (git status showed them '??'). @Author::GETTY's GatherDir enumerates the git index (reading current working-tree content for tracked files, so uncommitted edits to tracked files DO show up in .build) but it never sees untracked files at all. So 'prove -lr t/' (runs directly against the source tree) passed, while 'dzil test' (builds from the git index into .build/) scraped a tree missing those fixtures entirely -- Got had fewer entries than the already-correct Expected reference, the reverse of a stale-reference problem. t/51-scrape-N.t was worse: it silently vacuous-passed for php/go/rs (both sides empty, since --only matched nothing). Verified by copying the 8 missing files into an existing .build/ and rerunning prove there (green, non-vacuous), then git-add'ing them for real and rerunning both 'prove -lr t/' and 'dzil test' end to end -- t/50-scrape.t 9/9 and t/51-scrape-N.t 6/6 (incl. php/go/rs) now pass genuinely inside a real dzil build. No changes to Parser.pm/Scraper.pm or the t/out/ reference files were needed; the reference already matched (git diff HEAD -- t/out/scrape_00_out/err is purely additive: 5 PHP + 6 Rust msgids, nothing existing changed). Confirms the gap flagged in this ticket's report as 'predates this ticket' -- it wasn't a #6 code gap, just a missing git add, now staged.
