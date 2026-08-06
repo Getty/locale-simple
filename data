@@ -1,0 +1,116 @@
+---
+blocked: Ticket 4 Punkt 3 + Ticket 9
+claimed_at: 2026-08-06T04:10:29Z
+claimed_by: locale-simple-js-worker
+class: standard
+created: 2026-08-05T22:38:21Z
+id: 14
+priority: high
+started: 2026-08-06
+status: review
+tags:
+- js
+title: 'JS: Plural-Forms-Header auswerten statt hart n != 1'
+updated: 2026-08-06T04:27:49Z
+---
+
+Hängt an Ticket 4 Punkt 3. Nur relevant, wenn dort \"Header auswerten\" gewinnt —
+dann muss JS nachziehen, sonst ist es die einzige der sechs Runtimes mit falschen
+Pluralen.
+
+## Problem
+
+`js/src/index.js`, `getPluralIndex(n, lang)`:
+
+    // Germanic languages (en, de, nl, etc.): nplurals=2; plural=(n != 1)
+    return n !== 1 ? 1 : 0;
+
+Der `lang`-Parameter wird entgegengenommen und ignoriert. Für Polnisch (3 Formen),
+Russisch (3), Arabisch (6) oder Japanisch (1) liefert die Funktion einen falschen
+Index in ein Array, das gar nicht so viele Einträge hat — `entry[idx] || entry[0]`
+fängt den Out-of-Range-Fall ab und gibt still die falsche Form zurück.
+
+Perl und Python haben das Problem nicht: dort wertet libc den
+`Plural-Forms:`-Header der .mo aus.
+
+## Aufgabe
+
+1. Plural-Forms-Evaluator nach der Spec aus Ticket 9 in JS implementieren —
+   dieselbe Grammatik, dieselben Testvektoren. **Kein `eval`, kein `new Function`**:
+   der Ausdruck kommt aus einer .po/.mo-Datei, also aus Daten, und der Code läuft
+   potenziell im Browser.
+2. `bin/po2json` muss den `Plural-Forms`-Header ins JSON durchreichen. Prüfen, was
+   heute im `\"\"`-Header-Eintrag landet — `loadLocaleData` liest dort bereits
+   `header.lang`, der Rest wird verworfen.
+3. `loadTranslations` nimmt heute ein nacktes Objekt ohne Header entgegen. Dritter
+   optionaler Parameter für die Plural-Regel, oder Default `n != 1` wie bisher.
+   Rückwärtskompatibel bleiben — die Signatur ist veröffentlicht.
+
+## Tests
+
+Plural-Vektoren aus Ticket 9 in `js/test/`, plus ein Fixture mit einer
+nicht-germanischen Sprache (`t/data/locale/` hat heute nur `de_DE`; ein `pl_PL`
+mit drei Formen wäre für alle sechs Suiten gleichermaßen nützlich und gehört
+dann in Ticket 9).
+
+## Nachzug
+
+`js/README.md` und `js/src/index.d.ts` anpassen, falls `loadTranslations` einen
+Parameter bekommt.
+
+Owner: `locale-simple-js-worker`.
+
+---
+## Nachtrag 2026-08-06 — verbindlich
+
+Ticket 4 Punkt 3 ist auf \"Header auswerten\" entschieden. Dieses Ticket ist
+damit kein Optionsfall mehr, sondern Pflicht: ohne es wäre JS die einzige von
+sechs Runtimes mit falschen Pluralformen für nicht-germanische Sprachen.
+Priorität auf high gesetzt.
+Implemented per mo-reader.md §3 spec, verified against t/data/plural-forms.json.
+
+Files changed:
+- js/src/index.js — recursive-descent parser + evaluator for the C-subset
+  plural= grammar (ternary/||/&&/comparisons/+-*/%/unary !/parens/n/int
+  literals), bounded at depth 100 (§3.3). No eval/new Function. Division and
+  modulo by zero evaluate to 0. Missing/unparsable header falls back to
+  n != 1 with a one-time console.warn (module-level flag, not per lookup).
+  loadTranslations() gained a 4th optional `pluralForms` param (raw header
+  string or a pre-parsed {nplurals, evaluate} rule); omitted/null/undefined
+  keeps the old n != 1 default *silently* — required for backward compat
+  since the 3-arg signature is already published on npm. loadLocaleData()
+  now reads header['Plural-Forms'] (po2json passes it through verbatim
+  already) and uses it the same way, warning if that key is absent.
+- bin/po2json — checked, NO CHANGE NEEDED. It already copies every header
+  key (incl. Plural-Forms) into the "" entry unmodified; verified by running
+  it against t/data/locale/de_DE/LC_MESSAGES/test.po. The ticket's point 2
+  was already satisfied before this ticket started.
+- js/src/index.d.ts — loadTranslations() signature + new PluralRule
+  interface.
+- js/README.md — new "Plural forms" subsection (placed before the existing
+  "Deferred translation" section, not touching it) + updated Configuration
+  table row.
+- js/test/plural-forms.test.js (new) — data-driven over the full
+  t/data/plural-forms.json (en/de/fr/pl/ru/ar/ja + the div-by-zero and both
+  fallback edge cases), a loadTranslations-2-arg backward-compat test, and a
+  dedicated "warns exactly once" test that feeds 3 different broken/missing
+  headers through both loadLocaleData and loadTranslations with multiple
+  ln() calls each, asserting exactly 1 console.warn total. Kept in its own
+  file (Node isolates test files into separate processes) so the
+  once-per-process warning flag can't be tripped early by unrelated tests.
+
+Verification:
+- `cd js && npm test`: 57/57 pass (46 pre-existing + 11 new).
+- `cd js && npm run build`: rollup bundles build clean.
+- `dzil test`: currently blocked before reaching the JS run_test step by
+  t/50-scrape.t failing on the Perl side — confirmed unrelated to this
+  ticket: caused by ticket #6's concurrent in-progress edits to
+  lib/Locale/Simple/Scraper/Parser.pm (outside my lane, untouched by me).
+  An earlier dzil test run (before that concurrent edit landed) did reach
+  the JS step and passed there too. No Perl or Python file was touched by
+  this ticket.
+
+Backward compat: loadTranslations(domain, lang, data) — the exact
+pre-existing 3-arg call — is unaffected; pluralForms defaults to
+undefined, which resolvePluralRule() treats as "no opinion", returning the
+old n != 1 rule with no warning. Covered by a dedicated test.
