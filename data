@@ -1,0 +1,62 @@
+---
+blocked: Ticket 5 (String-Literale pro Typ)
+claimed_at: 2026-08-06T04:06:48Z
+claimed_by: locale-simple-scraper-worker
+class: standard
+created: 2026-08-05T22:34:11Z
+id: 6
+priority: medium
+started: 2026-08-06
+status: review
+tags:
+- scraper
+- php
+title: 'Scraper: PHP-Support (.php)'
+updated: 2026-08-06T04:37:31Z
+---
+
+Hängt an Ticket 5 (String-Literale pro Typ).
+
+## Aufgabe
+
+`lib/Locale/Simple/Scraper.pm`:
+- `--php=s` in `GetOptions`, `$php_ext`, `push @php, 'php'` — Muster von `--js`/`--py`.
+- `%e`-Eintrag `php => 'php'`. Die `%f`-Funktionstabelle (msgid/plural/ctxt/domain-
+  Positionen) ist sprachunabhängig und bleibt unverändert.
+- POD-Abschnitt zur Extension-Liste (Scraper.pm ~Z.276) um `.php` ergänzen.
+
+`lib/Locale/Simple/Scraper/Parser.pm`:
+- Typ `php`: `concat_op` = `.`, Literale `"…"` `'…'` plus Heredoc/Nowdoc.
+- `func_qr` muss den führenden Backslash eines FQN-Aufrufs überstehen. Je nach
+  Entscheidung in Ticket 4 sehen die Aufrufe so aus:
+      \Locale\Simple\l('Hello')          — Funktionsimport
+      use function Locale\Simple\l;  →  l('Hello')
+  Beide Formen müssen matchen; das heutige `\b` vor `l` reicht für `\Locale\Simple\l`
+  nicht sauber, weil der Backslash keine Wortgrenze im gewünschten Sinn erzeugt.
+  Prüfen und ggf. `(?:\\\\[\\w\\\\]+\\\\)?` als optionales Präfix voranstellen.
+
+## Fallen
+
+- **Variableninterpolation in Double-Quotes.** `l(\"Hallo \$name\")` ist in PHP ein
+  interpolierter String — als msgid Unsinn, aber der Parser muss ihn trotzdem
+  ohne Crash lesen. Konsistent mit dem bestehenden Verhalten bei anderen Sprachen
+  (Inhalt wird als Literal genommen).
+- **Heredoc-Terminierung** ist zeilenanfangs-gebunden und der Bezeichner ist frei
+  wählbar — wie beim Rust-Raw-String muss der öffnende Bezeichner zum Schließen
+  wiederverwendet werden.
+- **`?>` und Inline-HTML.** Der Scraper liest Dateien roh, ohne PHP-Tags zu kennen.
+  Das ist okay (er sucht nur nach Funktionsaufrufen), aber Inline-HTML mit
+  Apostroph (`don't`) darf keinen String-Scope aufmachen. Prüft sich am besten
+  mit einer Fixture, die genau das enthält.
+
+## Tests
+
+- `t/data/n-fixtures/l-calls.php` und `N-calls.php` nach dem Muster der
+  bestehenden `.js`/`.pl`/`.py`-Fixtures — alle 8 `l*`- und alle 8 `N*`-Formen.
+- Referenzausgaben für `t/50-scrape.t` / `t/51-scrape-N.t` regenerieren
+  (`TEST_REGRESSION_GEN=1`), Diff **von Hand prüfen** bevor er eingecheckt wird.
+- Eine Fixture mit Heredoc, Nowdoc, `don't` in Inline-HTML und einem
+  interpolierten String.
+
+Owner: `locale-simple-scraper-worker`.
+Implemented. lib/Locale/Simple/Scraper/Parser.pm: new type php — concat_op='.'; literal_forms gets php_double_quote_string_contents (tolerates \$ and other unknown backslash escapes, unlike the shared double_quote_string_contents) + reused single_quote_string_contents + a new php_heredoc_or_nowdoc method (<<<IDENT/<<<'IDENT', dynamic close qr// built from the captured identifier, content via raw_string_contents — both heredoc and nowdoc read raw/verbatim, no interpolation evaluated). constant_string/literal_forms generalized so a literal_forms entry can be a bare method name (self-contained open+content+close) instead of only an [open,content,close] triple — needed since heredoc's close pattern isn't known until the open matches; documented as the template #7/#8 (go/rs) can reuse. func_qr needed NO change for FQN calls (\\Locale\\Simple\\l(...)) — verified empirically end-to-end (noise()+call()) that a leading backslash already gives \\b the boundary it needs; documented why grafting the ticket's suggested optional prefix pattern would actually break the %arg_lists lookup (bug class of trap #1) if done carelessly. lib/Locale/Simple/Scraper.pm: --php=s/$php_ext/push @php,'php'/%e entry, exactly mirroring --js/--py; POD extension list + SUPPORTED CALLS section updated. Fixtures: t/data/n-fixtures/l-calls.php + N-calls.php (all 8 forms each), t/data/dummy.php (FQN call, heredoc, nowdoc, \$-escaped interpolated string, don't-in-inline-HTML-outside-tags — all parse clean, zero failures). t/51-scrape-N.t: added php to the pl/js/py language loop (passes, byte-identical l-calls.php vs N-calls.php output). t/50-scrape.t: discovered mid-task that an untracked php/ sibling package + vendor/ (Composer deps) already exist in the tree — exactly the missing-ignore-entry trap the scraper rule warns about, since .php becoming a recognised extension swept both in. Added --ignore ^php/ (anchored, since bare 'php' would also swallow t/data/*.php fixtures) and --ignore vendor to @default, mirroring python/js/node_modules. Verification: prove -lr t/ green (60 tests). Regenerated t/out/scrape_00_{err,out} via TEST_REGRESSION_GEN=1 and reviewed the diff by hand — only 5 new msgids from dummy.php (FQN call/heredoc/nowdoc/interpolated/after-inline-html) and matching debug lines, nothing unexplained. All other reference files (00_return, 01_*, 02_*) byte-identical by md5sum, confirmed before and after every regen. Also found and fixed two self-inflicted traps: my own explanatory code comments and the dummy.php inline-HTML comment originally spelled out literal call syntax like \\Locale\\Simple\\l(...) and l(\"Hallo \$name\"), which the scraper's own dumb regex matched as spurious calls against itself — reworded all of them to prose that doesn't contain a bounded 'l'/'ln'/.../'N_' token, verified with a script that greps every added diff line against the literal func_qr regex.
