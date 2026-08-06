@@ -1,0 +1,133 @@
+---
+blocked: Ticket 4 + Ticket 9
+claimed_at: 2026-08-06T04:10:19Z
+claimed_by: general-purpose
+class: standard
+created: 2026-08-05T22:36:33Z
+id: 11
+priority: medium
+started: 2026-08-06
+status: review
+tags:
+- go
+title: 'Go-Port: go/, Modul, Testsuite'
+updated: 2026-08-06T04:31:00Z
+---
+
+Hängt an Ticket 4 (Punkte 2, 3, 7) und Ticket 9 (Spec).
+
+## Layout
+
+    go/go.mod          module github.com/Getty/locale-simple/go
+    go/simple.go       Implementierung
+    go/mo.go           .mo-Reader
+    go/plural.go       Plural-Forms-Evaluator
+    go/sprintf.go      %1$s-fähiger sprintf
+    go/simple_test.go  Suite
+    go/README.md
+
+Der Modulpfad muss exakt der Repo-URL plus Unterverzeichnis entsprechen, inklusive
+Groß-`G` in `Getty`. Der Module-Proxy escaped das als `!getty` — das ist normal
+und funktioniert, sieht in Fehlermeldungen nur befremdlich aus.
+
+## API
+
+Exportierte Bezeichner müssen in Go großgeschrieben sein, sonst sind sie aus
+fremden Paketen unerreichbar. Damit bricht die Namensparität zwangsläufig:
+
+    LDir  LLang  LDry  LNolocales  Ltd
+    L  Ln  Lp  Lnp  Ld  Ldn  Ldp  Ldnp
+    N_  Nn_  Np_  Nnp_  Nd_  Ndn_  Ndp_  Ndnp_
+
+Die `N*`-Namen sind mit Unterstrich schon großgeschrieben und bleiben identisch;
+`go vet`/Linter meckern über den Unterstrich, das ist hinnehmbar. Die
+Abweichung gehört als akzeptierte Asymmetrie in `tri-language-parity.md`
+(Ticket 12).
+
+Signaturen: `func L(msgid string, args ...any) string`, durchgereicht an
+`func Ldnp(domain string, msgctxt, msgid string, msgidPlural string, n int, args ...any) string`.
+Für die optionalen Parameter (msgctxt/msgidPlural leer = nicht gesetzt) reicht der
+leere String als Sentinel — Go hat kein `undef`, und `*string` würde jeden
+Aufrufort verhässlichen.
+
+`N*`-Plural-Varianten geben `(string, string)` zurück — Go hat Mehrfachrückgabe,
+also näher an Perls Listenkontext als an JS' Array.
+
+## Runtime
+
+- .mo-Reader nach Ticket 9. `encoding/binary` deckt beide Byte-Orders ab, keine
+  externen Pakete — das Modul muss eine leere `require`-Sektion behalten.
+- Eigener sprintf: `fmt.Sprintf` kann `%1\$s` **nicht** (Go schreibt `%[1]s`) und
+  liefert bei fehlenden Argumenten `%!s(MISSING)` statt den Platzhalter
+  stehenzulassen. Referenzverhalten ist `js/src/index.js`.
+- Nebenläufigkeit: Perl/Python/JS haben globalen Zustand (aktuelle Sprache,
+  Domain). In Go ist ein Paket-globaler `var currentLang string` ohne Mutex ein
+  Data-Race, sobald jemand pro-Request die Sprache setzt — und genau das tut man
+  in einem Go-Webserver. **Vor der Implementierung klären:** globaler Zustand mit
+  `sync.RWMutex` (API-treu, aber pro Request falsch) oder zusätzlich ein
+  `*Translator`-Wert mit denselben Methoden (idiomatisch, aber eine Erweiterung
+  über die geteilte API hinaus). Empfehlung: beides — Paketfunktionen für Parität,
+  `Translator` als Go-spezifische Ergänzung, dokumentiert als solche.
+
+## Tests
+
+`go test ./...` gegen `t/data/locale/…` (relativer Pfad `../t/data/locale`).
+Testfälle aus `python/test.py` übertragen, plus die Plural-Vektoren aus Ticket 9,
+plus ein `-race`-Lauf falls der `Translator` kommt.
+
+---
+## Nachtrag 2026-08-06 — entschieden
+
+**`go.mod` liegt im Repo-Root**, nicht in `go/`:
+
+    module github.com/Getty/locale-simple
+
+Der Code bleibt trotzdem unter `go/` und wird als
+`import ls "github.com/Getty/locale-simple/go"` eingebunden. Der Vorteil
+gegenüber einem eigenen Modul in `go/`: das Modul ist im Wurzelverzeichnis
+definiert, also gilt der normale Root-Tag `v0.110.0` — **kein**
+`go/vX.Y.Z`-Präfix, keine CI-Zweit-Tag-Maschinerie. Das war der einzige Grund
+für den Präfix-Umweg im ursprünglichen Ticket; der entfällt.
+
+### Neue Falle: das Root-Modul erfasst die Scraper-Fixtures
+
+Mit `go.mod` im Root gehört **jede** `.go`-Datei im Repo zu diesem Modul, also
+auch `t/data/n-fixtures/l-calls.go` und `N-calls.go` aus Ticket 7.
+`go build ./...` und `go vet ./...` würden versuchen, sie zu übersetzen — und
+die Fixtures enthalten absichtlich Randfälle (rune-Literale neben Aufrufen,
+auskommentierte Aufrufe).
+
+Jede Go-Fixture braucht deshalb `//go:build ignore` als erste Zeile. Der
+Scraper liest die Dateien roh und interessiert sich nicht dafür. Gleiches gilt
+für jede spätere `.go`-Datei unter `t/`.
+
+### Toolchain
+
+`go` ist auf der Entwicklungsmaschine vorhanden, aber **1.19.8** — deutlich
+älter als das, was man 2026 als `go`-Direktive setzen würde. Vor dem Start
+klären, welche Mindestversion in `go.mod` steht und ob die lokale Toolchain
+dafür reicht.
+
+---
+## Nachtrag 2026-08-06 — Translator entschieden
+
+Der `Translator`-Wert kommt **mit dazu**, in Go und Rust gleichermaßen:
+Paketfunktionen (bzw. Makros) bilden die geteilte API ab und arbeiten auf
+globalem Zustand, daneben gibt es einen Wert mit denselben Operationen für
+nebenläufige Nutzung — der Fall, den ein Webserver mit sprachabhängigen
+Requests braucht.
+
+Beide Wege müssen denselben Katalog-Cache teilen, sonst liest jeder
+`Translator` die `.mo` erneut ein. Der globale Zustand bleibt mutex-geschützt
+(Go: `sync.RWMutex`, Rust: `RwLock`), auch wenn der `Translator` existiert —
+die Paketfunktionen bleiben ja benutzbar.
+
+In `.claude/rules/language-parity.md` (Ticket 15) als bewusste, Go/Rust-only
+Erweiterung eintragen. Der Parity-Auditor darf sie nicht als Abweichung melden.
+Go-Port implementiert und verifiziert. Dateien: go.mod (Repo-Root, module github.com/Getty/locale-simple, go 1.21), go/simple.go, go/translator.go, go/mo.go, go/plural.go, go/sprintf.go, go/simple_test.go, go/README.md.
+Verifikation (go1.26.5 im PATH): go build ./go/... clean; go vet ./go/... clean (keine Unterstrich-Warnung aufgetreten); go test ./go/... ok, 13 Top-Level-Tests / 47 PASS inkl. Subtests; go test -race ./go/... ok, keine Data Races; go build+vet ./... vom Repo-Root ebenfalls clean. dist.ini nicht angefasst (Ticket 13).
+Abweichung 1: Package-Name 'simple' statt 'go' - go ist Go-Schluesselwort, kein gueltiger Package-Name. Import bleibt wie in der Spec: import ls github.com/Getty/locale-simple/go. Abweichung 2: Das 'please set a locale directory'-Fehlerverhalten ist ein panic() statt Fehler-Rueckgabe, da die vorgegebene Signatur func L(msgid string, args ...any) string keinen error-Rueckgabewert vorsieht. Naechstliegendes Aequivalent zu Perls die/$@; Aufrufer fangen es per recover() ab, siehe TestErrorWithoutLocaleDir.
+Abweichung 3: Translator und Package-Funktionen sind keine zwei getrennten Implementierungen - die Package-Funktionen delegieren an einen package-globalen *Translator (var global = NewTranslator()). Erfuellt 'globaler RWMutex-Zustand PLUS Translator-Wert' ohne Logik-Duplizierung; beide Wege teilen sich denselben .mo-Katalog-Cache in mo.go, siehe TestTranslatorSharesCatalogCache.
+Abweichung 4: Ein unparsbares .mo (falsche Magic-Bytes, nicht unterstuetzte Major-Revision, truncated) wird beim Lookup wie Datei-nicht-vorhanden behandelt (naechster Fallback-Kandidat) statt Fehler an Aufrufer durchzureichen - konsistent mit der fall-back-and-dont-guess Haltung der Spec.
+Abweichung 5: TestLanguageSwitchingLifecycle prueft nach LLang-Wechsel auf nicht vorhandenen Katalog exakt auf Rueckfall zum msgid, nicht nur kein-Crash wie in Python - eigener Reader hat keine libc-Gettext-Cache-Ambiguitaet, Verhalten ist deterministisch.
+Abweichung 6: l_nolocales ist in Go wie in Perl/Python echt wirksam als Verzeichnispruefung, nicht wie in JS ein No-op. Bereit fuer Review.
