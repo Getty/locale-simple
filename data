@@ -1,0 +1,84 @@
+---
+blocked: Ticket 4 (Vorentscheidungen)
+claimed_at: 2026-08-06T03:57:18Z
+claimed_by: locale-simple-scraper-worker
+class: standard
+created: 2026-08-05T22:33:10Z
+id: 5
+priority: high
+started: 2026-08-06
+status: review
+tags:
+- scraper
+- perl
+- php
+- go
+- rust
+title: 'Scraper: String-Literale pro Sprachtyp konfigurierbar machen'
+updated: 2026-08-06T04:06:08Z
+---
+
+Voraussetzung für die drei Scraper-Sprach-Tickets. Reiner Refactor, kein
+Verhaltenswechsel für js/pl/py/tx — die bestehenden Regressionsreferenzen in
+`t/data/` müssen unverändert grün bleiben.
+
+## Problem
+
+`lib/Locale/Simple/Scraper/Parser.pm`, `sub constant_string` hängt für **jeden**
+Sprachtyp beide Quote-Varianten vorne dran:
+
+    unshift @components,
+      $self->curry::scope_of( q["], ... , q["] ),
+      $self->curry::scope_of( q['], ... , q['] );
+
+Für js/pl/py/tx ist das korrekt. Für Go und Rust ist es falsch: dort ist
+`'x'` ein rune- bzw. char-Literal, kein String. Ein `l("Es ist 'a'")` würde …
+schlimmer: der Parser würde ein einzelnes `'` in Go-Code als String-Anfang lesen
+und über den Rest der Datei hinweg synchronisieren.
+
+Analog ist `concat_op` bereits typabhängig (`js => "+", pl => ".", tx => qr/(_|~)/,
+py => "+"`), aber die Literal-Formen sind es nicht.
+
+## Aufgabe
+
+1. Quote-Formen aus `constant_string` in eine typabhängige Tabelle ziehen, im
+   selben Stil wie `concat_op`. Ziel-Zustand:
+
+   | type | Literale | concat |
+   |---|---|---|
+   | js  | `"…"` `'…'` (Templates: siehe unten) | `+` |
+   | pl  | `"…"` `'…'` | `.` |
+   | py  | `"…"` `'…'` | `+` |
+   | tx  | `"…"` `'…'` | `_` `~` |
+   | php | `"…"` `'…'` `<<<HEREDOC` `<<<'NOWDOC'` | `.` |
+   | go  | `"…"` und Backtick-Raw-Strings | `+` |
+   | rs  | `"…"` und `r"…"` / `r#"…"#` (beliebig viele `#`) | keiner |
+
+2. `concat_op` muss \"kein Konkatenationsoperator\" ausdrücken können (Rust). Heute
+   liefert die Methode immer einen Operator und `list_of` erwartet einen —
+   für rs muss `constant_string` auf ein einzelnes Literal reduzieren.
+
+3. Raw-String-Terminierung in Rust ist längenabhängig (`r##\"…\"##` endet erst bei
+   `\"##`). Das ist die einzige nicht-triviale Stelle des Refactors: der öffnende
+   Hash-Count muss beim Schließen wiederverwendet werden — geht mit einem
+   dynamisch gebauten `qr//` in einem `scope_of`.
+
+4. Go-Backticks und PHP-Nowdoc kennen keine Escapes — dafür braucht es eine
+   Variante von `string_contents` ohne die `expect_escaped`-Zweige.
+
+## Nicht Teil dieses Tickets
+
+- Neue Dateiendungen und `func_qr`/`%arg_lists`-Erweiterungen → die drei
+  Sprach-Tickets.
+- JS-Template-Literals (Backticks) — heute nicht unterstützt, bleibt so. Nur
+  nicht versehentlich mit dem neuen Go-Backtick-Zweig vermischen.
+
+## Verifikation
+
+`prove -lr t/` grün, insbesondere `t/50-scrape.t` und `t/51-scrape-N.t` ohne
+Änderung an den Referenzdateien unter `t/data/out/`. Läuft eine Referenz auseinander,
+ist der Refactor kein Refactor mehr — dann zurück auf Anfang, nicht die Referenz
+neu generieren.
+
+Owner: `locale-simple-scraper-worker`.
+Refactor done in lib/Locale/Simple/Scraper/Parser.pm. constant_string() now builds its literal alternatives from a new literal_forms() method (data table [open, content_method, close] per type, js/pl/py/tx all -> same [dquote,squote] pair, same style as concat_op). concat_op()==undef now makes constant_string collapse to a single any_of() literal instead of list_of() — verified with an ad-hoc Probe subclass (concat_op undef + one literal form): single literal parses, two adjacent literals correctly fail instead of silently concatenating. Added raw_string_contents($stop) as the escape-free sibling of double/single_quote_string_contents, unused for now (foundation for Go backtick / PHP nowdoc in #6/#7). Left php heredoc/nowdoc and Rust's length-dependent r#"..."# raw-string terminator as commented design notes only — both need bespoke builders beyond the [open,content,close] triple, no working code added per 'don't over-engineer without a caller'. prove -lr t/ green (10 files, 59 tests); t/out/scrape_* reference files verified byte-identical via md5 before/after — zero behavior change for js/pl/py/tx.
