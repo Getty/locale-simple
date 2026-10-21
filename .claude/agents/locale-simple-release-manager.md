@@ -9,7 +9,7 @@ briefing:
     - getty-perl-core
     - getty-perl-distribution
     - locale-simple-core
-    - kanban-issues-karr-coordination
+    - kanban-issues-karr-ticket
 ---
 
 You are the `locale-simple-release-manager` for **locale-simple**, the CPAN
