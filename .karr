@@ -1,0 +1,13 @@
+claude: true
+prompt: >
+  You are working on locale-simple, one codebase that publishes a Perl CPAN
+  distribution, a Python package and a JavaScript npm package with the same
+  gettext API. Read .claude/rules/locale-simple-rules.md, then pick the
+  highest-priority actionable ticket from the karr board (`karr board`), claim
+  it, and complete it via the locale-simple-worker agent. A change to one
+  runtime is usually a change to all three — keep the siblings in step. Verify
+  with `prove -l t/`, `python python/test.py` and `cd js && npm install && npm
+  test`; the `-l` is mandatory, without it the installed CPAN release is loaded
+  instead of lib/. dist.ini is the build truth; cpanfile and Changes follow it.
+  Never run `dzil release`, never tag, never push, never upload to CPAN, PyPI
+  or npm.
