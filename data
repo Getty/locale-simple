@@ -1,0 +1,24 @@
+---
+claimed_at: 2026-10-25T06:57:05Z
+claimed_by: koordinator
+class: standard
+completed: 2026-10-25T06:57:05Z
+created: 2026-10-25T06:54:03Z
+id: 19
+priority: high
+started: 2026-10-25T06:54:41Z
+status: done
+tags:
+- perl
+- bug
+title: 'Perl: l_lang translates nothing in a C-locale process without the target locale'
+updated: 2026-10-25T06:57:20Z
+---
+
+Since libintl-perl 1.36 gettext_pp follows GNU gettext: when the process LC_MESSAGES locale is C or POSIX, LANGUAGE is ignored and nothing is translated. That also hits Locale::gettext_dumb, although its POD promises to read only the environment. l_lang() calls setlocale(LC_MESSAGES, $lang), which only succeeds when that locale is installed. Result: in a container or daemon started without LANG (process locale C) and without e.g. de_DE installed, l()/ln()/... return the msgid.
+
+Measured on reuben (libintl-perl 1.37, glibc, empty LOCPATH, LC_ALL=C): t/10, t/20, t/30 FAIL; with LANG=en_US.UTF-8 they pass. Setting LC_MESSAGES to C.UTF-8 (built into glibc) restores the translation; GNU gettext treats only exactly C and POSIX as no-translation.
+
+Decision (coordinator): l_lang keeps setlocale(LC_MESSAGES, $lang); when LC_MESSAGES is then still C or POSIX it switches LC_MESSAGES to C.UTF-8 (then en_US.UTF-8). Test runs a subprocess with LC_ALL=C and an empty LOCPATH. Upstream report to libintl-perl is for the maintainer to decide.
+
+2026-10-25 06:57 Fixed in 0aa85f4: l_lang moves LC_MESSAGES to C.UTF-8 (then en_US.UTF-8) when the language cannot be set and the process is under C/POSIX. t/23 runs a child with LC_ALL=C + empty LOCPATH; red against the old lib (got 'Hello'), green now; t/20 and t/30 also pass under that setup now. dzil test: 76 Perl tests, JS 61, Python and Rust green. Upstream: libintl-perl master still ignores LANGUAGE under C for gettext_dumb, against its POD; the report is the maintainer's call.
