@@ -21,6 +21,9 @@ Revision history for Locale-Simple
  - PHP: new package raudssus/locale-simple for Composer. The same helpers
    (l, ln, ... Ndnp_) as functions in the namespace Locale\Simple, with its
    own .mo reader and Plural-Forms evaluator, so no ext-gettext is needed.
+ - Go: new module github.com/Getty/locale-simple (package in go/) with the
+   helpers as L, Ln, ... and the unchanged N_ family, an own .mo reader and
+   sprintf, and a Translator value for concurrent, per-request languages.
 
 0.109     2026-04-23 13:40:35Z
 
