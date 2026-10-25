@@ -18,6 +18,9 @@ Revision history for Locale-Simple
    so Polish, Russian, Arabic, Japanese and other languages pick the right
    plural form. loadTranslations takes the header as optional fourth
    argument; without it the old n != 1 rule stays.
+ - PHP: new package raudssus/locale-simple for Composer. The same helpers
+   (l, ln, ... Ndnp_) as functions in the namespace Locale\Simple, with its
+   own .mo reader and Plural-Forms evaluator, so no ext-gettext is needed.
 
 0.109     2026-04-23 13:40:35Z
 

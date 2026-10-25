@@ -1,4 +1,6 @@
 Locale-Simple-*
+vendor/
+composer.lock
 .build
 build/
 *.pyc
