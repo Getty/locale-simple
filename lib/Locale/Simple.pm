@@ -98,7 +98,17 @@ sub l_lang {
 	$ENV{LANG} = $primary;		# unsure if these ENV assignments are still needed with the setlocale below
 	$ENV{LC_ALL} = $primary;
 	$ENV{LC_MESSAGES} = $primary; # set locale for messages if the system supports it
-	setlocale( LC_MESSAGES, $primary ) if eval { LC_MESSAGES }; # set locale for messages if the system supports it
+	return unless eval { LC_MESSAGES }; # the system has no LC_MESSAGES
+	setlocale( LC_MESSAGES, $primary );
+	# Under the C or POSIX messages locale gettext ignores LANGUAGE and
+	# translates nothing. Without an installed locale for $primary, move
+	# LC_MESSAGES to one that is not C, so the language set here still wins.
+	my $now = setlocale( LC_MESSAGES );
+	return if defined $now && $now ne 'C' && $now ne 'POSIX';
+	for my $fallback ( 'C.UTF-8', 'en_US.UTF-8' ) {
+		return if setlocale( LC_MESSAGES, $fallback );
+	}
+	return;
 }
 
 # write dry
@@ -226,6 +236,11 @@ set locale directory on first use.
 
 Set the active language (e.g. C<'de_DE'>, C<'pt_BR'>). Sets C<$ENV{LANGUAGE}>,
 C<$ENV{LANG}>, C<$ENV{LC_ALL}>, C<$ENV{LC_MESSAGES}> and calls C<setlocale>.
+
+The system does not need a locale for C<$lang> installed. gettext translates
+nothing while the messages locale is C<C> or C<POSIX>, so when C<$lang> cannot
+be set and the process runs under one of those, C<l_lang> sets C<LC_MESSAGES>
+to C<C.UTF-8> (or C<en_US.UTF-8>) instead.
 
 =head2 l_dry($file, $nowrite)
 

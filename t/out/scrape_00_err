@@ -877,6 +877,17 @@ pl => /t/22-locale-simple-simplenumber.t
 - found func ln at line LINE
 - found 3 arguments
 - discarded COUNT characters of noise
+pl => /t/23-locale-simple-c-locale.t
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func ln at line LINE
+- found 3 arguments
+- discarded COUNT characters of noise
+- found func ln at line LINE
+- found 3 arguments
+- discarded COUNT characters of noise
 pl => /t/30-locale-simple-other.t
 - discarded COUNT characters of noise
 - found func l at line LINE
