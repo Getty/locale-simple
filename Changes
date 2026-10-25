@@ -2,6 +2,10 @@ Revision history for Locale-Simple
 
 {{$NEXT}}
 
+ - Release tags are now vMAJOR.MINOR.0 (e.g. v0.110.0), valid SemVer for all
+   ecosystems. The npm package follows the tag and jumps from 0.1.9 to
+   0.110.0 (monotonic, so allowed); npm versions now match the CPAN release.
+
 0.109     2026-04-23 13:40:35Z
 
  - Deferred-translation markers (N_, Nn_, Np_, Nd_, Ndn_, Ndp_, Nnp_,
