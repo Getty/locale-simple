@@ -25,6 +25,7 @@ sub scrape {
     my $pl_ext = "";    # Perl
     my $py_ext = "";    # Python
     my $php_ext = "";   # PHP
+    my $go_ext = "";    # Go
     my $tx_ext = "";    # Text::Xslate (Kolon or Metakolon)
 
     my @ignores;
@@ -38,6 +39,7 @@ sub scrape {
         "pl=s"            => \$pl_ext,
         "py=s"            => \$py_ext,
         "php=s"           => \$php_ext,
+        "go=s"            => \$go_ext,
         "tx=s"            => \$tx_ext,
         "ignore=s"        => \@ignores,
         "only=s"          => \@only,
@@ -63,6 +65,9 @@ sub scrape {
     my @php = split( ",", $php_ext );
     push @php, 'php';
 
+    my @go = split( ",", $go_ext );
+    push @go, 'go';
+
     # extension list
     my %e = (
         ( map { $_ => 'js' } @js ),
@@ -70,6 +75,7 @@ sub scrape {
         ( map { $_ => 'tx' } @tx ),
         ( map { $_ => 'py' } @py ),
         ( map { $_ => 'php' } @php ),
+        ( map { $_ => 'go' } @go ),
     );
 
     # functions with count of locale simple with function of parameter
@@ -277,11 +283,11 @@ from the current working directory recursively and prints to STDOUT.
 
 =over 4
 
-=item C<--js=EXT>, C<--pl=EXT>, C<--py=EXT>, C<--php=EXT>, C<--tx=EXT>
+=item C<--js=EXT>, C<--pl=EXT>, C<--py=EXT>, C<--php=EXT>, C<--go=EXT>, C<--tx=EXT>
 
 Comma-separated list of extra file extensions to recognise as the given
 language. The built-in defaults (C<.js>; C<.pl>/C<.pm>/C<.t>; C<.py>;
-C<.tx>; C<.php>) are always included.
+C<.tx>; C<.php>; C<.go>) are always included.
 
 =item C<--ignore=REGEX>
 
@@ -324,7 +330,13 @@ Recognised call shapes (identical across Perl, Python and JavaScript):
 Strings must be statically resolvable — literal strings and static
 concatenation (C<"a" . "b"> in Perl/PHP, C<"a" + "b"> in JS/Python,
 C<"a" ~ "b"> in Xslate Kolon). PHP also reads heredoc and nowdoc literals;
-calls qualified with the PHP namespace are found as well. Runtime interpolation is not extracted;
+calls qualified with the PHP namespace are found as well.
+
+Go exports its helpers capitalised: C<L>, C<Ln>, C<Lp>, C<Lnp>, C<Ld>, C<Ldn>,
+C<Ldp>, C<Ldnp> (the deferred markers keep their names). They are found with any
+package prefix or bare after a dot import; strings are C<"..."> and backtick
+raw strings, never C<'...'> (a rune in Go). The argument shapes are those
+above. Runtime interpolation is not extracted;
 keep msgids constant and pass dynamic data as sprintf arguments.
 
 =head1 SEE ALSO

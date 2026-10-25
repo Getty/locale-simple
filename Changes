@@ -8,6 +8,9 @@ Revision history for Locale-Simple
  - Scraper: recognise PHP sources (.php, option --php for more extensions),
    including heredoc and nowdoc strings and namespace-qualified calls.
    String literal forms now depend on the language type.
+ - Scraper: recognise Go sources (.go, option --go): the capitalised helper
+   names (L, Ln, ... Ndnp_), with or without package prefix, "..." and
+   backtick strings; rune literals no longer open a string.
  - JavaScript: evaluate the Plural-Forms header instead of assuming n != 1,
    so Polish, Russian, Arabic, Japanese and other languages pick the right
    plural form. loadTranslations takes the header as optional fourth

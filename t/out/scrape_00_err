@@ -716,8 +716,13 @@ pl => /lib/Locale/Simple/Scraper/Parser.pm
 - discarded COUNT characters of noise
 - found func l at line LINE
 - Expected translation token:
- |has func_qr => ( is => 'ro', default => sub { qr/\b(?:l(?:|n|p|np|d|dp|dn|dnp)\b|N(?:|n|p|np|d|dp|dn|dnp)_)/ } );
- |--------------------------------------------------------^
+ |    return qr/\b(?:l(?:|n|p|np|d|dp|dn|dnp)\b|N(?:|n|p|np|d|dp|dn|dnp)_)/;
+ |---------------------^
+- discarded COUNT characters of noise
+- found func l at line LINE
+- Expected "(":
+ |    $func =~ s/^L/l/ if $self->type eq "go";
+ |-------------------^
 - discarded COUNT characters of noise
 - found func l at line LINE
 - Expected "(":
@@ -1063,6 +1068,17 @@ pl => /t/60-N-markers.t
 - Expected translation token:
  |is( ln(@plur, 5), "5 items",  "Nn_ result flows through ln() plural" );
  |-----------------------------------------------------------^
+- discarded COUNT characters of noise
+go => /t/data/dummy.go
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func ld at line LINE
+- found 2 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
 - discarded COUNT characters of noise
 php => /t/data/dummy.php
 - discarded COUNT characters of noise

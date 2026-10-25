@@ -11,11 +11,27 @@ use Moo;
 use Try::Tiny;
 use curry;
 
-has func_qr => ( is => 'ro', default => sub { qr/\b(?:l(?:|n|p|np|d|dp|dn|dnp)\b|N(?:|n|p|np|d|dp|dn|dnp)_)/ } );
-has found   => ( is => 'ro', default => sub { [] } );
+has func_qr => ( is => 'ro', lazy => 1, default => sub { shift->default_func_qr } );
+has found  => ( is => 'ro', default => sub { [] } );
 has type => ( is => 'ro', required => 1 );
 
 with "Locale::Simple::Scraper::ParserShortcuts";
+
+# The helper names are exported from a Go package, so they start with an
+# upper case letter there. A package prefix before the dot needs no pattern of
+# its own: the word boundary already matches after the dot.
+sub default_func_qr {
+    my ( $self ) = @_;
+    return qr/\b(?:L(?:|n|p|np|d|dp|dn|dnp)\b|N(?:|n|p|np|d|dp|dn|dnp)_)/ if $self->type eq "go";
+    return qr/\b(?:l(?:|n|p|np|d|dp|dn|dnp)\b|N(?:|n|p|np|d|dp|dn|dnp)_)/;
+}
+
+# Maps a name as written in the source to the one the argument tables use.
+sub canonical_func {
+    my ( $self, $func ) = @_;
+    $func =~ s/^L/l/ if $self->type eq "go";
+    return $func;
+}
 
 sub parse {
     my ( $self ) = @_;
@@ -34,7 +50,7 @@ sub noise {
 sub call {
     my ( $self ) = @_;
 
-    my $func = $self->expect( $self->func_qr );
+    my $func = $self->canonical_func( $self->expect( $self->func_qr ) );
     my $line = ( $self->where )[0];
     $self->debug( "found func $func at line %d", $line );
 
@@ -130,7 +146,7 @@ sub constant_string {
 
 # undef means the language has no concatenation operator.
 sub concat_op {
-    my %ops = ( js => "+", pl => ".", tx => qr/(_|~)/, py => "+", php => "." );
+    my %ops = ( js => "+", pl => ".", tx => qr/(_|~)/, py => "+", php => ".", go => "+" );
     return $ops{ shift->type };
 }
 
@@ -145,6 +161,8 @@ sub literal_forms {
         pl => [ $dq, $sq ],
         py => [ $dq, $sq ],
         tx => [ $dq, $sq ],
+        # No single quotes: in Go they delimit a rune, not a string.
+        go  => [ $dq, [ q[`], "go_backtick_string_contents", q[`] ] ],
         php => [ [ q["], "php_double_quote_string_contents", q["] ], $sq, "php_heredoc_or_nowdoc" ],
     );
     return @{ $forms{ shift->type } };
@@ -205,8 +223,10 @@ sub php_heredoc_or_nowdoc {
     return $text;
 }
 
+sub go_backtick_string_contents { shift->raw_string_contents( q[`] ) }
+
 # Contents up to the given terminator pattern, no escapes (PHP heredoc and
-# nowdoc, later Go backticks and Rust raw strings).
+# nowdoc, Go backticks).
 sub raw_string_contents {
     my ( $self, $stop ) = @_;
     my $text = $self->substring_before( $stop );

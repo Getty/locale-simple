@@ -11,7 +11,7 @@ use Locale::Simple::Scraper 'scrape';
 # (minus the filename comment). Proves the N* markers emit the same
 # msgid/msgid_plural/msgctxt/domain entries as their runtime twins.
 
-for my $lang ( qw( pl js py php ) ) {
+for my $lang ( qw( pl js py php go ) ) {
     my $l_out = scrape_one( "l-calls.$lang",  $lang );
     my $n_out = scrape_one( "N-calls.$lang",  $lang );
     like( $l_out, qr/^msgid /m, "$lang: fixture yields entries" );

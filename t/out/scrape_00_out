@@ -28,6 +28,11 @@ msgstr[0] ""
 msgid "mo'ooooo"
 msgstr ""
 
+#: /t/data/dummy.go:14
+#, locale-simple-format go_dom
+msgid "Go raw \"string\" with \\ backslash"
+msgstr ""
+
 #: /t/data/dummy.php:20
 #, locale-simple-format php_dom
 msgid "PHP after inline html"
@@ -101,6 +106,16 @@ msgstr[0] ""
 #: /t/20-locale-simple.t:59 /t/data/test.py:73
 #, locale-simple-format
 msgid "Change order test %s %s"
+msgstr ""
+
+#: /t/data/dummy.go:10
+#, locale-simple-format
+msgid "Go after rune literal"
+msgstr ""
+
+#: /t/data/dummy.go:15
+#, locale-simple-format
+msgid "Go concat"
 msgstr ""
 
 #: /t/60-N-markers.t:31
