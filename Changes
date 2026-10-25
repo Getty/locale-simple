@@ -27,6 +27,13 @@ Revision history for Locale-Simple
  - Rust: new crate locale-simple (rust/) with the helpers as macros l!, ln!,
    ... and the lower-case markers n_!, nn_!, ..., an own .mo reader, sprintf
    and Plural-Forms evaluator, and a Translator for concurrent languages.
+ - Release: the Rust crate is published to crates.io from the release tag by
+   CI (Trusted Publishing), PHP via Packagist and Go via the module proxy
+   follow the same tag. dzil test and release also run the PHP, Go and Rust
+   suites and skip, visibly, a toolchain that is missing or too old; a CI
+   workflow runs all six suites on every push without skipping.
+ - .gitattributes keeps the Perl, Python and JavaScript sources out of
+   git archive, so a composer require does not pull the whole repository.
 
 0.109     2026-04-23 13:40:35Z
 
