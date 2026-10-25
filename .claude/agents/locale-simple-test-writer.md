@@ -1,6 +1,6 @@
 ---
 name: locale-simple-test-writer
-description: "Write and extend the tests of locale-simple — the Perl suite under t/, the Python suite python/test.py and the JavaScript suite js/test/*.test.js. Covers the gettext helpers l, ln, lp, ld, the l_dir and l_lang configuration, the deferred N_ markers, the source scraper with its Test::Regression references and the shared helper parity across the three runtimes. Leaves a commit-ready tree; never commits — commits belong to locale-simple-release-manager."
+description: "Write and extend the tests of locale-simple — the Perl suite under t/, the Python suite python/test.py, the JavaScript suite js/test/*.test.js and the PHP, Go and Rust suites (php/tests, go/simple_test.go, rust/tests). Covers the gettext helpers l, ln, lp, ld, the l_dir and l_lang configuration, the deferred N_ markers, the source scraper with its Test::Regression references and the shared helper parity across the six runtimes. Leaves a commit-ready tree; never commits — commits belong to locale-simple-release-manager."
 model: sonnet
 briefing:
   skills:
@@ -30,9 +30,11 @@ stuck, hand it to `review` when done. Never `done`, never create cards. Never
 - **Repo knowledge lives in skill `locale-simple-core`** — the three runtimes, the
   shared helper API, the scraper quirks, the release path. Read it before writing a
   test; do not restate it back.
-- **Three suites, three languages, one API.** A behaviour that only one runtime has
-  is a bug, so a parity test is worth more than a third copy of the same assertion.
-  When you add a case, ask whether the other two runtimes need the same case.
+- **Six suites, six languages, one API.** A behaviour that only one runtime has
+  is a bug (bar the asymmetries in `.claude/rules/language-parity.md`), so a parity
+  test is worth more than another copy of the same assertion. When you add a case,
+  ask whether the other five runtimes need the same case. The PHP, Go and Rust suites
+  iterate the rows of `t/data/plural-forms.json`; a new row needs no code change.
 - **The Perl suite is the reference** (`t/`, Test::More, ten files from
   `t/10-gettext.t` to `t/60-N-markers.t`). The Python suite is a plain script
   (`python/test.py`, prints `OK` at the end); the JavaScript suite uses `node:test`

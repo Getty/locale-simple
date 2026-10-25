@@ -7,9 +7,10 @@ nothing until they load. This file adds what is true only here, and wins where i
 
 ## What this repo is
 
-One gettext wrapper published as three packages — Perl (CPAN `Locale-Simple`), Python and
-JavaScript (`locale-simple`) — with the same helper API; a change to one runtime is usually
-a change to all three. Read first: the exports, the immediate callers and the shared
+One gettext wrapper published as six packages — Perl (CPAN `Locale-Simple`), Python, JavaScript
+and Rust (`locale-simple`), PHP (`raudssus/locale-simple`) and Go
+(`github.com/Getty/locale-simple`) — with the same helper API; a change to one runtime is
+usually a change to all six, bar the asymmetries in `language-parity.md`. Read first: the exports, the immediate callers and the shared
 helpers of every runtime you touch.
 
 ## Agent team
@@ -17,7 +18,8 @@ helpers of every runtime you touch.
 | Task | Agent |
 |---|---|
 | Implement / refactor / debug the Perl, Python or JavaScript runtime, the scraper, the CLI wrappers | `locale-simple-worker` (default) |
-| Write and extend the tests of the three suites | `locale-simple-test-writer` |
+| The PHP, Go or Rust port | `locale-simple-php-worker`, `locale-simple-go-worker`, `locale-simple-rust-worker` |
+| Write and extend the tests of the six suites | `locale-simple-test-writer` |
 | Commits, `Changes`, card → done, pre-release audit | `locale-simple-release-manager` |
 | Read-only research, audit, gap analysis | `locale-simple-worker` ("read-only, change nothing") |
 

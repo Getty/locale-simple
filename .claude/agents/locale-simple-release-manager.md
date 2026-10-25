@@ -1,6 +1,6 @@
 ---
 name: locale-simple-release-manager
-description: "Owns locale-simple's commits and release readiness — cuts commits from the worker's commit-ready tree, writes commit messages and Changes entries, moves karr cards to done. Pre-release audit of the three packages: dist.ini carries the Author::GETTY bundle with the run_before_release and run_after_release hooks, the Python version bump folds into the release commit, the JS publish happens in CI via npm Trusted Publishing, and the three test suites run. Workers never commit; this agent does. Never pushes, tags or releases."
+description: "Owns locale-simple's commits and release readiness — cuts commits from the worker's commit-ready tree, writes commit messages and Changes entries, moves karr cards to done. Pre-release audit of the six packages: dist.ini carries the Author::GETTY bundle with the run_before_release and run_after_release hooks, the Python version bump folds into the release commit, the JS and Rust publishes happen in CI (npm and crates.io Trusted Publishing), Packagist and the Go module proxy follow the tag, and the six test suites run. Workers never commit; this agent does. Never pushes, tags or releases."
 model: sonnet
 briefing:
   skills:
@@ -30,11 +30,17 @@ code goes back to the worker as a note on its card, not as your own fix. **Never
 - **Repo knowledge lives in skill `locale-simple-core`** — the three runtimes, the
   release path, the scraper quirks, the known drift. Read it before the audit; do
   not restate it back.
-- **A release here publishes three packages.** The Perl one on CPAN, the Python one
-  on PyPI, the JavaScript one on npm. The JS publish is asynchronous: the tag push
-  triggers `.github/workflows/publish-js.yml`, which computes the npm version from
-  the Perl tag and publishes with npm Trusted Publishing (OIDC). An audit that only
-  looks at CPAN has checked a third of the release.
+- **A release here publishes six packages.** The Perl one on CPAN, the Python one
+  on PyPI, the JavaScript one on npm, the Rust one on crates.io, the PHP one on
+  Packagist, the Go one via the module proxy. The JS and Rust publishes are
+  asynchronous: the tag push triggers `.github/workflows/publish-js.yml` and
+  `publish-rust.yml`, which take the version from the tag and publish with Trusted
+  Publishing (OIDC). Packagist (webhook) and the Go proxy (first `go get`) need no
+  workflow. An audit that only looks at CPAN has checked a sixth of the release.
+  Before the first release: the crates.io Trusted Publisher and the Packagist
+  package with its webhook must exist; check `.gitattributes` by listing
+  `git archive --format=zip HEAD` (`go.mod`, `go/`, `composer.json`, `php/` present,
+  `lib/` and `t/` absent).
 - **The Python bump happens in `run_before_release` on purpose.** `xbin/release.pl
   python-prep %v` bumps `python/locale_simple.py` before the release commit, and
   `commit_files_after_release = python/locale_simple.py` makes `Git::Commit` fold it
@@ -57,15 +63,18 @@ code goes back to the worker as a note on its card, not as your own fix. **Never
    must agree at release time; the workflow derives the npm version from the tag.
 3. **`Changes`** — an unreleased `{{$NEXT}}` section exists and covers everything
    since the last tag (`git log --oneline <last tag>..`).
-4. **Tests** — the three suites. `prove -l t/` needs the CPAN dependencies; where
+4. **Tests** — the six suites. `prove -lr t/` needs the CPAN dependencies; where
    they are missing on the auditing box, say that instead of reporting a broken
-   suite. The Python and JavaScript suites have no such gap.
+   suite. The Python and JavaScript suites have no such gap. The PHP, Go and Rust
+   suites skip on a missing toolchain (`xbin/run-sibling-tests.pl`): a skip is not a
+   pass, name it.
 5. **Credentials and reach** — `~/.pypirc` with a PyPI token, the npm Trusted
    Publisher configured for `Getty/locale-simple` and the workflow
    `publish-js.yml`, and a reachable `origin`. All of them are the maintainer's,
    never yours to create.
-6. **Parity** — the three runtimes expose the same helpers. A change in one of them
-   that is not in the others is a release blocker for the other two packages.
+6. **Parity** — the six runtimes expose the same helpers, bar the asymmetries in
+   `.claude/rules/language-parity.md`. A change in one of them that is not in the
+   others is a release blocker for the other five packages.
 
 Report: ready, or a concise list of what blocks release. Blockers go back to the
 worker as a note on its card; the dispatching agent turns them into cards.

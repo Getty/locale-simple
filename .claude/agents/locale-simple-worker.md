@@ -30,8 +30,8 @@ to `locale-simple-release-manager`.
 - **Repo knowledge lives in skill `locale-simple-core`** — the three runtimes, the
   shared helper API, the scraper quirks, the release path, the known drift. Read it
   before touching code; do not restate it back.
-- **A change to one runtime is usually a change to all three.** Perl, Python and
-  JavaScript implement the same `l`/`ln`/`lp`/`ld` family, the same configuration
+- **A change to one runtime is usually a change to all six.** Perl, Python and
+  JavaScript (yours) and PHP, Go and Rust (the `locale-simple-*-worker` agents) implement the same `l`/`ln`/`lp`/`ld` family, the same configuration
   calls and the same `N_` markers. A fix that lands in one sibling and not the
   others is half a fix — the repositories of consumers differ in language, not in
   behaviour.
@@ -68,7 +68,7 @@ change.
 ## Out of lane
 
 - Never run `dzil release`, never tag, never push, never upload to CPAN or PyPI, and
-  never run `npm publish`. Three published packages are at stake — the maintainer's
+  never run `npm publish`. Six published packages are at stake — the maintainer's
   call, every time.
 - Do not "fix" the `js/package.json` / `js/CHANGELOG.md` mismatch, the leftover
   `bin/locale_simple_scraper_old` or the missing Perl dependencies on some boxes.
