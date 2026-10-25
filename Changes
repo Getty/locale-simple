@@ -5,6 +5,10 @@ Revision history for Locale-Simple
  - Release tags are now vMAJOR.MINOR.0 (e.g. v0.110.0), valid SemVer for all
    ecosystems. The npm package follows the tag and jumps from 0.1.9 to
    0.110.0 (monotonic, so allowed); npm versions now match the CPAN release.
+ - JavaScript: evaluate the Plural-Forms header instead of assuming n != 1,
+   so Polish, Russian, Arabic, Japanese and other languages pick the right
+   plural form. loadTranslations takes the header as optional fourth
+   argument; without it the old n != 1 rule stays.
 
 0.109     2026-04-23 13:40:35Z
 

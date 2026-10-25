@@ -79,12 +79,27 @@ console.log(ld("emails", "Welcome, %s", name)); // explicit domain
 
 | Call | Purpose |
 |---|---|
-| `loadTranslations(domain, lang, data)` | Register a translation bundle (plain `{msgid: msgstr}` map; arrays for plurals) |
-| `loadLocaleData(domain, data)` | Register a bundle in `po2json` / `Gettext.js` format |
+| `loadTranslations(domain, lang, data, pluralForms?)` | Register a translation bundle (plain `{msgid: msgstr}` map; arrays for plurals). `pluralForms` is the `Plural-Forms` header value; omitted means `n != 1` |
+| `loadLocaleData(domain, data)` | Register a bundle in `po2json` / `Gettext.js` format; the `Plural-Forms` header of the bundle selects the plural form |
 | `l_lang(code)` | Set primary language (`de_DE`, `pt_BR`, …) |
 | `ltd(domain)` | Default text domain |
 | `l_dir(path)` | Locale directory (used in dry/scrape mode) |
 | `l_dry(on, noWrite?)` | Dry-run mode for scraping translatable strings |
+
+## Plural forms
+
+The `Plural-Forms:` header of a bundle is evaluated (no `eval`; a small parser
+for the C subset gettext uses), so Polish, Russian, Arabic, Japanese and the
+rest pick the right form:
+
+```js
+loadTranslations('myapp', 'pl_PL', bundle,
+  'nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);');
+```
+
+A bundle loaded through `loadLocaleData` carries the header itself. A missing or
+unparsable header falls back to `n != 1` with a single `console.warn` per
+process; `loadTranslations` without the fourth argument keeps `n != 1` silently.
 
 ## Module formats
 

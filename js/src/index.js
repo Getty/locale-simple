@@ -98,17 +98,190 @@ function sprintf(format, ...args) {
   );
 }
 
+// Plural rules per loaded bundle: { domain: { lang: { nplurals, evaluate } } }
+const pluralRules = {};
+
+const DEFAULT_PLURAL_RULE = { nplurals: 2, evaluate: (n) => (n !== 1 ? 1 : 0) };
+
+const MAX_PLURAL_DEPTH = 100;
+const MAX_PLURAL_LENGTH = 1000;
+
+let pluralWarned = false;
+
+function warnPluralOnce(reason) {
+  if (pluralWarned) return;
+  pluralWarned = true;
+  if (typeof console === 'object' && typeof console.warn === 'function') {
+    console.warn('locale-simple: ' + reason + ', falling back to "n != 1"');
+  }
+}
+
+const PLURAL_BINARY_LEVELS = [['||'], ['&&'], ['==', '!='], ['<', '>', '<=', '>='], ['+', '-'], ['*', '/', '%']];
+const PLURAL_BINARY_OPS = {
+  '||': (x, y) => (x || y ? 1 : 0),
+  '&&': (x, y) => (x && y ? 1 : 0),
+  '==': (x, y) => (x === y ? 1 : 0),
+  '!=': (x, y) => (x !== y ? 1 : 0),
+  '<': (x, y) => (x < y ? 1 : 0),
+  '>': (x, y) => (x > y ? 1 : 0),
+  '<=': (x, y) => (x <= y ? 1 : 0),
+  '>=': (x, y) => (x >= y ? 1 : 0),
+  '+': (x, y) => x + y,
+  '-': (x, y) => x - y,
+  '*': (x, y) => x * y,
+  '/': (x, y) => (y === 0 ? 0 : Math.trunc(x / y)),
+  '%': (x, y) => (y === 0 ? 0 : x % y),
+};
+
 /**
- * Get plural form index for a language
- * Default: Germanic plural rules (n != 1)
+ * Compile the expression of a Plural-Forms header into a function of n.
+ * Recursive-descent parser over the C subset gettext uses; the expression is
+ * data from a .po/.mo file, so it is never eval'ed. Nesting of parentheses,
+ * "!" and the branches of "?:" is capped at MAX_PLURAL_DEPTH.
+ * @param {string} src
+ * @returns {(n: number) => number}
+ */
+function compilePluralExpr(src) {
+  if (src.length > MAX_PLURAL_LENGTH) throw new Error('plural expression too long');
+  const toks = [];
+  const re = /\s*(\d+|n|\|\||&&|==|!=|<=|>=|[-+*/%<>!?:()])/y;
+  let at = 0;
+  while (at < src.length && src.slice(at).trim() !== '') {
+    re.lastIndex = at;
+    const m = re.exec(src);
+    if (!m) throw new Error('unexpected input in plural expression');
+    toks.push(m[1]);
+    at = re.lastIndex;
+  }
+  let pos = 0;
+  let depth = 0;
+
+  const peek = () => toks[pos];
+  const take = (t) => {
+    if (toks[pos] !== t) throw new Error('expected ' + t);
+    pos++;
+  };
+  const nested = (fn) => {
+    if (++depth > MAX_PLURAL_DEPTH) throw new Error('plural expression nested too deeply');
+    const r = fn();
+    depth--;
+    return r;
+  };
+
+  function expr() {
+    const cond = binary(0);
+    if (peek() !== '?') return cond;
+    pos++;
+    const a = nested(expr);
+    take(':');
+    const b = nested(expr);
+    return (n) => (cond(n) ? a(n) : b(n));
+  }
+
+  function binary(level) {
+    if (level === PLURAL_BINARY_LEVELS.length) return unary();
+    let left = binary(level + 1);
+    while (PLURAL_BINARY_LEVELS[level].includes(peek())) {
+      const op = PLURAL_BINARY_OPS[toks[pos++]];
+      const l = left;
+      const r = binary(level + 1);
+      left = (n) => op(l(n), r(n));
+    }
+    return left;
+  }
+
+  function unary() {
+    if (peek() === '!') {
+      pos++;
+      const inner = nested(unary);
+      return (n) => (inner(n) ? 0 : 1);
+    }
+    return primary();
+  }
+
+  function primary() {
+    const t = toks[pos++];
+    if (t === 'n') return (n) => n;
+    if (t !== undefined && /^\d+$/.test(t)) {
+      const v = parseInt(t, 10);
+      return () => v;
+    }
+    if (t === '(') {
+      const inner = nested(expr);
+      take(')');
+      return inner;
+    }
+    throw new Error('unexpected token ' + t);
+  }
+
+  const fn = expr();
+  if (pos !== toks.length) throw new Error('trailing tokens in plural expression');
+  return fn;
+}
+
+const compiledRules = new Map();
+
+/**
+ * Parse a Plural-Forms header value ("nplurals=2; plural=n != 1;", with or
+ * without the leading "Plural-Forms:") into a rule. Returns null if unusable.
+ * @param {string} header
+ * @returns {{nplurals: number, evaluate: (n: number) => number}|null}
+ */
+function parsePluralForms(header) {
+  if (typeof header !== 'string') return null;
+  if (compiledRules.has(header)) return compiledRules.get(header);
+  let rule = null;
+  const np = /\bnplurals\s*=\s*(\d+)/.exec(header);
+  const ex = /\bplural\s*=\s*([^;\n]*)/.exec(header);
+  if (np && ex && parseInt(np[1], 10) >= 1) {
+    try {
+      const fn = compilePluralExpr(ex[1]);
+      const nplurals = parseInt(np[1], 10);
+      rule = {
+        nplurals,
+        evaluate(n) {
+          const idx = fn(Math.abs(Math.trunc(n)));
+          return idx < 0 || idx >= nplurals ? 0 : idx;
+        },
+      };
+    } catch (e) {
+      rule = null;
+    }
+  }
+  compiledRules.set(header, rule);
+  return rule;
+}
+
+/**
+ * Turn the optional pluralForms argument into a rule.
+ * @param {string|{evaluate: Function}|null|undefined} spec
+ * @param {boolean} warnIfAbsent - warn when nothing was given (header-based loading)
+ */
+function resolvePluralRule(spec, warnIfAbsent) {
+  if (spec && typeof spec === 'object' && typeof spec.evaluate === 'function') return spec;
+  if (spec === undefined || spec === null) {
+    if (warnIfAbsent) warnPluralOnce('no Plural-Forms header');
+    return DEFAULT_PLURAL_RULE;
+  }
+  const rule = parsePluralForms(spec);
+  if (rule) return rule;
+  warnPluralOnce('unusable Plural-Forms header');
+  return DEFAULT_PLURAL_RULE;
+}
+
+function storePluralRule(domain, lang, rule) {
+  if (!pluralRules[domain]) pluralRules[domain] = {};
+  pluralRules[domain][lang] = rule;
+}
+
+/**
+ * Get plural form index from the rule of a loaded bundle
  * @param {number} n - Count
- * @param {string} [lang] - Language code
+ * @param {{evaluate: (n: number) => number}} rule
  * @returns {number} Plural form index
  */
-function getPluralIndex(n, lang) {
-  // Germanic languages (en, de, nl, etc.): nplurals=2; plural=(n != 1)
-  // This is the most common case
-  return n !== 1 ? 1 : 0;
+function getPluralIndex(n, rule) {
+  return rule.evaluate(n);
 }
 
 /**
@@ -142,7 +315,8 @@ function lookup(domain, msgctxt, msgid, msgid_plural, n) {
   const domainData = translations[domain];
   if (!domainData) return msgid_plural && n !== 1 ? msgid_plural : msgid;
 
-  const langData = domainData[currentLang] || domainData[''];
+  const langKey = domainData[currentLang] ? currentLang : '';
+  const langData = domainData[langKey];
   if (!langData) return msgid_plural && n !== 1 ? msgid_plural : msgid;
 
   // Build lookup key (with context if present)
@@ -154,7 +328,8 @@ function lookup(domain, msgctxt, msgid, msgid_plural, n) {
   // Handle plural forms
   if (msgid_plural && n !== null) {
     if (Array.isArray(entry)) {
-      const idx = getPluralIndex(n, currentLang);
+      const rule = (pluralRules[domain] && pluralRules[domain][langKey]) || DEFAULT_PLURAL_RULE;
+      const idx = getPluralIndex(n, rule);
       return entry[idx] || entry[0] || msgid;
     }
     // Single string, use for both forms
@@ -219,12 +394,15 @@ export function ltd(textdomain) {
  * @param {string} domain - Domain name
  * @param {string} lang - Language code
  * @param {Object} data - Translation data object
+ * @param {string|{evaluate: Function}} [pluralForms] - Plural-Forms header value,
+ *   e.g. "nplurals=3; plural=...;". Omitted: "n != 1".
  */
-export function loadTranslations(domain, lang, data) {
+export function loadTranslations(domain, lang, data, pluralForms) {
   if (!translations[domain]) {
     translations[domain] = {};
   }
   translations[domain][lang] = data;
+  storePluralRule(domain, lang, resolvePluralRule(pluralForms, false));
 }
 
 /**
@@ -252,7 +430,8 @@ export function loadLocaleData(domain, localeData) {
     if (Array.isArray(value)) {
       if (value.length === 2 && value[0] === null) {
         data[key] = value[1];
-      } else if (value.length > 2) {
+      } else if (value.length > 2 || (value.length === 2 && value[0] !== null)) {
+        // msgid_plural first, then one entry per plural form (a single one for nplurals=1)
         data[key] = value.slice(1);
       }
     } else {
@@ -261,6 +440,7 @@ export function loadLocaleData(domain, localeData) {
   }
 
   translations[domain][lang] = data;
+  storePluralRule(domain, lang, resolvePluralRule(header['Plural-Forms'], true));
 }
 
 // ============================================================================

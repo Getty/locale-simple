@@ -24,12 +24,23 @@ export function l_dry(dry: boolean, noWrite?: boolean): void;
 export function ltd(textdomain: string): void;
 
 /**
- * Load translation data for a domain
+ * A compiled plural rule: index of the plural form for n.
+ */
+export interface PluralRule {
+  nplurals: number;
+  evaluate(n: number): number;
+}
+
+/**
+ * Load translation data for a domain.
+ * `pluralForms` is the value of the Plural-Forms header
+ * (e.g. "nplurals=2; plural=n != 1;"); omitted means "n != 1".
  */
 export function loadTranslations(
   domain: string,
   lang: string,
-  data: Record<string, string | string[]>
+  data: Record<string, string | string[]>,
+  pluralForms?: string | PluralRule | null
 ): void;
 
 /**

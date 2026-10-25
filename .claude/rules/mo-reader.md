@@ -139,7 +139,7 @@ The expression is data from a file.
 - **No `eval`, no `new Function`, no `create_function`, no template engines** — in any
   language, PHP included. Write a tokenizer and a recursive-descent (or Pratt) parser
   into an AST or closure tree, once per header, cached per loaded file.
-- **Depth limit.** Nesting counts `(` groups, `!` prefixes and the else-branch of
+- **Depth limit.** Nesting counts `(` groups, `!` prefixes and both branches of
   `?:`. More than **100** levels makes the expression unparsable (the fixture covers
   100 = ok, 101 = fallback). The input expression is also limited to 1000 characters.
 - No recursion beyond that bound, no unbounded allocation from the expression.
