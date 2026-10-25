@@ -24,6 +24,9 @@ Revision history for Locale-Simple
  - Go: new module github.com/Getty/locale-simple (package in go/) with the
    helpers as L, Ln, ... and the unchanged N_ family, an own .mo reader and
    sprintf, and a Translator value for concurrent, per-request languages.
+ - Rust: new crate locale-simple (rust/) with the helpers as macros l!, ln!,
+   ... and the lower-case markers n_!, nn_!, ..., an own .mo reader, sprintf
+   and Plural-Forms evaluator, and a Translator for concurrent languages.
 
 0.109     2026-04-23 13:40:35Z
 

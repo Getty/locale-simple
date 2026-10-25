@@ -1,6 +1,8 @@
 Locale-Simple-*
 vendor/
 composer.lock
+rust/target/
+rust/Cargo.lock
 .build
 build/
 *.pyc
