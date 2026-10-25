@@ -111,22 +111,51 @@ sub variable     { shift->expect( qr/[\w\.]+/ ) }
 sub constant_string {
     my ( $self, @components ) = @_;
 
-    my $p = $self->{patterns};
+    unshift @components, $self->literal_scopes;
 
-    unshift @components,
-      $self->curry::scope_of( q["], $self->c_with_ws( "double_quote_string_contents" ), q["] ),
-      $self->curry::scope_of( q['], $self->c_with_ws( "single_quote_string_contents" ), q['] );
-
-    my $string = $self->list_of( $self->concat_op, $self->c_any_of( @components ) );
+    my $string;
+    if ( defined $self->concat_op ) {
+        $string = $self->list_of( $self->concat_op, $self->c_any_of( @components ) );
+    }
+    else {
+        # No concatenation operator: a string argument is a single literal.
+        my $single = $self->maybe( sub { $self->any_of( @components ) } );
+        $string = defined $single ? [$single] : [];
+    }
 
     return join "", map { $_ ? $_ : "" } @{$string} if @{$string};
 
     $self->fail;
 }
 
+# undef means the language has no concatenation operator.
 sub concat_op {
     my %ops = ( js => "+", pl => ".", tx => qr/(_|~)/, py => "+" );
     return $ops{ shift->type };
+}
+
+# String literal forms per language type. An entry is either
+# [ open, content method, close ] or the name of a method that parses a whole
+# literal by itself (for forms whose terminator depends on the opening).
+sub literal_forms {
+    my $dq  = [ q["], "double_quote_string_contents", q["] ];
+    my $sq  = [ q['], "single_quote_string_contents", q['] ];
+    my %forms = (
+        js => [ $dq, $sq ],
+        pl => [ $dq, $sq ],
+        py => [ $dq, $sq ],
+        tx => [ $dq, $sq ],
+    );
+    return @{ $forms{ shift->type } };
+}
+
+sub literal_scopes {
+    my ( $self ) = @_;
+    return map {
+        ref $_
+          ? $self->curry::scope_of( $_->[0], $self->c_with_ws( $_->[1] ), $_->[2] )
+          : $self->c_with_ws( $_ )
+    } $self->literal_forms;
 }
 
 sub dynamic_string {
