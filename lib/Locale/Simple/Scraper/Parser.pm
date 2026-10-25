@@ -23,6 +23,10 @@ with "Locale::Simple::Scraper::ParserShortcuts";
 sub default_func_qr {
     my ( $self ) = @_;
     return qr/\b(?:L(?:|n|p|np|d|dp|dn|dnp)\b|N(?:|n|p|np|d|dp|dn|dnp)_)/ if $self->type eq "go";
+
+    # Rust has macros: a bang follows the name, and the deferred markers are
+    # lower case there. The path before a macro needs no pattern either.
+    return qr/\b(?:l(?:|n|p|np|d|dp|dn|dnp)!|n(?:|n|p|np|d|dp|dn|dnp)_!)/ if $self->type eq "rs";
     return qr/\b(?:l(?:|n|p|np|d|dp|dn|dnp)\b|N(?:|n|p|np|d|dp|dn|dnp)_)/;
 }
 
@@ -30,6 +34,10 @@ sub default_func_qr {
 sub canonical_func {
     my ( $self, $func ) = @_;
     $func =~ s/^L/l/ if $self->type eq "go";
+    if ( $self->type eq "rs" ) {
+        $func =~ s/!$//;
+        $func = ucfirst $func if $func =~ /_$/;
+    }
     return $func;
 }
 
@@ -146,7 +154,7 @@ sub constant_string {
 
 # undef means the language has no concatenation operator.
 sub concat_op {
-    my %ops = ( js => "+", pl => ".", tx => qr/(_|~)/, py => "+", php => ".", go => "+" );
+    my %ops = ( js => "+", pl => ".", tx => qr/(_|~)/, py => "+", php => ".", go => "+", rs => undef );
     return $ops{ shift->type };
 }
 
@@ -163,6 +171,8 @@ sub literal_forms {
         tx => [ $dq, $sq ],
         # No single quotes: in Go they delimit a rune, not a string.
         go  => [ $dq, [ q[`], "go_backtick_string_contents", q[`] ] ],
+        # No single quotes either (chars and lifetimes), and no concatenation.
+        rs  => [ $dq, "rust_raw_string" ],
         php => [ [ q["], "php_double_quote_string_contents", q["] ], $sq, "php_heredoc_or_nowdoc" ],
     );
     return @{ $forms{ shift->type } };
@@ -218,6 +228,17 @@ sub php_heredoc_or_nowdoc {
     shift @open;    # the whole match comes first, then the captures
     my ( $id ) = grep { defined } @open;
     my $close = qr/\r?\n[ \t]*\Q$id\E\b/;
+    my $text = $self->raw_string_contents( $close );
+    $self->expect( $close );
+    return $text;
+}
+
+# A raw string ends at a quote followed by as many hashes as it was opened
+# with, so it is parsed as a whole.
+sub rust_raw_string {
+    my ( $self ) = @_;
+    my ( undef, $hashes ) = $self->expect( qr/r(#*)"/ );
+    my $close = qr/"\Q$hashes\E/;
     my $text = $self->raw_string_contents( $close );
     $self->expect( $close );
     return $text;

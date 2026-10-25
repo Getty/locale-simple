@@ -716,6 +716,11 @@ pl => /lib/Locale/Simple/Scraper/Parser.pm
 - discarded COUNT characters of noise
 - found func l at line LINE
 - Expected translation token:
+ |    return qr/\b(?:l(?:|n|p|np|d|dp|dn|dnp)!|n(?:|n|p|np|d|dp|dn|dnp)_!)/ if $self->type eq "rs";
+ |---------------------^
+- discarded COUNT characters of noise
+- found func l at line LINE
+- Expected translation token:
  |    return qr/\b(?:l(?:|n|p|np|d|dp|dn|dnp)\b|N(?:|n|p|np|d|dp|dn|dnp)_)/;
  |---------------------^
 - discarded COUNT characters of noise
@@ -1147,6 +1152,29 @@ pl => /t/data/dummy.pl
 - discarded COUNT characters of noise
 - found func l at line LINE
 - found 1 arguments
+rs => /t/data/dummy.rs
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func ln at line LINE
+- found 3 arguments
+- discarded COUNT characters of noise
+- found func ld at line LINE
+- found 2 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
 tx => /t/data/dummy.tx
 - discarded COUNT characters of noise
 - found func l at line LINE

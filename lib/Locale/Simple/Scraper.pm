@@ -26,6 +26,7 @@ sub scrape {
     my $py_ext = "";    # Python
     my $php_ext = "";   # PHP
     my $go_ext = "";    # Go
+    my $rs_ext = "";    # Rust
     my $tx_ext = "";    # Text::Xslate (Kolon or Metakolon)
 
     my @ignores;
@@ -40,6 +41,7 @@ sub scrape {
         "py=s"            => \$py_ext,
         "php=s"           => \$php_ext,
         "go=s"            => \$go_ext,
+        "rs=s"            => \$rs_ext,
         "tx=s"            => \$tx_ext,
         "ignore=s"        => \@ignores,
         "only=s"          => \@only,
@@ -68,6 +70,9 @@ sub scrape {
     my @go = split( ",", $go_ext );
     push @go, 'go';
 
+    my @rs = split( ",", $rs_ext );
+    push @rs, 'rs';
+
     # extension list
     my %e = (
         ( map { $_ => 'js' } @js ),
@@ -76,6 +81,7 @@ sub scrape {
         ( map { $_ => 'py' } @py ),
         ( map { $_ => 'php' } @php ),
         ( map { $_ => 'go' } @go ),
+        ( map { $_ => 'rs' } @rs ),
     );
 
     # functions with count of locale simple with function of parameter
@@ -283,11 +289,11 @@ from the current working directory recursively and prints to STDOUT.
 
 =over 4
 
-=item C<--js=EXT>, C<--pl=EXT>, C<--py=EXT>, C<--php=EXT>, C<--go=EXT>, C<--tx=EXT>
+=item C<--js=EXT>, C<--pl=EXT>, C<--py=EXT>, C<--php=EXT>, C<--go=EXT>, C<--rs=EXT>, C<--tx=EXT>
 
 Comma-separated list of extra file extensions to recognise as the given
 language. The built-in defaults (C<.js>; C<.pl>/C<.pm>/C<.t>; C<.py>;
-C<.tx>; C<.php>; C<.go>) are always included.
+C<.tx>; C<.php>; C<.go>; C<.rs>) are always included.
 
 =item C<--ignore=REGEX>
 
@@ -336,7 +342,15 @@ Go exports its helpers capitalised: C<L>, C<Ln>, C<Lp>, C<Lnp>, C<Ld>, C<Ldn>,
 C<Ldp>, C<Ldnp> (the deferred markers keep their names). They are found with any
 package prefix or bare after a dot import; strings are C<"..."> and backtick
 raw strings, never C<'...'> (a rune in Go). The argument shapes are those
-above. Runtime interpolation is not extracted;
+above.
+
+Rust calls are macros: the names carry a bang and the deferred markers are
+lower case (C<n_!>, C<nn_!>, C<np_!>, C<nnp_!>, C<nd_!>, C<ndn_!>, C<ndp_!>,
+C<ndnp_!>), a path before the macro is fine. Only the round brackets are read
+as the argument list, not C<{}> or C<[]>. Strings are C<"..."> and raw strings
+with any number of hashes; there is no concatenation operator and no
+C<'...'> (chars and lifetimes). Comments are not skipped, as in every other
+language, so a commented-out call is extracted. Runtime interpolation is not extracted;
 keep msgids constant and pass dynamic data as sprintf arguments.
 
 =head1 SEE ALSO

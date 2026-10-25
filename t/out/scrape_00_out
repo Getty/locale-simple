@@ -38,6 +38,11 @@ msgstr ""
 msgid "PHP after inline html"
 msgstr ""
 
+#: /t/data/dummy.rs:25
+#, locale-simple-format rust_dom
+msgid "Rust after attribute"
+msgstr ""
+
 #: /t/data/dummy.php:17
 #, locale-simple-format
 msgctxt "PHP_ctx"
@@ -158,6 +163,37 @@ msgstr ""
 msgid "PHP nowdoc one $notvar"
 msgid_plural "PHP nowdoc many"
 msgstr[0] ""
+
+#: /t/data/dummy.rs:28
+#, locale-simple-format
+msgid "Rust commented out"
+msgstr ""
+
+#: /t/data/dummy.rs:20
+#, locale-simple-format
+msgid "Rust one"
+msgid_plural "Rust many"
+msgstr[0] ""
+
+#: /t/data/dummy.rs:12
+#, locale-simple-format
+msgid "Rust path qualified"
+msgstr ""
+
+#: /t/data/dummy.rs:18
+#, locale-simple-format
+msgid "Rust raw \"# near terminator"
+msgstr ""
+
+#: /t/data/dummy.rs:19
+#, locale-simple-format
+msgid "Rust raw no hashes"
+msgstr ""
+
+#: /t/data/dummy.rs:17
+#, locale-simple-format
+msgid "Rust raw with \"quote\" inside"
+msgstr ""
 
 #: /t/data/dummy.pl:11
 #, locale-simple-format

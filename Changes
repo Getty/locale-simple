@@ -11,6 +11,9 @@ Revision history for Locale-Simple
  - Scraper: recognise Go sources (.go, option --go): the capitalised helper
    names (L, Ln, ... Ndnp_), with or without package prefix, "..." and
    backtick strings; rune literals no longer open a string.
+ - Scraper: recognise Rust sources (.rs, option --rs): the macros l!, ln!, ...
+   and the lower-case markers n_!, nn_!, ... with round brackets, "..." and
+   raw strings of any hash count, no single-quote strings.
  - JavaScript: evaluate the Plural-Forms header instead of assuming n != 1,
    so Polish, Russian, Arabic, Japanese and other languages pick the right
    plural form. loadTranslations takes the header as optional fourth
