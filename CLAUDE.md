@@ -17,7 +17,8 @@ scraper quirks, the house rules — lives in skill `locale-simple-core`.
 ## Delegation
 
 Delegate behavior-relevant code to the right agent instead of touching it
-yourself — principle and lane are in `.claude/rules/locale-simple-rules.md`.
+yourself — the principle is a shared house rule (skilletor bundle
+`getty-cpan-dist@getty`); lanes and deviations are in `.claude/rules/locale-simple-rules.md`.
 
 | Task | Agent |
 |---|---|
