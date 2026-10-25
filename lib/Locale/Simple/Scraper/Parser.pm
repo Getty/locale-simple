@@ -130,7 +130,7 @@ sub constant_string {
 
 # undef means the language has no concatenation operator.
 sub concat_op {
-    my %ops = ( js => "+", pl => ".", tx => qr/(_|~)/, py => "+" );
+    my %ops = ( js => "+", pl => ".", tx => qr/(_|~)/, py => "+", php => "." );
     return $ops{ shift->type };
 }
 
@@ -145,6 +145,7 @@ sub literal_forms {
         pl => [ $dq, $sq ],
         py => [ $dq, $sq ],
         tx => [ $dq, $sq ],
+        php => [ [ q["], "php_double_quote_string_contents", q["] ], $sq, "php_heredoc_or_nowdoc" ],
     );
     return @{ $forms{ shift->type } };
 }
@@ -176,6 +177,41 @@ sub single_quote_string_contents {
         $self->c_expect_escaped( q[\\] ),
         $self->c_expect( qr/\\/ ),
     );
+}
+
+# PHP double quotes also escape the dollar sign; any other backslash is kept
+# as it is. Interpolated variables stay part of the text.
+sub php_double_quote_string_contents {
+    my ( $self ) = @_;
+    return $self->string_contents(
+        $self->c_expect( qr/[^\\"]+/ ),
+        $self->c_expect_escaped( q["] ),
+        $self->c_expect_escaped( q[$] ),
+        $self->c_expect_escaped( q[\\] ),
+        $self->c_expect( qr/\\/ ),
+    );
+}
+
+# Heredoc and nowdoc: the closing identifier is the one that was opened, so
+# the whole literal is parsed here. Contents are taken verbatim.
+sub php_heredoc_or_nowdoc {
+    my ( $self ) = @_;
+    my @open = $self->expect( qr/<<<[ \t]*(?:'(\w+)'|"(\w+)"|(\w+))[ \t]*\r?\n/ );
+    shift @open;    # the whole match comes first, then the captures
+    my ( $id ) = grep { defined } @open;
+    my $close = qr/\r?\n[ \t]*\Q$id\E\b/;
+    my $text = $self->raw_string_contents( $close );
+    $self->expect( $close );
+    return $text;
+}
+
+# Contents up to the given terminator pattern, no escapes (PHP heredoc and
+# nowdoc, later Go backticks and Rust raw strings).
+sub raw_string_contents {
+    my ( $self, $stop ) = @_;
+    my $text = $self->substring_before( $stop );
+    $self->fail( "no string contents found" ) if !length $text;
+    return $text;
 }
 
 sub string_contents {

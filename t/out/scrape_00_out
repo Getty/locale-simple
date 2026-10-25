@@ -28,6 +28,17 @@ msgstr[0] ""
 msgid "mo'ooooo"
 msgstr ""
 
+#: /t/data/dummy.php:20
+#, locale-simple-format php_dom
+msgid "PHP after inline html"
+msgstr ""
+
+#: /t/data/dummy.php:17
+#, locale-simple-format
+msgctxt "PHP_ctx"
+msgid "PHP single concat"
+msgstr ""
+
 #: /t/20-locale-simple.t:71 /t/data/test.py:83
 #, locale-simple-format
 msgctxt "alien"
@@ -106,6 +117,32 @@ msgstr ""
 #, locale-simple-format
 msgid "Other change order test %s %s %s"
 msgstr ""
+
+#: /t/data/dummy.php:15
+#, locale-simple-format
+msgid "PHP escaped $dollar and \"quote\""
+msgstr ""
+
+#: /t/data/dummy.php:5
+#, locale-simple-format
+msgid "PHP fqn call"
+msgstr ""
+
+#: /t/data/dummy.php:6
+#, locale-simple-format
+msgid "PHP heredoc \"quoted\" and it's fine\nsecond line"
+msgstr ""
+
+#: /t/data/dummy.php:16
+#, locale-simple-format
+msgid "PHP interpolated $name here"
+msgstr ""
+
+#: /t/data/dummy.php:11
+#, locale-simple-format
+msgid "PHP nowdoc one $notvar"
+msgid_plural "PHP nowdoc many"
+msgstr[0] ""
 
 #: /t/data/dummy.pl:11
 #, locale-simple-format

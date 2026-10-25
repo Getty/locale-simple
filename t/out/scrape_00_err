@@ -1064,6 +1064,29 @@ pl => /t/60-N-markers.t
  |is( ln(@plur, 5), "5 items",  "Nn_ result flows through ln() plural" );
  |-----------------------------------------------------------^
 - discarded COUNT characters of noise
+php => /t/data/dummy.php
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func ln at line LINE
+- found 3 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func lp at line LINE
+- found 2 arguments
+- discarded COUNT characters of noise
+- found func ld at line LINE
+- found 2 arguments
+- discarded COUNT characters of noise
 pl => /t/data/dummy.pl
 - found func l at line LINE
 - found 1 arguments

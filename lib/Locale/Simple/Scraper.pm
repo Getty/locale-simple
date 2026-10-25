@@ -24,6 +24,7 @@ sub scrape {
     my $js_ext = "";    # Javascript
     my $pl_ext = "";    # Perl
     my $py_ext = "";    # Python
+    my $php_ext = "";   # PHP
     my $tx_ext = "";    # Text::Xslate (Kolon or Metakolon)
 
     my @ignores;
@@ -36,6 +37,7 @@ sub scrape {
         "js=s"            => \$js_ext,
         "pl=s"            => \$pl_ext,
         "py=s"            => \$py_ext,
+        "php=s"           => \$php_ext,
         "tx=s"            => \$tx_ext,
         "ignore=s"        => \@ignores,
         "only=s"          => \@only,
@@ -58,12 +60,16 @@ sub scrape {
     my @py = split( ",", $py_ext );
     push @py, 'py';
 
+    my @php = split( ",", $php_ext );
+    push @php, 'php';
+
     # extension list
     my %e = (
         ( map { $_ => 'js' } @js ),
         ( map { $_ => 'pl' } @pl ),
         ( map { $_ => 'tx' } @tx ),
         ( map { $_ => 'py' } @py ),
+        ( map { $_ => 'php' } @php ),
     );
 
     # functions with count of locale simple with function of parameter
@@ -271,11 +277,11 @@ from the current working directory recursively and prints to STDOUT.
 
 =over 4
 
-=item C<--js=EXT>, C<--pl=EXT>, C<--py=EXT>, C<--tx=EXT>
+=item C<--js=EXT>, C<--pl=EXT>, C<--py=EXT>, C<--php=EXT>, C<--tx=EXT>
 
 Comma-separated list of extra file extensions to recognise as the given
 language. The built-in defaults (C<.js>; C<.pl>/C<.pm>/C<.t>; C<.py>;
-C<.tx>) are always included.
+C<.tx>; C<.php>) are always included.
 
 =item C<--ignore=REGEX>
 
@@ -316,8 +322,9 @@ Recognised call shapes (identical across Perl, Python and JavaScript):
   ldnp( domain, msgctxt, msgid, msgid_plural, n, ... )
 
 Strings must be statically resolvable — literal strings and static
-concatenation (C<"a" . "b"> in Perl/Python, C<"a" + "b"> in JS,
-C<"a" ~ "b"> in Xslate Kolon). Runtime interpolation is not extracted;
+concatenation (C<"a" . "b"> in Perl/PHP, C<"a" + "b"> in JS/Python,
+C<"a" ~ "b"> in Xslate Kolon). PHP also reads heredoc and nowdoc literals;
+calls qualified with the PHP namespace are found as well. Runtime interpolation is not extracted;
 keep msgids constant and pass dynamic data as sprintf arguments.
 
 =head1 SEE ALSO
