@@ -134,14 +134,10 @@ not skills for working on this repository:
 | `python-localization-with-locale-simple` | how to use `locale_simple` in a Python app |
 | `js-localization-with-locale-simple` | how to use the npm package in a JS/TS app |
 
-These are the canonical copies — other projects link to them. Do not edit them here
-to change this repository; a change to the API belongs in the implementation and in
-the usage skills together, but the usage skills are edited in their own home.
-
-The directory also carries `perl-moo`, `perl-release-author-getty` and
-`perl-release-dist-ini`. They are the older spellings of the shared library skills
-(`getty-perl-moo`, `getty-perl-distribution`, `perl-release-dist-ini`) and are kept
-because other projects link to them. The agents brief the current library skills.
+These are the canonical copies — other projects install them from here with
+skilletor. Do not edit them here to change this repository; a change to the API
+belongs in the implementation and in the usage skills together, but the usage skills
+are edited in their own home.
 
 ## Known drift — reported, not fixed
 
