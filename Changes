@@ -57,6 +57,18 @@ Revision history for Locale-Simple
    with commas or brackets, calls over several lines) in all six languages,
    together with the translation calls inside those arguments. Before, such
    calls were dropped, e.g. l("Hello %s", $name) or ln(..., items.length).
+ - Scraper: files are named by their path relative to the directory the
+   scraper runs in, in the #: lines, the file field and the --md5 hash.
+ - Scraper: symlinks that point nowhere are skipped and the files after them
+   are read.
+ - Scraper: string escapes are read the way each language reads them, so the
+   .pot holds the msgid the program looks up; "0" is a msgid like any other.
+ - Scraper: --js, --pl, --py, --tx, --php, --go and --rs can be given more
+   than once, and the lists add up.
+ - Scraper: the deferred-translation docs say that N-markers are found in
+   .tx templates too.
+ - Tests: t/50-scrape.t passes in the CPAN tarball: it leaves out the author
+   tests that dzil generates from xt/.
  - Tests: t/10-gettext.t sets the messages locale the way l_lang() does, so
    it passes on systems that start under the C or POSIX locale.
  - Documentation: the READMEs, the POD and the usage skills describe all

@@ -24,16 +24,9 @@ sub collect_from {
 sub named_token {
     my ( $self, $name, $type ) = @_;
     $type ||= "constant_string";
-    my $token = $self->maybe( sub { $self->$type } ) or $self->fail( "Expected $name" );
+    my $token = $self->maybe( sub { $self->$type } );
+    $self->fail( "Expected $name" ) if !defined $token;
     return $token;
-}
-
-sub c_expect_escaped {
-    my ( $self, $char ) = @_;
-    return sub {
-        $self->expect( qr/\\\Q$char\E/ );
-        return $char;
-    };
 }
 
 sub warn_failure {

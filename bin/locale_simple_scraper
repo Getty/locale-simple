@@ -29,6 +29,9 @@
   # setting additional extensions for Perl (default: pl, pm, t)
   locale_simple_scraper --pl ppl,pppl
 
+  # every one of these options can be given more than once, the lists add up
+  locale_simple_scraper --pl ppl --pl pppl
+
   # setting additional extensions for Text::Xslate (default: tx)
   locale_simple_scraper --tx ttx,xxx
 

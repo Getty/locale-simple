@@ -20,14 +20,19 @@ sub scrape {
 
     $| = 1;
 
-    # Supported filetypes:
-    my $js_ext = "";    # Javascript
-    my $pl_ext = "";    # Perl
-    my $py_ext = "";    # Python
-    my $php_ext = "";   # PHP
-    my $go_ext = "";    # Go
-    my $rs_ext = "";    # Rust
-    my $tx_ext = "";    # Text::Xslate (Kolon or Metakolon)
+    # Supported filetypes and the extensions read as them. --js, --pl, ...
+    # add more: repeatable, each a comma-separated list.
+    my %defaults = (
+        js  => ['js'],                 # Javascript
+        pl  => [ 'pl', 'pm', 't' ],    # Perl
+        tx  => ['tx'],                 # Text::Xslate (Kolon or Metakolon)
+        py  => ['py'],                 # Python
+        php => ['php'],                # PHP
+        go  => ['go'],                 # Go
+        rs  => ['rs'],                 # Rust
+    );
+    my @types = qw( js pl tx py php go rs );
+    my %extra = map { $_ => [] } @types;
 
     my @ignores;
     my @only;
@@ -36,13 +41,7 @@ sub scrape {
     my ($md5, $no_line_numbers);
 
     GetOptions(
-        "js=s"            => \$js_ext,
-        "pl=s"            => \$pl_ext,
-        "py=s"            => \$py_ext,
-        "php=s"           => \$php_ext,
-        "go=s"            => \$go_ext,
-        "rs=s"            => \$rs_ext,
-        "tx=s"            => \$tx_ext,
+        ( map { ( "$_=s" => $extra{$_} ) } @types ),
         "ignore=s"        => \@ignores,
         "only=s"          => \@only,
         "output=s"        => \$output,
@@ -50,39 +49,11 @@ sub scrape {
         "no_line_numbers" => \$no_line_numbers,
     );
 
-    # could add Getopt::Long here for override
-
-    my @js = split( ",", $js_ext );
-    push @js, 'js';
-
-    my @pl = split( ",", $pl_ext );
-    push @pl, 'pl', 'pm', 't';
-
-    my @tx = split( ",", $tx_ext );
-    push @tx, 'tx';
-
-    my @py = split( ",", $py_ext );
-    push @py, 'py';
-
-    my @php = split( ",", $php_ext );
-    push @php, 'php';
-
-    my @go = split( ",", $go_ext );
-    push @go, 'go';
-
-    my @rs = split( ",", $rs_ext );
-    push @rs, 'rs';
-
     # extension list
-    my %e = (
-        ( map { $_ => 'js' } @js ),
-        ( map { $_ => 'pl' } @pl ),
-        ( map { $_ => 'tx' } @tx ),
-        ( map { $_ => 'py' } @py ),
-        ( map { $_ => 'php' } @php ),
-        ( map { $_ => 'go' } @go ),
-        ( map { $_ => 'rs' } @rs ),
-    );
+    my %e;
+    for my $type ( @types ) {
+        $e{$_} = $type for ( map { split /,/ } @{ $extra{$type} } ), @{ $defaults{$type} };
+    }
 
     # functions with count of locale simple with function of parameter
     #
@@ -116,13 +87,12 @@ sub scrape {
 
     my %files;
 
-    my $dir    = getcwd;
-    my $re_dir = $dir;
-    $re_dir =~ s/\./\\./g;
+    my $dir = getcwd;
 
     finddepth(
         sub {
-            my $filename        = $File::Find::name;
+            my $filename = $File::Find::name;
+            $filename =~ s/^\Q$dir\E\///;
             my $stored_filename = $filename;
             if ( $md5 ) {
                 eval {
@@ -132,7 +102,6 @@ sub scrape {
                 die "This feature requires Digest::MD5" if $@;
                 $stored_filename = md5_hex( $filename );
             }
-            $filename =~ s/^$dir\///g;
             for ( @ignores ) {
                 return if $filename =~ /$_/;
             }
@@ -155,7 +124,7 @@ sub scrape {
         my ( $ext, $filename, $stored_filename ) = @{ $files{$file} };
         my $type = $e{$ext};
         print STDERR $type . " => " . $file . "\n";
-        return if -l $file and not -e readlink( $file );
+        next if -l $file and not -e $file;
         my $parses = Locale::Simple::Scraper::Parser->new( type => $type )->from_file( $file );
         my @file_things = map {
             {
@@ -292,8 +261,9 @@ from the current working directory recursively and prints to STDOUT.
 =item C<--js=EXT>, C<--pl=EXT>, C<--py=EXT>, C<--php=EXT>, C<--go=EXT>, C<--rs=EXT>, C<--tx=EXT>
 
 Comma-separated list of extra file extensions to recognise as the given
-language. The built-in defaults (C<.js>; C<.pl>/C<.pm>/C<.t>; C<.py>;
-C<.tx>; C<.php>; C<.go>; C<.rs>) are always included.
+language. Repeatable; the lists add up. The built-in defaults (C<.js>;
+C<.pl>/C<.pm>/C<.t>; C<.py>; C<.tx>; C<.php>; C<.go>; C<.rs>) are always
+included.
 
 =item C<--ignore=REGEX>
 
@@ -337,6 +307,13 @@ Strings must be statically resolvable — literal strings and static
 concatenation (C<"a" . "b"> in Perl/PHP, C<"a" + "b"> in JS/Python,
 C<"a" ~ "b"> in Xslate Kolon). PHP also reads heredoc and nowdoc literals;
 calls qualified with the PHP namespace are found as well.
+
+Escapes are read the way the language reads them, so the msgid is the text
+the program sees: C<"Line\n"> gives a msgid ending in a newline, which the
+C<.pot> writes as C<\n>. Single quotes in Perl, Xslate and PHP know only
+C<\\> and C<\'>. A character named by its code point is stored as UTF-8. A
+literal with an escape the language rejects is skipped, and so is a Perl
+literal with a case change such as C<\U>.
 
 That holds for the msgid, the plural msgid, the context and the domain. The
 count and the arguments after them can be any code, such as C<$name>,

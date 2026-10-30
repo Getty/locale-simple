@@ -10,6 +10,7 @@ use base qw( Parser::MGC );
 use Moo;
 use Try::Tiny;
 use curry;
+use charnames ();
 
 has func_qr => ( is => 'ro', lazy => 1, default => sub { shift->default_func_qr } );
 has found  => ( is => 'ro', default => sub { [] } );
@@ -216,7 +217,7 @@ sub constant_string {
         $string = defined $single ? [$single] : [];
     }
 
-    return join "", map { $_ ? $_ : "" } @{$string} if @{$string};
+    return join "", map { defined $_ ? $_ : "" } @{$string} if @{$string};
 
     $self->fail;
 }
@@ -228,23 +229,27 @@ sub concat_op {
 }
 
 # String literal forms per language type. An entry is either
-# [ open, content method, close ] or the name of a method that parses a whole
-# literal by itself (for forms whose terminator depends on the opening).
+# [ open, content method, close, arguments ] or the name of a method that
+# parses a whole literal by itself (for forms whose terminator depends on the
+# opening). Quoted forms name the escape table their contents are read with.
 sub literal_forms {
-    my $dq  = [ q["], "double_quote_string_contents", q["] ];
-    my $sq  = [ q['], "single_quote_string_contents", q['] ];
     my %forms = (
-        js => [ $dq, $sq ],
-        pl => [ $dq, $sq ],
-        py => [ $dq, $sq ],
-        tx => [ $dq, $sq ],
+        js => [ quoted( q["], "js" ),     quoted( q['], "js" ) ],
+        pl => [ quoted( q["], "perl" ),   quoted( q['], "single" ) ],
+        py => [ quoted( q["], "python" ), quoted( q['], "python" ) ],
+        tx => [ quoted( q["], "xslate" ), quoted( q['], "single" ) ],
         # No single quotes: in Go they delimit a rune, not a string.
-        go  => [ $dq, [ q[`], "go_backtick_string_contents", q[`] ] ],
+        go  => [ quoted( q["], "go" ), [ q[`], "go_backtick_string_contents", q[`] ] ],
         # No single quotes either (chars and lifetimes), and no concatenation.
-        rs  => [ $dq, "rust_raw_string" ],
-        php => [ [ q["], "php_double_quote_string_contents", q["] ], $sq, "php_heredoc_or_nowdoc" ],
+        rs  => [ quoted( q["], "rust" ), "rust_raw_string" ],
+        php => [ quoted( q["], "php" ), quoted( q['], "single" ), "php_heredoc_or_nowdoc" ],
     );
     return @{ $forms{ shift->type } };
+}
+
+sub quoted {
+    my ( $quote, $escapes ) = @_;
+    return [ $quote, "quoted_string_contents", $quote, $quote, $escapes ];
 }
 
 sub literal_scopes {
@@ -254,49 +259,190 @@ sub literal_scopes {
 
 sub literal_scope {
     my ( $self, $form ) = @_;
-    return ref $form
-      ? $self->curry::scope_of( $form->[0], $self->c_with_ws( $form->[1] ), $form->[2] )
-      : $self->c_with_ws( $form );
+    return $self->c_with_ws( $form ) if !ref $form;
+    my ( $open, $contents, $close, @args ) = @{$form};
+    return $self->curry::scope_of( $open, $self->c_with_ws( $contents, @args ), $close );
 }
 
-sub double_quote_string_contents {
-    my ( $self ) = @_;
-    return $self->string_contents( $self->c_expect( qr/[^\\"]+/ ), $self->c_expect_escaped( q["] ) );
+# The text up to the closing quote, with its escapes read as the language
+# reads them.
+sub quoted_string_contents {
+    my ( $self, $quote, $escapes ) = @_;
+    my $q    = quotemeta $quote;
+    my $text = $self->maybe_expect( qr/(?:[^\\$q]++|\\.)+/s );
+    $text = $self->unescape( $text, $escapes ) if defined $text;
+    $self->fail( "no string contents found" ) if !defined $text or !length $text;
+    return $text;
 }
 
-sub single_quote_string_contents {
-    my ( $self ) = @_;
-    return $self->string_contents(
-        $self->c_expect( qr/[^\\']+/ ),
-        $self->c_expect_escaped( q['] ),
-        $self->c_expect_escaped( q[\\] ),
-        $self->c_expect( qr/\\/ ),
-    );
+# Escapes inside string literals, per table: the patterns tried after a
+# backslash, each with the text it stands for, and what becomes of an escape
+# no pattern takes: the character alone (drop), backslash and character
+# (keep), or no msgid at all (fail: the language rejects it). The scraper
+# reads and writes bytes, so a character named by its code point is stored
+# as its UTF-8 bytes; Go and PHP byte escapes are stored as the byte.
+my %c_escape = ( a => "\a", b => "\b", e => "\e", f => "\f", n => "\n", r => "\r", t => "\t", v => "\x0b" );
+
+sub c_escape { exists $c_escape{ $_[0] } ? $c_escape{ $_[0] } : $_[0] }
+
+sub digits {
+    ( my $digits = shift ) =~ tr/_//d;
+    return length $digits ? $digits : 0;
 }
 
-# PHP double quotes also escape the dollar sign; any other backslash is kept
-# as it is. Interpolated variables stay part of the text.
-sub php_double_quote_string_contents {
-    my ( $self ) = @_;
-    return $self->string_contents(
-        $self->c_expect( qr/[^\\"]+/ ),
-        $self->c_expect_escaped( q["] ),
-        $self->c_expect_escaped( q[$] ),
-        $self->c_expect_escaped( q[\\] ),
-        $self->c_expect( qr/\\/ ),
-    );
+sub code_point {
+    my ( $number ) = @_;
+    die "code point out of range\n" if $number > 0x10FFFF;
+    my $char = do { no warnings; chr $number };
+    utf8::encode( $char );
+    return $char;
+}
+
+# Go and Rust take no surrogate halves.
+sub scalar_value {
+    my ( $number ) = @_;
+    die "surrogate half\n" if $number >= 0xD800 and $number <= 0xDFFF;
+    return code_point( $number );
+}
+
+sub named_char {
+    my ( $name ) = @_;
+    my $char = charnames::string_vianame( $name );
+    die "unknown character name\n" if !defined $char;
+    utf8::encode( $char );
+    return $char;
+}
+
+sub reject { die "escape the language rejects\n" }
+
+my %escapes = (
+    perl => {
+        rules => [
+            [ qr/([abefnrt])/                => \&c_escape ],
+            [ qr/x\{\s*([0-9A-Fa-f_]*)\s*\}/ => sub { code_point( hex digits( $_[0] ) ) } ],
+            [ qr/x([0-9A-Fa-f]{0,2})/        => sub { code_point( hex digits( $_[0] ) ) } ],
+            [ qr/N\{U\+([0-9A-Fa-f_]+)\}/    => sub { code_point( hex digits( $_[0] ) ) } ],
+            [ qr/N\{([^}]+)\}/               => sub { named_char( $_[0] ) } ],
+            [ qr/o\{\s*([0-7_]+)\s*\}/       => sub { code_point( oct digits( $_[0] ) ) } ],
+            [ qr/([0-7]{1,3})/               => sub { code_point( oct $_[0] ) } ],
+            [ qr/c(.)/s                      => sub { chr( ord( uc $_[0] ) ^ 64 ) } ],
+            # Case changes and \Q act on the text that follows: not read.
+            [ qr/[lLuUQEF]/ => \&reject ],
+        ],
+        other => "drop",
+    },
+    js => {
+        rules => [
+            [ qr/(?:\r\n|\n|\r|\xE2\x80[\xA8\xA9])/                      => sub { "" } ],
+            [ qr/0(?![0-9])/                                             => sub { "\0" } ],
+            [ qr/([0-3][0-7]{0,2}|[4-7][0-7]?)/                          => sub { code_point( oct $_[0] ) } ],
+            [ qr/([bfnrtv])/                                             => \&c_escape ],
+            [ qr/x([0-9A-Fa-f]{2})/                                      => sub { code_point( hex $_[0] ) } ],
+            [ qr/u([Dd][89ABab][0-9A-Fa-f]{2})\\u([Dd][C-Fc-f][0-9A-Fa-f]{2})/ => sub {
+                    code_point( 0x10000 + ( hex( $_[0] ) - 0xD800 ) * 0x400 + hex( $_[1] ) - 0xDC00 );
+                }
+            ],
+            [ qr/u([0-9A-Fa-f]{4})/     => sub { code_point( hex $_[0] ) } ],
+            [ qr/u\{([0-9A-Fa-f]+)\}/   => sub { code_point( hex $_[0] ) } ],
+            [ qr/[xu]/                  => \&reject ],
+        ],
+        other => "drop",
+    },
+    python => {
+        rules => [
+            [ qr/(?:\r\n|\n|\r)/    => sub { "" } ],
+            [ qr/([\\'"abfnrtv])/   => \&c_escape ],
+            [ qr/([0-7]{1,3})/      => sub { code_point( oct $_[0] ) } ],
+            [ qr/x([0-9A-Fa-f]{2})/ => sub { code_point( hex $_[0] ) } ],
+            [ qr/u([0-9A-Fa-f]{4})/ => sub { code_point( hex $_[0] ) } ],
+            [ qr/U([0-9A-Fa-f]{8})/ => sub { code_point( hex $_[0] ) } ],
+            [ qr/N\{([^}]+)\}/      => sub { named_char( uc $_[0] ) } ],
+            [ qr/[xuUN]/            => \&reject ],
+        ],
+        other => "keep",
+    },
+    go => {
+        rules => [
+            [ qr/([\\"abfnrtv])/     => \&c_escape ],
+            [ qr/([0-3][0-7]{2})/    => sub { chr oct $_[0] } ],
+            [ qr/x([0-9A-Fa-f]{2})/  => sub { chr hex $_[0] } ],
+            [ qr/u([0-9A-Fa-f]{4})/  => sub { scalar_value( hex $_[0] ) } ],
+            [ qr/U([0-9A-Fa-f]{8})/  => sub { scalar_value( hex $_[0] ) } ],
+        ],
+        other => "fail",
+    },
+    rust => {
+        rules => [
+            [ qr/\r?\n[ \t\r\n]*/                       => sub { "" } ],
+            [ qr/0/                                     => sub { "\0" } ],
+            [ qr/([\\"'nrt])/                           => \&c_escape ],
+            [ qr/x([0-7][0-9A-Fa-f])/                   => sub { code_point( hex $_[0] ) } ],
+            [ qr/u\{((?:[0-9A-Fa-f]_*){1,6})\}/         => sub { scalar_value( hex digits( $_[0] ) ) } ],
+        ],
+        other => "fail",
+    },
+    xslate => {
+        rules => [ [ qr/([nrt])/ => \&c_escape ] ],
+        other => "drop",
+    },
+    # Perl, Xslate and PHP single quotes.
+    single => {
+        rules => [ [ qr/([\\'])/ => sub { $_[0] } ] ],
+        other => "keep",
+    },
+    php => {
+        rules => [
+            [ qr/([nrtvef\\\$"])/        => \&c_escape ],
+            [ qr/([0-7]{1,3})/           => sub { chr( oct( $_[0] ) & 0xFF ) } ],
+            [ qr/x([0-9A-Fa-f]{1,2})/    => sub { chr hex $_[0] } ],
+            [ qr/u\{([0-9A-Fa-f]+)\}/    => sub { code_point( hex $_[0] ) } ],
+            [ qr/u\{/                    => \&reject ],
+        ],
+        other => "keep",
+    },
+);
+
+# A heredoc reads the escapes of double quotes, except the quote itself.
+$escapes{php_heredoc} = {
+    %{ $escapes{php} },
+    rules => [ [ qr/([nrtvef\\\$])/ => \&c_escape ], @{ $escapes{php}{rules} }[ 1 .. $#{ $escapes{php}{rules} } ] ],
+};
+
+sub unescape {
+    my ( $self, $text, $table ) = @_;
+    my ( $rules, $other ) = @{ $escapes{$table} }{qw( rules other )};
+    my $result = "";
+  ESCAPE: while ( $text =~ /\G([^\\]*)\\/gc ) {
+        $result .= $1;
+        for my $rule ( @{$rules} ) {
+            my ( $pattern, $meaning ) = @{$rule};
+            next if $text !~ /\G$pattern/gc;
+            my $char = eval { $meaning->( $1, $2 ) };
+            $self->fail( "escape not read: $@" ) if !defined $char;
+            $result .= $char;
+            next ESCAPE;
+        }
+        $text =~ /\G(.)/sgc;
+        $self->fail( "escape not read: \\$1" ) if $other eq "fail";
+        $result .= $other eq "keep" ? "\\$1" : $1;
+    }
+    return $result . substr( $text, pos( $text ) || 0 );
 }
 
 # Heredoc and nowdoc: the closing identifier is the one that was opened, so
-# the whole literal is parsed here. Contents are taken verbatim.
+# the whole literal is parsed here. A heredoc reads its escapes, a nowdoc
+# keeps the text.
 sub php_heredoc_or_nowdoc {
     my ( $self ) = @_;
     my @open = $self->expect( qr/<<<[ \t]*(?:'(\w+)'|"(\w+)"|(\w+))[ \t]*\r?\n/ );
     shift @open;    # the whole match comes first, then the captures
+    my $nowdoc = defined $open[0];
     my ( $id ) = grep { defined } @open;
     my $close = qr/\r?\n[ \t]*\Q$id\E\b/;
     my $text = $self->raw_string_contents( $close );
     $self->expect( $close );
+    $text = $self->unescape( $text, "php_heredoc" ) if !$nowdoc;
+    $self->fail( "no string contents found" ) if !length $text;
     return $text;
 }
 
@@ -313,20 +459,13 @@ sub rust_raw_string {
 
 sub go_backtick_string_contents { shift->raw_string_contents( q[`] ) }
 
-# Contents up to the given terminator pattern, no escapes (PHP heredoc and
-# nowdoc, Go backticks).
+# Contents up to the given terminator pattern, as they are (PHP heredoc and
+# nowdoc, Go backticks, Rust raw strings).
 sub raw_string_contents {
     my ( $self, $stop ) = @_;
     my $text = $self->substring_before( $stop );
     $self->fail( "no string contents found" ) if !length $text;
     return $text;
-}
-
-sub string_contents {
-    my ( $self, @contents ) = @_;
-    my $elements = $self->sequence_of( $self->c_any_of( @contents ) );
-    return join "", @{$elements} if @{$elements};
-    $self->fail( "no string contents found" );
 }
 
 1;

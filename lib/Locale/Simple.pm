@@ -334,9 +334,9 @@ caller already has them.
 The scraper (L<Locale::Simple::Scraper>) recognises all eight C<N*_>
 names in Perl, JavaScript, Python, PHP and Go sources and their lower-case
 macro twins (C<n_!>, C<nn_!>, ...) in Rust, and emits C<.pot> entries
-identical to their C<l*()> twins. Templates (C<.tx>) are not
-scanned for N-markers — they run at request time, so the deferred
-pattern serves no purpose there.
+identical to their C<l*()> twins. It finds them in Xslate templates
+(C<.tx>) as well, though they are rarely needed there: templates run at
+request time, when the language is already known.
 
 =head1 STRING EXTRACTION
 

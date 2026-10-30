@@ -537,7 +537,7 @@ pl => /lib/Locale/Simple.pm
 - discarded COUNT characters of noise
 - found func l at line LINE
 - Expected "(":
- |identical to their C<l*()> twins. Templates (C<.tx>) are not
+ |identical to their C<l*()> twins. It finds them in Xslate templates
  |----------------------^
 - discarded COUNT characters of noise
 pl => /lib/Locale/Simple/Scraper.pm
@@ -629,8 +629,8 @@ pl => /lib/Locale/Simple/Scraper.pm
 - discarded COUNT characters of noise
 - found func l at line LINE
 - Expected "(":
- |        return if -l $file and not -e readlink( $file );
- |--------------------^
+ |        next if -l $file and not -e $file;
+ |------------------^
 - discarded COUNT characters of noise
 - found func l at line LINE
 - Expected translation token:
@@ -918,8 +918,8 @@ pl => /t/51-scrape-N.t
 - discarded COUNT characters of noise
 - found func l at line LINE
 - Expected "(":
- |# For each (Perl, JS, Python) fixture pair — an l*-call file and its
- |---------------------------------------------------^
+ |# For each language's fixture pair — an l*-call file and its
+ |-------------------------------------------^
 - discarded COUNT characters of noise
 - found func l at line LINE
 - Expected "(":
@@ -932,6 +932,10 @@ pl => /t/51-scrape-N.t
  |------------------------------------------------------------------^
 - discarded COUNT characters of noise
 pl => /t/52-scrape-args.t
+- discarded COUNT characters of noise
+pl => /t/53-scrape-files.t
+- discarded COUNT characters of noise
+pl => /t/54-scrape-escapes.t
 - discarded COUNT characters of noise
 pl => /t/60-N-markers.t
 - discarded COUNT characters of noise
@@ -1302,6 +1306,4 @@ py => /t/data/test.py
 - discarded COUNT characters of noise
 - found func lp at line LINE
 - found 2 arguments
-- discarded COUNT characters of noise
-pl => /xt/author/license-copies.t
 - discarded COUNT characters of noise
