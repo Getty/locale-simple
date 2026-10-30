@@ -931,6 +931,8 @@ pl => /t/51-scrape-N.t
  |    is( $n_out, $l_out, "$lang: N*_ markers produce same .pot as l*()" );
  |------------------------------------------------------------------^
 - discarded COUNT characters of noise
+pl => /t/52-scrape-args.t
+- discarded COUNT characters of noise
 pl => /t/60-N-markers.t
 - discarded COUNT characters of noise
 - found func N_ at line LINE
@@ -1300,4 +1302,6 @@ py => /t/data/test.py
 - discarded COUNT characters of noise
 - found func lp at line LINE
 - found 2 arguments
+- discarded COUNT characters of noise
+pl => /xt/author/license-copies.t
 - discarded COUNT characters of noise

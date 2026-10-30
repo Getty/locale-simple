@@ -55,6 +55,9 @@ sub noise {
     return $noise;
 }
 
+# A call whose arguments do not parse is reported and skipped; reading goes
+# on where they failed, at the top level and inside another call's argument
+# alike. Nothing is read twice, so nothing is recorded twice.
 sub call {
     my ( $self ) = @_;
 
@@ -93,9 +96,76 @@ sub extra_arguments {
     my ( $self ) = @_;
     return if !$self->maybe_expect( "," );
 
-    my @types = ( $self->curry::call, $self->curry::dynamic_string, $self->curry::token_int, $self->curry::variable );
-    my $extra_args = $self->list_of( ",", $self->c_any_of( @types ) );
+    my $extra_args = $self->list_of( ",", sub { $self->argument( "argument" ) } );
     return @{$extra_args};
+}
+
+# An argument the catalogue does not need, the count or one after it: any
+# code up to the comma or closing bracket that ends it. Returns its source
+# text, or nothing when it is a translation call alone, as that call is
+# recorded on its own.
+sub argument {
+    my ( $self, $name ) = @_;
+    $self->skip_ws;
+    my $start = $self->pos;
+    my $parts = $self->sequence_of( $self->c_any_of( $self->code_parts ) );
+    $self->fail( "Expected $name" ) if $self->pos == $start;
+    return if !@{$parts};
+    return substr $self->{str}, $start, $self->pos - $start;
+}
+
+# The pieces such code is made of. Translation calls in it are recorded.
+# String literals and bracket pairs are read as a whole, so a comma or a
+# bracket inside them does not end the argument.
+sub code_parts {
+    my ( $self ) = @_;
+    return (
+        $self->curry::call,
+        $self->skipped_literals,
+        $self->curry::bracketed,
+        $self->c_expect( qr/\w+|[^\w\s,()\[\]{}]/ ),
+    );
+}
+
+# A bracket pair with what it holds, commas included. A pair left open (in
+# broken code, or opened inside a literal form the scraper does not know)
+# ends where its contents do. It never fails once opened, so what is read
+# inside it is never read again.
+sub bracketed {
+    my ( $self ) = @_;
+    my $open = $self->expect( qr/[(\[{]/ );
+    ( my $close = $open ) =~ tr/([{/)]}/;
+    $self->sequence_of( $self->c_any_of( $self->code_parts, $self->c_expect( "," ) ) );
+    $self->maybe_expect( $close );
+    return $open;
+}
+
+# The language's string literals as they appear in skipped code. The quoted
+# forms are read leniently, any escape and empty included, as their text is
+# not kept; the others are read as for a msgid.
+sub skipped_literals {
+    my ( $self ) = @_;
+    my @literals = map {
+        ref $_ && $_->[0] =~ /^["']\z/
+          ? $self->c_expect( $self->quoted_qr( $_->[0] ) )
+          : $self->literal_scope( $_ )
+    } $self->literal_forms;
+    return @literals, map { $self->c_expect( $_ ) } $self->code_only_literals;
+}
+
+sub quoted_qr {
+    my ( $self, $quote ) = @_;
+    my $q = quotemeta $quote;
+    return qr/$q(?:[^\\$q]|\\.)*$q/s;
+}
+
+# Literals that never hold a msgid but must not be read as code: JavaScript
+# template literals, Go runes and Rust chars (one character or one escape; a
+# Rust lifetime has no closing quote and stays code).
+sub code_only_literals {
+    my $char = qr/'(?:\\.[^'\\\n]*|[^'\\\n])'/;
+    my %literals = ( js => [qr/`(?:[^`\\]|\\.)*`/s], go => [$char], rs => [$char] );
+    return @{ $literals{ shift->type } || [] };
 }
 
 sub required_args {
@@ -126,16 +196,15 @@ sub required_args {
 
 sub tr_token     { shift->named_token( "translation token" ) }
 sub plural_token { shift->named_token( "plural translation token" ) }
-sub plural_count { shift->named_token( "count of plural entity", "token_int" ) }
+sub plural_count { shift->argument( "count of plural entity" ) }
 sub context_id   { shift->named_token( "context id" ) }
 sub domain_id    { shift->named_token( "domain id" ) }
 sub comma        { shift->op( "," ) }
-sub variable     { shift->expect( qr/[\w\.]+/ ) }
 
 sub constant_string {
-    my ( $self, @components ) = @_;
+    my ( $self ) = @_;
 
-    unshift @components, $self->literal_scopes;
+    my @components = $self->literal_scopes;
 
     my $string;
     if ( defined $self->concat_op ) {
@@ -180,16 +249,14 @@ sub literal_forms {
 
 sub literal_scopes {
     my ( $self ) = @_;
-    return map {
-        ref $_
-          ? $self->curry::scope_of( $_->[0], $self->c_with_ws( $_->[1] ), $_->[2] )
-          : $self->c_with_ws( $_ )
-    } $self->literal_forms;
+    return map { $self->literal_scope( $_ ) } $self->literal_forms;
 }
 
-sub dynamic_string {
-    my ( $self ) = @_;
-    return $self->constant_string( $self->curry::call, $self->curry::variable );
+sub literal_scope {
+    my ( $self, $form ) = @_;
+    return ref $form
+      ? $self->curry::scope_of( $form->[0], $self->c_with_ws( $form->[1] ), $form->[2] )
+      : $self->c_with_ws( $form );
 }
 
 sub double_quote_string_contents {

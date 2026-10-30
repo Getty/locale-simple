@@ -52,6 +52,11 @@ Revision history for Locale-Simple
  - JavaScript: the build uses @rollup/wasm-node and runs on any CPU.
  - Packages: the PyPI wheel and the crates.io crate carry the MIT LICENSE
    file, like the npm package.
+ - Scraper: extract calls whose plural count or extra arguments are any
+   code (variables, member access, function calls, casts, brackets, strings
+   with commas or brackets, calls over several lines) in all six languages,
+   together with the translation calls inside those arguments. Before, such
+   calls were dropped, e.g. l("Hello %s", $name) or ln(..., items.length).
  - Tests: t/10-gettext.t sets the messages locale the way l_lang() does, so
    it passes on systems that start under the C or POSIX locale.
  - Documentation: the READMEs, the POD and the usage skills describe all

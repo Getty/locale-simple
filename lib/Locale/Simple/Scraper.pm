@@ -338,6 +338,12 @@ concatenation (C<"a" . "b"> in Perl/PHP, C<"a" + "b"> in JS/Python,
 C<"a" ~ "b"> in Xslate Kolon). PHP also reads heredoc and nowdoc literals;
 calls qualified with the PHP namespace are found as well.
 
+That holds for the msgid, the plural msgid, the context and the domain. The
+count and the arguments after them can be any code, such as C<$name>,
+C<< $obj->count >>, C<count($items)>, C<items.len()> or C<n as i64>. Such an
+argument ends at the comma or closing bracket outside any string literal or
+bracket pair, and the translation calls inside it are extracted as well.
+
 Go exports its helpers capitalised: C<L>, C<Ln>, C<Lp>, C<Lnp>, C<Ld>, C<Ldn>,
 C<Ldp>, C<Ldnp> (the deferred markers keep their names). They are found with any
 package prefix or bare after a dot import; strings are C<"..."> and backtick
