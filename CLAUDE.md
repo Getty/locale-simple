@@ -58,7 +58,7 @@ message; CI runs all six.
 | Skill | Source | Purpose |
 |---|---|---|
 | `locale-simple-core` | this repository | project knowledge — architecture, release path, known drift |
-| `getty-perl-core`, `getty-perl-moo`, `getty-perl-distribution`, `getty-git-commit-style`, `getty-git-usage`, `perl-release-dist-ini` | installed by `skilletor` | shared library conventions |
+| `getty-perl-core`, `getty-perl-moo`, `getty-git-commit-style`, `getty-git-usage`, `perl-release-dist-ini` | installed by `skilletor` | shared library conventions |
 | `kanban-issues-karr-coordination`, `kanban-issues-karr-ticket` | installed by `skilletor` | the karr board |
 | `perl-…`, `python-…`, `js-…`, `php-…`, `go-…`, `rust-localization-with-locale-simple` | tracked in this repository | **usage** skills for consumers of locale-simple — not build skills |
 
