@@ -1,14 +1,14 @@
 ---
 name: js-localization-with-locale-simple
-description: "Add i18n to a JavaScript / TypeScript app with the locale-simple npm package — same gettext-style API as the Perl and Python siblings. Load when editing a JS project that imports locale-simple, ships translated bundles, or shares .po files with Perl/Python code."
+description: "Add i18n to a JavaScript/TypeScript app with the locale-simple npm package. Load when a JS project imports it, ships translation bundles, or shares .po files with a sibling."
 user-invocable: false
 ---
 
 # Localizing JS / TS apps with locale-simple
 
-`locale-simple` (npm) is the JavaScript sibling of the Perl `Locale::Simple`
-and Python `locale_simple` modules. Same function names, same msgids, same
-`.po` files — no native dependencies, pure JS.
+`locale-simple` (npm) is the JavaScript sibling of `Locale::Simple` for Perl,
+Python, PHP, Go and Rust. Same function names, same msgids, same `.po` files —
+no native dependencies, pure JS.
 
 ## Install
 
@@ -24,7 +24,7 @@ Ships three builds from one source:
 | CJS | `dist/index.cjs` | legacy Node, `require()` |
 | UMD | `dist/locale-simple.umd.js` | drop-in `<script>` (global `LocaleSimple`) |
 
-TypeScript types: `dist/index.d.ts`.
+TypeScript types ship with the package (`src/index.d.ts`).
 
 ## Minimal setup
 
@@ -51,14 +51,15 @@ console.log(ln('You have %d message',
 
 ### `loadLocaleData` — po2json format
 
-If your toolchain emits `po2json` output (or you run `bin/po2json` from the
-Perl distribution), pass it straight in:
+`po2json` from the Perl distribution turns a `.po` file into a bundle.
+`loadLocaleData` takes it keyed by the domain and reads the language and the
+plural rule from the bundle's header:
 
 ```js
 import { loadLocaleData } from 'locale-simple';
-import de from './locale/de_DE.json' assert { type: 'json' };
+import de from './locale/de_DE.json' with { type: 'json' };
 
-loadLocaleData('myapp', de);
+loadLocaleData('myapp', { myapp: de });
 ```
 
 ## Translation calls
@@ -78,7 +79,8 @@ strings stay compatible with the Perl/Python sides.
 ## Workflow with the Perl scraper
 
 Even in a pure-JS project, the easiest way to extract msgids is still the
-Perl scraper — it parses `.js`, `.ts`, `.tx`, `.pl`, `.py` uniformly:
+Perl scraper — it reads `.js` next to the sources of the five sibling
+languages, and `--js ts` adds TypeScript:
 
 ```bash
 cpanm Locale::Simple                  # one-time
@@ -87,14 +89,14 @@ locale_simple_scraper \
     > po/myapp.pot
 
 # Translate → de_DE.po, then:
-po2json de_DE.po de_DE.json           # ships with Locale::Simple
+po2json de_DE.po > src/locale/de_DE.json   # ships with Locale::Simple
 ```
 
 Then in the app:
 
 ```js
-import de from './locale/de_DE.json';
-loadLocaleData('myapp', de);
+import de from './locale/de_DE.json' with { type: 'json' };
+loadLocaleData('myapp', { myapp: de });
 ```
 
 No runtime Perl needed — scraping is build-time only.
@@ -124,7 +126,7 @@ you already loaded. For SPAs:
 async function setLanguage(lang) {
   if (!hasLoaded(lang)) {
     const data = await fetch(`/locale/${lang}.json`).then(r => r.json());
-    loadLocaleData('myapp', data);
+    loadLocaleData('myapp', { myapp: data });
   }
   l_lang(lang);
   rerender();
@@ -141,8 +143,8 @@ async function setLanguage(lang) {
   extraction can't see it. Always use sprintf: `l("Hello, %s", name)`.
 - **Mixing `loadTranslations` and `loadLocaleData` for the same domain/lang**
   — the later call wins. Pick one source of truth.
-- **Tree-shaking** — `locale-simple` is tiny (~3 KB min). Don't wrap it in a
+- **Tree-shaking** — `locale-simple` is tiny. Don't wrap it in a
   custom facade just to "shake unused helpers"; you'll pay more in your
   facade than you'd save.
-- **`l_dir` on JS** — it exists but is a no-op placeholder kept for API
-  symmetry with Perl/Python. The JS build doesn't read the filesystem.
+- **`l_dir` and `l_nolocales` on JS** — they exist as no-ops for API symmetry
+  with the other runtimes. The JS build doesn't read the filesystem.

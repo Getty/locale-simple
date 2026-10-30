@@ -1,6 +1,6 @@
 ---
 name: php-localization-with-locale-simple
-description: "Add i18n to a PHP app with the raudssus/locale-simple Composer package — same gettext API as the Perl, Python and JavaScript siblings, no ext-gettext. Load when editing a PHP project that uses Locale\\Simple functions, ships .po/.mo files, or needs translations keyed to the same msgids as another sibling."
+description: "Add i18n to a PHP app with the raudssus/locale-simple Composer package. Load when a PHP project uses the Locale\Simple functions, ships .po/.mo files, or shares msgids with a sibling."
 user-invocable: false
 ---
 

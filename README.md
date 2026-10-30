@@ -3,8 +3,7 @@
 **Locale::Simple** is a lightweight translation framework providing a consistent
 gettext-based API across **Perl**, **Python**, **JavaScript**, **PHP**, **Go**
 and **Rust**. Write your translatable strings the same way in any of the six
-languages, keep one
-shared `.po`/`.mo` workflow, and ship.
+languages, keep one shared `.po`/`.mo` workflow, and ship.
 
 | Language | Package | Install |
 |---|---|---|
@@ -144,17 +143,41 @@ behaviour.
 
 | Function | Purpose |
 |---|---|
-| `loadTranslations(domain, lang, data)` | Register translations from a plain object |
-| `loadLocaleData(domain, localeData)` | Load `po2json`-style locale data |
+| `loadTranslations(domain, lang, data, pluralForms?)` | Register translations from a plain object; `pluralForms` is a `Plural-Forms` header value (default `n != 1`) |
+| `loadLocaleData(domain, localeData)` | Register `po2json` output; the language and the plural rule come from its header |
 
-## String extraction (Perl)
+## String extraction
 
-The Perl distribution ships a `locale_simple_scraper` CLI that walks your
-source tree (`.pl`, `.pm`, `.py`, `.js`, `.tx`) and emits a `.po` template with
-every `l()`/`ln()`/… call it can statically resolve:
+The Perl distribution ships `locale_simple_scraper`. It walks the current
+directory and writes a `.pot` template with every `l()`/`ln()`/… call and every
+`N_` marker it can resolve statically — for all six languages in one run:
+`.pl`, `.pm`, `.t`, `.py`, `.js`, `.php`, `.go`, `.rs` and Text::Xslate `.tx`
+files.
 
 ```bash
-locale_simple_scraper --ignore node_modules --ignore build > messages.pot
+locale_simple_scraper --ignore node_modules --ignore vendor > messages.pot
+```
+
+`--pl`, `--py`, `--js`, `--php`, `--go`, `--rs` and `--tx` add file extensions
+to a language (`--js mjs,ts`); `perldoc locale_simple_scraper` lists all
+options.
+
+## JavaScript: `.po` to JSON
+
+The JavaScript package reads JSON instead of `.mo` files. `po2json`, also part
+of the Perl distribution, converts a `.po` file:
+
+```bash
+po2json data/locale/de_DE/LC_MESSAGES/myapp.po > myapp.de_DE.json
+```
+
+```js
+import { loadLocaleData, ltd, l_lang, l } from 'locale-simple';
+import de from './myapp.de_DE.json' with { type: 'json' };
+
+loadLocaleData('myapp', { myapp: de });   // language and plural rule from the header
+ltd('myapp');
+l_lang('de_DE');
 ```
 
 ## License

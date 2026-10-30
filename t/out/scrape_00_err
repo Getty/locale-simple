@@ -361,12 +361,12 @@ pl => /lib/Locale/Simple.pm
 - discarded COUNT characters of noise
 - found func lnp at line LINE
 - Expected "(":
- |C<lnp>, C<ldnp>) that are API-compatible with the matching Python package
+ |C<lnp>, C<ldnp>). The same helpers ship for Python, JavaScript, PHP, Go and
  |-----^
 - discarded COUNT characters of noise
 - found func ldnp at line LINE
 - Expected "(":
- |C<lnp>, C<ldnp>) that are API-compatible with the matching Python package
+ |C<lnp>, C<ldnp>). The same helpers ship for Python, JavaScript, PHP, Go and
  |--------------^
 - discarded COUNT characters of noise
 - found func l at line LINE
@@ -537,8 +537,8 @@ pl => /lib/Locale/Simple.pm
 - discarded COUNT characters of noise
 - found func l at line LINE
 - Expected "(":
- |entries identical to their C<l*()> twins. Templates (C<.tx>) are not
- |------------------------------^
+ |identical to their C<l*()> twins. Templates (C<.tx>) are not
+ |----------------------^
 - discarded COUNT characters of noise
 pl => /lib/Locale/Simple/Scraper.pm
 - discarded COUNT characters of noise

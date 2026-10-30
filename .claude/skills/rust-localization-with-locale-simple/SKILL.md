@@ -1,6 +1,6 @@
 ---
 name: rust-localization-with-locale-simple
-description: "Add i18n to a Rust app with the locale-simple crate — same gettext API as the Perl, Python and JavaScript siblings, as macros (l!, ln!, ...) with lower-case markers (n_!, nn_!). Load when editing a Rust project that uses locale_simple macros, ships .po/.mo files, or needs translations keyed to the same msgids as another sibling."
+description: "Add i18n to a Rust app with the locale-simple crate (l!, ln!, n_!, ...). Load when a Rust project uses its macros, ships .po/.mo files, or shares msgids with a sibling."
 user-invocable: false
 ---
 

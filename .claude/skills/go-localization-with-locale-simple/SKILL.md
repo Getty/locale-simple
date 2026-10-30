@@ -1,6 +1,6 @@
 ---
 name: go-localization-with-locale-simple
-description: "Add i18n to a Go app with the github.com/Getty/locale-simple module — same gettext API as the Perl, Python and JavaScript siblings, capitalised names (L, Ln, Lp, ...). Load when editing a Go project that imports locale-simple, ships .po/.mo files, or needs translations keyed to the same msgids as another sibling."
+description: "Add i18n to a Go app with the github.com/Getty/locale-simple module (L, Ln, Lp, ...). Load when a Go project imports it, ships .po/.mo files, or shares msgids with a sibling."
 user-invocable: false
 ---
 

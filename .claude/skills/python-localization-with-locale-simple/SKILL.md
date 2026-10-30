@@ -1,13 +1,13 @@
 ---
 name: python-localization-with-locale-simple
-description: "Add i18n to a Python app with the locale-simple package — same gettext API as the Perl and JavaScript siblings. Load when editing a Python project that imports locale_simple, ships .po files, or needs translations keyed to the same msgids as a Perl/JS sibling."
+description: "Add i18n to a Python app with the locale-simple package. Load when a Python project imports locale_simple, ships .po/.mo files, or shares msgids with a sibling."
 user-invocable: false
 ---
 
 # Localizing Python apps with locale-simple
 
 `locale-simple` is a thin wrapper around the stdlib `gettext` module that
-mirrors the Perl and JavaScript `Locale::Simple` API exactly — same function
+mirrors the API of its Perl, JavaScript, PHP, Go and Rust siblings exactly — same function
 names, same msgids, same `.po` files.
 
 ## Install

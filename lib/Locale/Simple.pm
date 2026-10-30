@@ -1,5 +1,5 @@
 package Locale::Simple;
-# ABSTRACT: Functions for translate text based on gettext data, also in JavaScript
+# ABSTRACT: Short gettext helpers with one API for Perl, Python, JavaScript, PHP, Go and Rust
 our $VERSION = '0.200';
 use strict;
 use warnings;
@@ -213,10 +213,9 @@ Compile to C<.mo>:
 
 C<Locale::Simple> is a thin wrapper over L<Locale::TextDomain> / gettext,
 exporting short function names (C<l>, C<ln>, C<lp>, C<ld>, C<ldn>, C<ldp>,
-C<lnp>, C<ldnp>) that are API-compatible with the matching Python package
-L<locale-simple|https://pypi.org/project/locale-simple/> and the npm package
-L<locale-simple|https://www.npmjs.com/package/locale-simple>. The same msgids
-and the same C<.po> files work across all three languages.
+C<lnp>, C<ldnp>). The same helpers ship for Python, JavaScript, PHP, Go and
+Rust (see L</SEE ALSO>), built from the same repository; the same msgids and
+the same C<.po> files work across all six languages.
 
 The module only supports UTF-8 data, in and out — that is fixed by design.
 
@@ -251,7 +250,7 @@ suppress the file output but keep dry semantics.
 
 =head2 l_nolocales($bool)
 
-Disable the sanity check that requires L</l_dir> to have been called. Lets
+Disable the sanity check that requires L</"l_dir($dir)"> to have been called. Lets
 you use the module in pure sprintf mode (no gettext lookup) — handy in
 tests, scripts and the string-extraction pipeline.
 
@@ -333,8 +332,9 @@ caller already has them.
   print ln(@plur, $count);
 
 The scraper (L<Locale::Simple::Scraper>) recognises all eight C<N*_>
-names across C<.pl>/C<.pm>/C<.t>/C<.js>/C<.py> and emits C<.pot>
-entries identical to their C<l*()> twins. Templates (C<.tx>) are not
+names in Perl, JavaScript, Python, PHP and Go sources and their lower-case
+macro twins (C<n_!>, C<nn_!>, ...) in Rust, and emits C<.pot> entries
+identical to their C<l*()> twins. Templates (C<.tx>) are not
 scanned for N-markers — they run at request time, so the deferred
 pattern serves no purpose there.
 
@@ -342,14 +342,19 @@ pattern serves no purpose there.
 
 The distribution ships C<bin/locale_simple_scraper>, a static-analysis tool
 that walks your source tree and writes a C<.pot> template. It understands
-C<.pl>, C<.pm>, C<.t>, C<.py>, C<.js> and C<.tx> files uniformly, so one
-extraction run covers a polyglot project.
+C<.pl>, C<.pm>, C<.t>, C<.py>, C<.js>, C<.php>, C<.go>, C<.rs> and C<.tx>
+files, so one extraction run covers a polyglot project.
 
   locale_simple_scraper --ignore node_modules --ignore build \
                         > po/myapp.pot
 
 See L<Locale::Simple::Scraper> for the programmatic interface and supported
 options.
+
+C<bin/po2json> converts a C<.po> file into the JSON the JavaScript package
+loads with C<loadLocaleData>:
+
+  po2json share/locale/de_DE/LC_MESSAGES/myapp.po > myapp.de_DE.json
 
 =head1 SEE ALSO
 
@@ -370,6 +375,18 @@ L<https://pypi.org/project/locale-simple/> — Python sibling.
 =item *
 
 L<https://www.npmjs.com/package/locale-simple> — JavaScript sibling.
+
+=item *
+
+L<https://packagist.org/packages/raudssus/locale-simple> — PHP sibling.
+
+=item *
+
+L<https://pkg.go.dev/github.com/Getty/locale-simple/go> — Go sibling.
+
+=item *
+
+L<https://crates.io/crates/locale-simple> — Rust sibling.
 
 =back
 

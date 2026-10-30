@@ -9,7 +9,7 @@
 A tiny, sharp wrapper around `gettext` with `sprintf`-style formatting and
 short, friendly helpers (`l`, `ln`, `lp`, `ld`, …). UTF‑8 only, by design.
 
-The same API ships in three runtimes — **Perl, Python and JavaScript** — so
+The same API ships for **Perl, Python, JavaScript, PHP, Go and Rust** — so
 **one set of `.po` files feeds your whole stack**. Translate once, use
 everywhere.
 
@@ -18,10 +18,10 @@ everywhere.
 ## Why locale-simple?
 
 - **Same API across languages.** A function called `lnp` in Python behaves
-  identically in Perl and JavaScript. No mental context switch when jumping
-  between server, CLI tool and frontend.
-- **One `.po` file for everything.** Scrape strings from Perl/Python/JS
-  sources with the same scraper, ship one translation bundle.
+  identically in the other five runtimes. No mental context switch when
+  jumping between server, CLI tool and frontend.
+- **One `.po` file for everything.** One scraper reads the sources of all six
+  languages, so one translation bundle covers the whole stack.
 - **`sprintf` baked in.** Both classic (`%s`) and positional (`%1$s`)
   placeholders — exactly like Perl's `sprintf` and gettext's `xgettext`
   format strings expect.
@@ -76,7 +76,7 @@ print(ld("emails", "Welcome, %s", name))  # explicit domain
 | `l_lang(code)` | Set primary language (`de_DE`, `pt_BR`, …) |
 | `ltd(domain)` | Default text domain |
 | `l_dry(path)` | Append every encountered string to a `.po`-ish file (scrape mode) |
-| `l_nolocales(bool)` | Skip lookup, return the formatted msgid (handy in tests) |
+| `l_nolocales(bool)` | Lift the "set `l_dir()` first" check; without a directory the formatted msgid comes back (handy in tests) |
 
 ## Sibling packages
 
@@ -85,8 +85,11 @@ print(ld("emails", "Welcome, %s", name))  # explicit domain
 | Perl | [`Locale::Simple`](https://metacpan.org/dist/Locale-Simple) on CPAN | `lib/Locale/Simple.pm` |
 | Python | [`locale-simple`](https://pypi.org/project/locale-simple/) on PyPI | `python/locale_simple.py` |
 | JavaScript | [`locale-simple`](https://www.npmjs.com/package/locale-simple) on npm | `js/src/index.js` |
+| PHP | [`raudssus/locale-simple`](https://packagist.org/packages/raudssus/locale-simple) on Packagist | `php/src/Simple.php` |
+| Go | [`github.com/Getty/locale-simple/go`](https://pkg.go.dev/github.com/Getty/locale-simple/go) | `go/` |
+| Rust | [`locale-simple`](https://crates.io/crates/locale-simple) on crates.io | `rust/` |
 
-All three share the same source tree:
+All six share the same source tree:
 <https://github.com/Getty/locale-simple>
 
 ## License

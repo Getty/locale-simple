@@ -10,7 +10,7 @@ A tiny, sharp gettext wrapper with `sprintf`-style formatting and short,
 friendly helpers (`l`, `ln`, `lp`, `ld`, …). UTF‑8 only, by design. Ships
 ESM, CJS and TypeScript types out of the box.
 
-The same API ships in three runtimes — **Perl, Python and JavaScript** — so
+The same API ships for **Perl, Python, JavaScript, PHP, Go and Rust** — so
 **one set of `.po` files feeds your whole stack**. Translate once, use
 everywhere.
 
@@ -19,10 +19,10 @@ everywhere.
 ## Why locale-simple?
 
 - **Same API across languages.** A function called `lnp` in JavaScript
-  behaves identically in Perl and Python. No mental context switch when
-  jumping between server, CLI tool and frontend.
-- **One `.po` file for everything.** Scrape strings from Perl/Python/JS
-  sources with the same scraper, ship one translation bundle.
+  behaves identically in the other five runtimes. No mental context switch
+  when jumping between server, CLI tool and frontend.
+- **One `.po` file for everything.** One scraper reads the sources of all six
+  languages, so one translation bundle covers the whole stack.
 - **`sprintf` baked in.** Both classic (`%s`) and positional (`%1$s`)
   placeholders — exactly like Perl's `sprintf` and gettext's `xgettext`
   format strings expect.
@@ -37,15 +37,21 @@ npm install locale-simple
 
 ## Quick start
 
-For browser / bundler use, convert your `.mo` (or `.po`) files to JSON
-once with the `po2json` tool that ships in the sibling Perl distribution,
-then load the resulting bundle:
+For browser / bundler use, convert your `.po` files to JSON once with the
+`po2json` tool that ships in the sibling Perl distribution:
+
+```bash
+po2json locale/de_DE/LC_MESSAGES/myapp.po > locale/de_DE/myapp.json
+```
+
+then load the resulting bundle; the language and the plural rule come from
+its header:
 
 ```js
-import { l, ln, lp, ld, loadTranslations, l_lang, ltd } from 'locale-simple';
-import bundle from './locale/de_DE/myapp.json' assert { type: 'json' };
+import { l, ln, lp, ld, loadLocaleData, l_lang, ltd } from 'locale-simple';
+import bundle from './locale/de_DE/myapp.json' with { type: 'json' };
 
-loadTranslations('myapp', 'de_DE', bundle);
+loadLocaleData('myapp', { myapp: bundle });
 ltd('myapp');
 l_lang('de_DE');
 
@@ -80,11 +86,12 @@ console.log(ld("emails", "Welcome, %s", name)); // explicit domain
 | Call | Purpose |
 |---|---|
 | `loadTranslations(domain, lang, data, pluralForms?)` | Register a translation bundle (plain `{msgid: msgstr}` map; arrays for plurals). `pluralForms` is the `Plural-Forms` header value; omitted means `n != 1` |
-| `loadLocaleData(domain, data)` | Register a bundle in `po2json` / `Gettext.js` format; the `Plural-Forms` header of the bundle selects the plural form |
+| `loadLocaleData(domain, data)` | Register `po2json` output (`{ [domain]: bundle }`, Gettext.js format); the `Language` and `Plural-Forms` headers of the bundle select the language and the plural form |
 | `l_lang(code)` | Set primary language (`de_DE`, `pt_BR`, …) |
 | `ltd(domain)` | Default text domain |
-| `l_dir(path)` | Locale directory (used in dry/scrape mode) |
-| `l_dry(on, noWrite?)` | Dry-run mode for scraping translatable strings |
+| `l_dir(path)` | Accepted for API symmetry; the browser has no locale directory |
+| `l_dry(on, noWrite?)` | Dry-run mode: log the msgid of every call to `console.debug` |
+| `l_nolocales(on)` | Accepted for API symmetry; a no-op in JavaScript |
 
 ## Plural forms
 
@@ -107,7 +114,8 @@ process; `loadTranslations` without the fourth argument keeps `n != 1` silently.
 |---|---|
 | ESM | `dist/index.js` |
 | CommonJS | `dist/index.cjs` |
-| TypeScript types | `dist/index.d.ts` |
+| UMD (browser global `LocaleSimple`) | `dist/locale-simple.umd.js` |
+| TypeScript types | `src/index.d.ts` |
 
 Pick whichever your bundler / runtime prefers — modern setups will get the
 ESM build automatically via `package.json#exports`.
@@ -119,8 +127,11 @@ ESM build automatically via `package.json#exports`.
 | Perl | [`Locale::Simple`](https://metacpan.org/dist/Locale-Simple) on CPAN | `lib/Locale/Simple.pm` |
 | Python | [`locale-simple`](https://pypi.org/project/locale-simple/) on PyPI | `python/locale_simple.py` |
 | JavaScript | [`locale-simple`](https://www.npmjs.com/package/locale-simple) on npm | `js/src/index.js` |
+| PHP | [`raudssus/locale-simple`](https://packagist.org/packages/raudssus/locale-simple) on Packagist | `php/src/Simple.php` |
+| Go | [`github.com/Getty/locale-simple/go`](https://pkg.go.dev/github.com/Getty/locale-simple/go) | `go/` |
+| Rust | [`locale-simple`](https://crates.io/crates/locale-simple) on crates.io | `rust/` |
 
-All three share the same source tree:
+All six share the same source tree:
 <https://github.com/Getty/locale-simple>
 
 ## License

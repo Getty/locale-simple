@@ -1,6 +1,6 @@
 ---
 name: perl-localization-with-locale-simple
-description: "Add i18n to a Perl app with Locale::Simple — gettext-backed translations with the `l`, `ln`, `lp`, `ld`, … helpers. Load when editing a Perl project that needs localized strings, has a `use Locale::Simple` line, or ships .po files."
+description: "Add i18n to a Perl app with Locale::Simple (l, ln, lp, ld, ...). Load when a Perl project uses Locale::Simple, ships .po/.mo files, or shares msgids with a sibling."
 user-invocable: false
 ---
 
@@ -8,8 +8,8 @@ user-invocable: false
 
 `Locale::Simple` is a thin wrapper over `Locale::TextDomain` / `gettext`. It
 exports short function names (`l`, `ln`, …) that are identical across Perl,
-Python and JavaScript — so the same msgids and the same `.po` files work for
-all three.
+Python, JavaScript, PHP, Go and Rust — so the same msgids and the same `.po`
+files work for all six.
 
 ## Install
 
@@ -84,7 +84,8 @@ locale_simple_scraper \
     > po/myapp.pot
 ```
 
-It statically scans `.pl`, `.pm`, `.py`, `.js`, `.tx` files and emits a
+It statically scans `.pl`, `.pm`, `.t`, `.py`, `.js`, `.php`, `.go`, `.rs` and
+`.tx` files and emits a
 standard `.pot` — feed that to `msgmerge` / Poedit / Weblate like any other
 gettext project.
 
