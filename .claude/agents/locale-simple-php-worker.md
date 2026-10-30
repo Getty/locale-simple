@@ -1,6 +1,6 @@
 ---
 name: locale-simple-php-worker
-description: "Worker for the PHP port of locale-simple — php/src/Simple.php, the PHPUnit suite php/tests, composer.json (raudssus/locale-simple) and php/README.md. Functions in the namespace Locale\\Simple, own .mo reader and Plural-Forms evaluator, native sprintf. Leaves a commit-ready tree; never commits — commits belong to locale-simple-release-manager."
+description: "Worker for the PHP port of locale-simple — php/src/Simple.php, the PHPUnit suite php/tests, composer.json (raudssus/locale-simple) and php/README.md. Functions in the namespace Locale\\Simple, own .mo reader, Plural-Forms evaluator and sprintf. Leaves a commit-ready tree; never commits — commits belong to locale-simple-release-manager."
 model: inherit
 briefing:
   skills:
@@ -30,9 +30,9 @@ to `locale-simple-release-manager`.
   `php/src/Simple.php` with `files`; PSR-4 would not load functions.
 - **No `eval`, no `create_function`** for the Plural-Forms expression: tokenizer and
   recursive-descent parser only (mo-reader.md §3.4).
-- **PHP's own `sprintf`** does the formatting; `ArgumentCountError` and `ValueError`
-  are caught and the string is returned unformatted. Do not depend on `ext-gettext` or
-  `ext-mbstring`.
+- **The package's own formatter** (`Internal::format`) parses each placeholder and
+  meets the rows of `t/data/sprintf.json`; PHP's `sprintf` only writes the digits of
+  one number. Do not depend on `ext-gettext` or `ext-mbstring`.
 - **Minimum PHP is 8.0** for the package (`mixed`, union types, no `never`, no
   `readonly`); PHPUnit 11.5 needs 8.2 and is a dev dependency only.
 - **A behavior change to this port is usually a change to the other five.** The

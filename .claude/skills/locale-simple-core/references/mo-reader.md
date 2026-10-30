@@ -168,12 +168,10 @@ helper, so §3.1 is covered as well.
 `-`, `0`, space and `'<char>` (custom pad), width, `.precision`, the `N$` position and
 `%%`.
 
-- **PHP:** native `sprintf()` understands all of this, including `%1$s` → no own
-  implementation. Too few arguments raise `ArgumentCountError`; catch it and return the
-  unformatted string.
-- **Go:** `fmt.Sprintf` uses `%[1]s` for positions; `%1$s` yields `%!s(…)`. Needs an
-  own implementation.
-- **Rust:** `format!` is compile-time and has no `%`. Needs an own implementation.
+Every runtime brings its own formatter that parses the format once and formats each
+placeholder on its own: Perl and PHP hand one placeholder at a time to the native
+`sprintf`, Python, JavaScript, Go and Rust format it themselves (`fmt.Sprintf` has no
+`%1$s`, `format!` is compile-time). Width and precision count characters, not bytes.
 - **Missing argument:** the placeholder is left unchanged in the output. No panic, no
   error, no warning.
 - **Extra arguments** are ignored.
