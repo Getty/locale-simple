@@ -1,6 +1,6 @@
 {
   "name": "locale-simple",
-  "version": "0.0.21",
+  "version": "0.200.0",
   "description": "Tiny gettext wrapper with sprintf-style helpers (l, ln, lp, ld, …) — same API as the Perl, Python, PHP, Go and Rust siblings, so one .po file feeds all six runtimes. ESM + CJS + types, zero runtime deps.",
   "type": "module",
   "main": "./dist/index.cjs",
