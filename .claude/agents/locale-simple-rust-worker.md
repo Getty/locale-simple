@@ -33,9 +33,10 @@ to `locale-simple-release-manager`.
   Perl message text (the return type is `String`, not `Result`).
 - **No `unsafe`, nothing in `[dependencies]`.** Dev dependencies (serde_json for the JSON
   vectors) are fine.
-- **`rust-version = "1.65"`:** avoid newer std APIs (`OnceLock`, `LazyLock`,
-  `is_some_and`, let-else chains). Check the library with a `rust:1.65` container
-  when in doubt.
+- **`rust-version = "1.67"`:** the first release whose float formatting rounds a tie
+  to even, as the sprintf rows demand. Avoid newer std APIs (`OnceLock`, `LazyLock`,
+  `is_some_and`, let-else chains). Check the library with a `rust:1.67` container
+  when in doubt; the test suite's serde_json needs a newer toolchain.
 - **`Translator`** is the Go/Rust extension for per-request languages; it shares the
   catalog cache with the macros. Tests touching the global state serialize on a mutex.
 - **The crate version** comes from the release tag in CI; do not bump it by hand.

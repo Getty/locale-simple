@@ -20,7 +20,7 @@ The msgids and the `.po`/`.mo` files are shared; only the runtime differs.
 | `locale-simple` (npm) | `js/src/index.js` | JavaScript/TypeScript, reads po2json JSON |
 | `raudssus/locale-simple` (Packagist) | `php/src/Simple.php`, `composer.json` | PHP ≥ 8.0, own `.mo` reader |
 | `github.com/Getty/locale-simple` (Go) | `go/`, root `go.mod` | Go ≥ 1.21, own `.mo` reader, package `simple` |
-| `locale-simple` (crates.io) | `rust/` | Rust ≥ 1.65, own `.mo` reader, macros |
+| `locale-simple` (crates.io) | `rust/` | Rust ≥ 1.67, own `.mo` reader, macros |
 
 The helpers: `l`, `ln`, `lp`, `lnp`, `ld`, `ldn`, `ldp`, `ldnp` (the `ld*` family takes
 the text domain first), the configuration `l_dir`, `l_lang`, `l_dry`, `l_nolocales`,

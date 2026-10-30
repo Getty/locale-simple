@@ -88,7 +88,8 @@ All translators and the package functions share one catalog cache, so each
 - Without `l_dir` (and without `l_nolocales(true)`) a call panics with
   "please set a locale directory with l_dir() before using other translate
   functions".
-- Minimum Rust version: 1.65.
+- Minimum Rust version: 1.67 (from there on `{:.0}` rounds a tie to the even digit,
+  which the sprintf relies on).
 
 ## Tests
 

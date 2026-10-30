@@ -8,7 +8,7 @@ user-invocable: false
 
 The crate `locale-simple` mirrors the Perl/Python/JavaScript `Locale::Simple` API
 — same msgids, same `.po` files — with an own `.mo` reader, sprintf and
-Plural-Forms evaluator. No dependencies, no `unsafe`. Minimum Rust 1.65.
+Plural-Forms evaluator. No dependencies, no `unsafe`. Minimum Rust 1.67.
 
 ## Install
 

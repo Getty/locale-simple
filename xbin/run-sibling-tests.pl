@@ -23,7 +23,8 @@ my $home = $ENV{HOME} // '';
 
 # Minimum versions are the floors the ports themselves declare:
 #   go   go.mod            "go 1.21"
-#   rust rust/Cargo.toml   rust-version = "1.65"
+#   rust rust/Cargo.toml   rust-version = "1.67" for the crate, but the test
+#                          dependency serde_json needs Rust 1.71
 #   php  composer.json     "php": ">=8.0" for the package, but the test
 #                          dependency phpunit ^11.5 needs PHP 8.2
 my %runtime = (
@@ -41,7 +42,7 @@ my %runtime = (
 	},
 	rust => {
 		tool    => 'cargo',
-		min     => [ 1, 65 ],
+		min     => [ 1, 71 ],
 		version => ['--version'],
 		dirs    => ["$home/.cargo/bin"],
 	},
