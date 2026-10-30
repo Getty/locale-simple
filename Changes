@@ -38,6 +38,11 @@ Revision history for Locale-Simple
    workflow runs all six suites on every push without skipping.
  - .gitattributes keeps the Perl, Python and JavaScript sources out of
    git archive, so a composer require does not pull the whole repository.
+ - Packages: the PyPI wheel and the crates.io crate carry the MIT LICENSE
+   file, like the npm package.
+ - Documentation: the READMEs, the POD and the usage skills describe all
+   six runtimes, the scraper's languages and loading po2json output in
+   JavaScript.
 
 0.109     2026-04-23 13:40:35Z
 
