@@ -24,7 +24,8 @@ everywhere.
   languages, so one translation bundle covers the whole stack.
 - **`sprintf` baked in.** Both classic (`%s`) and positional (`%1$s`)
   placeholders — exactly like Perl's `sprintf` and gettext's `xgettext`
-  format strings expect.
+  format strings expect. Argument values go in as they are, so a `%` in them
+  stays.
 - **Boring and small.** Single-file module, no surprises, no magic.
 
 ## Install
@@ -63,7 +64,7 @@ print(ld("emails", "Welcome, %s", name))  # explicit domain
 | `ln(msgid, msgid_plural, n, *args)` | `ngettext` | Plural form for `n` |
 | `lp(ctxt, msgid, *args)` | `pgettext` | With disambiguating context |
 | `lnp(ctxt, msgid, msgid_plural, n, *args)` | `npgettext` | Plural + context |
-| `ld(domain, msgid, *args)` | `dgettext` | Specific text domain |
+| `ld(domain, msgid, *args)` | `dgettext` | Specific text domain, bound to the `l_dir()` directory on first use |
 | `ldn(domain, msgid, msgid_plural, n, *args)` | `dngettext` | Domain + plural |
 | `ldp(domain, ctxt, msgid, *args)` | `dpgettext` | Domain + context |
 | `ldnp(domain, ctxt, msgid, msgid_plural, n, *args)` | `dnpgettext` | The full thing |
@@ -72,11 +73,11 @@ print(ld("emails", "Welcome, %s", name))  # explicit domain
 
 | Call | Purpose |
 |---|---|
-| `l_dir(path)` | Locale directory containing `<lang>/LC_MESSAGES/<domain>.mo` |
+| `l_dir(path)` | Locale directory containing `<lang>/LC_MESSAGES/<domain>.mo`; a later call moves every bound domain to the new directory |
 | `l_lang(code)` | Set primary language (`de_DE`, `pt_BR`, …) |
 | `ltd(domain)` | Default text domain |
-| `l_dry(path)` | Append every encountered string to a `.po`-ish file (scrape mode) |
-| `l_nolocales(bool)` | Lift the "set `l_dir()` first" check; without a directory the formatted msgid comes back (handy in tests) |
+| `l_dry(path)` | Dry run: append each call's msgid block (`# domain:`, `msgctxt`, `msgid`, `msgid_plural`) to `path` in UTF-8 with LF line ends, the same bytes the Perl module writes, and return the formatted msgid; `l_dry(path, True)` skips the file, `l_dry(None)` leaves dry mode |
+| `l_nolocales(bool)` | Lift the "set `l_dir()` first" check that `ltd()` and every helper make; without a directory the formatted msgid comes back (handy in tests) |
 
 ## Sibling packages
 

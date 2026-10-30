@@ -33,6 +33,24 @@ msgstr ""
 msgid "Go raw \"string\" with \\ backslash"
 msgstr ""
 
+#: t/21-dryrun.t:79
+#, locale-simple-format othertest
+msgctxt "inbox"
+msgid "You have %d message"
+msgid_plural "You have %d messages"
+msgstr[0] ""
+
+#: t/21-dryrun.t:76 t/31-locale-simple-domain-binding.t:26 t/31-locale-simple-domain-binding.t:61 t/31-locale-simple-domain-binding.t:75
+#, locale-simple-format othertest
+msgid "Hello"
+msgstr ""
+
+#: t/31-locale-simple-domain-binding.t:38
+#, locale-simple-format othertest
+msgid "You have %d message"
+msgid_plural "You have %d messages"
+msgstr[0] ""
+
 #: t/data/dummy.php:20
 #, locale-simple-format php_dom
 msgid "PHP after inline html"
@@ -49,7 +67,7 @@ msgctxt "PHP_ctx"
 msgid "PHP single concat"
 msgstr ""
 
-#: t/20-locale-simple.t:71 t/data/test.py:83
+#: t/20-locale-simple.t:71 t/21-dryrun.t:77 t/data/test.py:83
 #, locale-simple-format
 msgctxt "alien"
 msgid "Hello"
@@ -79,13 +97,28 @@ msgstr ""
 msgid " Sie müssen eine eigene Domain eingeben. \"%s\" ist nicht zulässig. "
 msgstr ""
 
+#: t/20-locale-simple.t:94
+#, locale-simple-format
+msgid "%%s %s %%"
+msgstr ""
+
+#: t/20-locale-simple.t:84
+#, locale-simple-format
+msgid "%1$s"
+msgstr ""
+
+#: t/20-locale-simple.t:87
+#, locale-simple-format
+msgid "%2$s / %1$s"
+msgstr ""
+
 #: t/20-locale-simple.t:47 t/data/test.py:63
 #, locale-simple-format
 msgid "%2$s brought %1$d message"
 msgid_plural "%2$s brought %1$d messages"
 msgstr[0] ""
 
-#: t/20-locale-simple.t:53 t/data/test.py:68
+#: t/20-locale-simple.t:53 t/20-locale-simple.t:89 t/21-dryrun.t:78 t/data/test.py:68
 #, locale-simple-format
 msgid "%2$s has %1$d message"
 msgid_plural "%2$s has %1$d messages"
@@ -97,6 +130,16 @@ msgid "%d item"
 msgid_plural "%d items"
 msgstr[0] ""
 
+#: t/20-locale-simple.t:86
+#, locale-simple-format
+msgid "%s and %s"
+msgstr ""
+
+#: t/20-locale-simple.t:85
+#, locale-simple-format
+msgid "%s"
+msgstr ""
+
 #: t/data/dummy.tx:4
 #, locale-simple-format
 msgid "/unternehmen/kundeninformationen/agb-verbraucher/#widerrufsrecht"
@@ -107,6 +150,11 @@ msgstr ""
 msgid "1 file"
 msgid_plural "%d files"
 msgstr[0] ""
+
+#: t/20-locale-simple.t:93
+#, locale-simple-format
+msgid "100%% of %s"
+msgstr ""
 
 #: t/20-locale-simple.t:59 t/data/test.py:73
 #, locale-simple-format
@@ -128,7 +176,7 @@ msgstr ""
 msgid "Greet"
 msgstr ""
 
-#: lib/Locale/Simple.pm:LINE t/20-locale-simple.t:17 t/21-dryrun.t:20 t/23-locale-simple-c-locale.t:51 t/30-locale-simple-other.t:18 t/30-locale-simple-other.t:26 t/60-N-markers.t:14 t/data/test.py:38
+#: lib/Locale/Simple.pm:LINE t/20-locale-simple.t:17 t/21-dryrun.t:21 t/21-dryrun.t:74 t/21-dryrun.t:121 t/23-locale-simple-c-locale.t:51 t/30-locale-simple-other.t:18 t/30-locale-simple-other.t:26 t/31-locale-simple-domain-binding.t:32 t/31-locale-simple-domain-binding.t:55 t/31-locale-simple-domain-binding.t:69 t/60-N-markers.t:14 t/data/test.py:38
 #, locale-simple-format
 msgid "Hello"
 msgstr ""
@@ -195,6 +243,11 @@ msgstr ""
 msgid "Rust raw with \"quote\" inside"
 msgstr ""
 
+#: t/21-dryrun.t:80
+#, locale-simple-format
+msgid "Say \"%s\"\\n\nGrüße"
+msgstr ""
+
 #: t/data/dummy.pl:11
 #, locale-simple-format
 msgid "Sie müssen eine eigene Domain eingeben. \"%s\" ist nicht zulässig!"
@@ -203,6 +256,11 @@ msgstr ""
 #: t/data/dummy.tx:2 t/data/dummy.tx:3
 #, locale-simple-format
 msgid "Soll der Tarif %s?"
+msgstr ""
+
+#: t/21-dryrun.t:81
+#, locale-simple-format
+msgid "Tab\there\rand CR"
 msgstr ""
 
 #: t/30-locale-simple-other.t:31
@@ -220,13 +278,13 @@ msgstr ""
 msgid "Vertrag gekündigt zum %s"
 msgstr ""
 
-#: t/20-locale-simple.t:35 t/20-locale-simple.t:41 t/21-dryrun.t:38 t/21-dryrun.t:44 t/data/test.py:53 t/data/test.py:58
+#: t/20-locale-simple.t:35 t/20-locale-simple.t:41 t/21-dryrun.t:39 t/21-dryrun.t:45 t/data/test.py:53 t/data/test.py:58
 #, locale-simple-format
 msgid "You have %d message of %s"
 msgid_plural "You have %d messages of %s"
 msgstr[0] ""
 
-#: lib/Locale/Simple.pm:LINE t/20-locale-simple.t:23 t/20-locale-simple.t:29 t/21-dryrun.t:26 t/21-dryrun.t:32 t/23-locale-simple-c-locale.t:52 t/23-locale-simple-c-locale.t:53 t/data/test.py:43 t/data/test.py:48
+#: lib/Locale/Simple.pm:LINE t/20-locale-simple.t:23 t/20-locale-simple.t:29 t/21-dryrun.t:27 t/21-dryrun.t:33 t/23-locale-simple-c-locale.t:52 t/23-locale-simple-c-locale.t:53 t/data/test.py:43 t/data/test.py:48
 #, locale-simple-format
 msgid "You have %d message"
 msgid_plural "You have %d messages"

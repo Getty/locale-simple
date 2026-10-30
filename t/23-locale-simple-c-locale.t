@@ -14,7 +14,7 @@ use FindBin qw( $Bin );
 use POSIX ();
 
 plan skip_all => 'no LC_MESSAGES on this platform'
-  unless eval { POSIX::LC_MESSAGES(); 1 };
+  unless defined eval { POSIX::LC_MESSAGES() };
 
 # An empty LOCPATH hides every installed glibc locale, like a minimal
 # container; other C libraries ignore it.

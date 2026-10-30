@@ -45,14 +45,31 @@ def l_dir(d):
     global dir
     if not os.path.isdir(d): raise OSError("%s: No such file or directory" % d)
     dir = d
+    for td in list(tds):
+        _bind(td)
+
+# Binds a text domain to the l_dir() directory. ltd(), the ld* helpers and
+# l_dir() all bind through here, so every bound domain follows l_dir().
+def _bind(td):
+    bindtextdomain(td, dir)
+    if bind_textdomain_codeset:
+        bind_textdomain_codeset(td, 'utf-8')
+    tds[td] = 1
 
 def _die(msg):
     sys.stderr.write(msg + '\n')
     exit(1)
 
+def _check_dir():
+    if not dir and not nolocales:
+        _die("please set a locale directory with l_dir() before using other translate functions")
+
 def gettext_escape(content):
+    content = content.replace('\\', '\\\\')
     content = content.replace('\n', '\\n')
-    content = content.replace('"', '\"')
+    content = content.replace('\t', '\\t')
+    content = content.replace('\r', '\\r')
+    content = content.replace('"', '\\"')
     return content
 
 def l_lang(primary):
@@ -61,19 +78,49 @@ def l_lang(primary):
 
 def wd(data):
     if nowrite: return
-    f = open(dry, 'a')
-    f.write('\n'.join(data) + "\n\n")
-    f.close()
+    with open(dry, 'a', encoding='utf-8', newline='\n') as f:
+        f.write('\n'.join(data) + "\n\n")
 
+_PLACEHOLDER = re.compile(
+    r'%%|%(?:(\d+)\$)?([-+ 0#]*)(\*|\d+)?(?:\.(\*|\d+))?([scoxXuidfFeEgG])'
+)
+
+# One pass over the format: the text between placeholders is copied, and each
+# placeholder is formatted on its own with its own argument, so an argument
+# value is never read as a format. %2$s picks its argument, a placeholder
+# without N$ takes the next one in order (a * width or precision too), as in
+# Perl. A placeholder without an argument stays as it is; extra arguments are
+# ignored.
 def sprintf(string, *args):
-    args = list(args)
-    for m in re.finditer(r'%(\d+)\$([scboxXuidfegEG])', string):
-        substr = m.string[m.start():m.end()]
-        groups = m.groups()
-        string = string.replace(substr, ('%'+groups[1]) % args[int(groups[0])-1])
-    count = len(re.findall(r'%%|%(?:\d+\$)?(?:[-+\'#0 ]*)(?:\*\d+\$|\*|\d+)?(\.(?:\*\d+\$|\*|\d+))?(?:[scboxXuidfegEG])', string))
-    args = tuple(args[:count])
-    return string % args
+    out = []
+    last = 0
+    implicit = 0
+    for m in _PLACEHOLDER.finditer(string):
+        out.append(string[last:m.start()])
+        last = m.end()
+        if m.group(0) == '%%':
+            out.append('%')
+            continue
+        index, flags, width, precision, conversion = m.groups()
+        picks = []
+        for star in (width, precision):
+            if star == '*':
+                picks.append(implicit)
+                implicit += 1
+        if index:
+            picks.append(int(index) - 1)
+        else:
+            picks.append(implicit)
+            implicit += 1
+        if not all(0 <= i < len(args) for i in picks):
+            out.append(m.group(0))
+            continue
+        spec = '%' + flags + (width or '')
+        if precision is not None:
+            spec += '.' + precision
+        out.append((spec + conversion) % tuple(args[i] for i in picks))
+    out.append(string[last:])
+    return ''.join(out)
 
 def l(id, *args):
     return ldnp('', None, id, None, None, *args)
@@ -92,8 +139,7 @@ def ldp(td, ctxt, id, *args):
 
 def ldnp(td, ctxt, id, idp, n, *args):
     if not len(id): return id
-    if not dir and not nolocales:
-        _die("please set a locale directory with l_dir() before using other translate functions")
+    _check_dir()
 
     if idp is not None: args = (n,) + args
     is_plural = idp is not None
@@ -101,13 +147,14 @@ def ldnp(td, ctxt, id, idp, n, *args):
     if dry:
         if not nowrite:
             save = []
-            if td: save.append(' # domain: '+td)
-            if ctxt: save.append('msgctxt: "'+gettext_escape(ctxt)+'"')
+            if td: save.append('# domain: '+td)
+            if ctxt: save.append('msgctxt "'+gettext_escape(ctxt)+'"')
             save.append('msgid "'+gettext_escape(id)+'"')
             if idp: save.append('msgid_plural "'+gettext_escape(idp)+'"')
             wd(save)
-        out = (idp if is_plural and n != 1 else id) % args
+        out = sprintf(idp if is_plural and n != 1 else id, *args)
     else:
+        if td and td not in tds: _bind(td)
         key = (ctxt + '\x04' + id) if ctxt else id
         keyp = (ctxt + '\x04' + idp) if ctxt and idp else idp
         if   td and is_plural:     raw = dngettext(td, key, keyp, n)
@@ -147,9 +194,6 @@ def Ndnp_(td, ctxt, sg, pl):
 
 
 def ltd(td):
-    if td not in tds:
-        bindtextdomain(td, dir)
-        if bind_textdomain_codeset:
-            bind_textdomain_codeset(td, 'utf-8')
-        tds[td] = 1
+    _check_dir()
+    if td not in tds: _bind(td)
     textdomain(td)

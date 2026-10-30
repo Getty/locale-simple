@@ -8,7 +8,6 @@ use Exporter 'import';
 use Locale::TextDomain 1.23 (); # to ensure we get the right version of gettext_dumb
 use Locale::gettext_dumb qw(:locale_h :libintl_h);
 use POSIX qw' setlocale ';
-use IO::All 0.41 -utf8;
 
 our @EXPORT = qw(
 
@@ -61,12 +60,14 @@ my %tds;
 my $dir;
 
 sub l_nolocales { $nolocales = shift }
-sub l_dry { $dry = shift; $nowrite = shift; $nolocales = 1 if $dry }
+sub l_dry { $dry = shift; $nowrite = shift; $nolocales = $dry ? 1 : 0 }
 
 sub gettext_escape {
 	my ( $content ) = @_;
 	$content =~ s/\\/\\\\/g;
 	$content =~ s/\n/\\n/g;
+	$content =~ s/\t/\\t/g;
+	$content =~ s/\r/\\r/g;
 	$content =~ s/"/\\"/g;
 	return $content;
 }
@@ -90,7 +91,20 @@ sub coderef_hash {{
 	ldnp => sub { ldnp(@_) },
 }}
 
-sub l_dir { $dir = shift }
+sub l_dir {
+	$dir = shift;
+	_bind_textdomain($_) for keys %tds;
+	return $dir;
+}
+
+# Binds a text domain to the l_dir() directory. ltd(), the domain helpers
+# and l_dir() all bind through here, so every bound domain follows l_dir().
+sub _bind_textdomain {
+	my ( $td ) = @_;
+	bindtextdomain($td,$dir);
+	bind_textdomain_codeset($td,'utf-8');
+	$tds{$td} = 1;
+}
 
 sub l_lang {
 	my $primary = shift;
@@ -98,7 +112,9 @@ sub l_lang {
 	$ENV{LANG} = $primary;		# unsure if these ENV assignments are still needed with the setlocale below
 	$ENV{LC_ALL} = $primary;
 	$ENV{LC_MESSAGES} = $primary; # set locale for messages if the system supports it
-	return unless eval { LC_MESSAGES }; # the system has no LC_MESSAGES
+	# POSIX knows LC_MESSAGES only where the system has it; Locale::gettext_pp
+	# answers its own LC_MESSAGES with a stand-in number everywhere.
+	return unless defined eval { POSIX::LC_MESSAGES() };
 	setlocale( LC_MESSAGES, $primary );
 	# Under the C or POSIX messages locale gettext ignores LANGUAGE and
 	# translates nothing. Without an installed locale for $primary, move
@@ -111,8 +127,14 @@ sub l_lang {
 	return;
 }
 
-# write dry
-sub wd { io($dry)->append(join("\n",@_)."\n\n") if !$nowrite }
+# write dry: UTF-8 with LF line ends on every platform (:raw drops :crlf)
+sub wd {
+	return if $nowrite;
+	open my $fh, '>>:raw:encoding(UTF-8)', $dry
+	  or die 'cannot append to '.$dry.': '.$!;
+	print $fh join("\n",@_)."\n\n";
+	close $fh;
+}
 
 # l(msgid,...)
 sub l { return ldnp('',undef,shift,undef,undef,@_) }
@@ -130,8 +152,9 @@ sub ldn { return ldnp(shift,undef,shift,shift,shift,@_) }
 sub ldp { return ldnp(shift,shift,shift,undef,undef,@_) }
 # ldnp(domain,msgctxt,msgid,msgid_plural,count,...)
 sub ldnp {
-	die "please set a locale directory with l_dir() before using other translate functions" unless $dir || $nolocales;
 	my ($td, $ctxt, $id, $idp, $n) = (shift,shift,shift,shift,shift);
+	return $id if defined $id && $id eq '';
+	die "please set a locale directory with l_dir() before using other translate functions" unless $dir || $nolocales;
 	my @args = @_;
 	unshift @args, $n if $idp;
 	my $return;
@@ -147,6 +170,7 @@ sub ldnp {
 		no warnings 'redundant';
 		$return = sprintf($idp && $n != 1 ? $idp : $id, @args);
 	} else {
+		_bind_textdomain($td) if $td && !$tds{$td};
 		# L::TD handles msg ids as bytes internally
 		utf8::encode($id);
 		my $gt = dnpgettext($td, $ctxt, $id, $idp, $n);
@@ -161,11 +185,7 @@ sub ldnp {
 sub ltd {
 	die "please set a locale directory with l_dir() before using other translate functions" unless $dir || $nolocales;
 	my $td = shift;
-	unless (defined $tds{$td}) {
-		bindtextdomain($td,$dir);
-		bind_textdomain_codeset($td,'utf-8');
-		$tds{$td} = 1;
-	}
+	_bind_textdomain($td) unless $tds{$td};
 	textdomain($td);
 }
 
@@ -226,6 +246,10 @@ The module only supports UTF-8 data, in and out — that is fixed by design.
 Set the locale directory. Structure underneath must follow the standard
 gettext layout: C<< $dir/<lang>/LC_MESSAGES/<domain>.mo >>.
 
+Every text domain reads from the directory set last: a later C<l_dir> moves
+the domains already bound, whether through L</"ltd($domain)"> or on their
+first use in a domain function, to the new directory.
+
 =head2 ltd($domain)
 
 Set (or switch) the active text domain. Binds the domain to the previously
@@ -241,12 +265,30 @@ nothing while the messages locale is C<C> or C<POSIX>, so when C<$lang> cannot
 be set and the process runs under one of those, C<l_lang> sets C<LC_MESSAGES>
 to C<C.UTF-8> (or C<en_US.UTF-8>) instead.
 
+On a platform whose L<POSIX> has no C<LC_MESSAGES> category (Windows),
+C<l_lang> sets the environment variables only.
+
 =head2 l_dry($file, $nowrite)
 
 Enable dry-run mode. While active, every translation call appends its msgid
-in C<.po> format to C<$file> and still returns the formatted result. Useful
-for harvesting msgids from a running system. Pass a truthy C<$nowrite> to
-suppress the file output but keep dry semantics.
+block to C<$file> and returns the msgid (or C<$msgid_plural> for C<$n != 1>),
+formatted with the same sprintf as a translation, positional placeholders
+included. Useful for harvesting msgids from a running system. Pass a truthy
+C<$nowrite> to suppress the file output but keep dry semantics.
+
+The block holds the lines C<# domain: ...>, C<msgctxt "...">, C<msgid "...">
+and C<msgid_plural "..."> that apply, joined by newlines and followed by a
+blank line, in UTF-8 with LF line ends on every platform. Backslash, newline,
+tab, carriage return and double quote are escaped as in a C<.po> file. An
+empty msgid writes no block. The Python package writes the same bytes:
+
+  # domain: myapp
+  msgctxt "menu"
+  msgid "%d file"
+  msgid_plural "%d files"
+
+Dry-run mode lifts the L</"l_dir($dir)"> check like L</"l_nolocales($bool)">.
+C<l_dry(undef)> leaves dry-run mode and turns the check back on.
 
 =head2 l_nolocales($bool)
 
@@ -259,7 +301,8 @@ tests, scripts and the string-extraction pipeline.
 All translation functions take sprintf-style format arguments after the
 required positional arguments. Perl positional-argument syntax
 (C<%1$s>, C<%2$d>) is supported and recommended for anything that needs to
-be reordered during translation.
+be reordered during translation. An empty msgid returns an empty string
+without a lookup.
 
 =head2 l($msgid, @args)
 
@@ -283,6 +326,9 @@ Context + plural. The full gettext C<p_gettext_n> shape.
 =head2 ld($domain, $msgid, @args)
 
 Translation from a specific domain without switching the current domain.
+The domain is bound to the L</"l_dir($dir)"> directory on its first use, the
+way L</"ltd($domain)"> binds it, so it needs no C<ltd> call of its own. The
+three domain functions below do the same.
 
 =head2 ldn($domain, $msgid, $msgid_plural, $n, @args)
 

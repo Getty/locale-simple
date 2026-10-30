@@ -29,4 +29,15 @@ eval {
 
 is($@,'',"Checking for proper preventing of error with l_nolocales");
 
+# Dry-run mode lifts the check for ltd as well, and leaving it brings the
+# check back; python/test.py checks the same.
+l_nolocales(0);
+l_dry('unused.po',1);
+eval { ltd('test') };
+is($@,'',"dry-run mode lifts the l_dir check for ltd");
+
+l_dry(undef);
+eval { ltd('test') };
+like($@,qr/please set a locale directory/,"leaving dry-run mode brings the check back for ltd");
+
 done_testing;

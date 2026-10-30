@@ -852,6 +852,32 @@ pl => /t/20-locale-simple.t
 - found func lp at line LINE
 - found 2 arguments
 - discarded COUNT characters of noise
+- found func l at line LINE
+- Expected translation token:
+ |    l(''),
+ |------^
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 2 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 2 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 3 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 3 arguments
+- discarded COUNT characters of noise
+- found func ln at line LINE
+- found 4 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 3 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 2 arguments
+- discarded COUNT characters of noise
 pl => /t/21-dryrun.t
 - discarded COUNT characters of noise
 - found func l at line LINE
@@ -868,6 +894,40 @@ pl => /t/21-dryrun.t
 - discarded COUNT characters of noise
 - found func ln at line LINE
 - found 4 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- Expected translation token:
+ |        l(''),
+ |----------^
+- discarded COUNT characters of noise
+- found func ld at line LINE
+- found 2 arguments
+- discarded COUNT characters of noise
+- found func lp at line LINE
+- found 2 arguments
+- discarded COUNT characters of noise
+- found func ln at line LINE
+- found 4 arguments
+- discarded COUNT characters of noise
+- found func ldnp at line LINE
+- found 5 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 2 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func ld at line LINE
+- Expected domain id:
+ |      '-e', 'l_dry(shift); ld(q(othertest),q(Hello))', $crlf ) == 0
+ |------------------------------^
 - discarded COUNT characters of noise
 pl => /t/22-locale-simple-simplenumber.t
 - discarded COUNT characters of noise
@@ -888,6 +948,8 @@ pl => /t/23-locale-simple-c-locale.t
 - found func ln at line LINE
 - found 3 arguments
 - discarded COUNT characters of noise
+pl => /t/24-l-lang-without-lc-messages.t
+- discarded COUNT characters of noise
 pl => /t/30-locale-simple-other.t
 - discarded COUNT characters of noise
 - found func l at line LINE
@@ -898,6 +960,29 @@ pl => /t/30-locale-simple-other.t
 - discarded COUNT characters of noise
 - found func l at line LINE
 - found 1 arguments
+- discarded COUNT characters of noise
+pl => /t/31-locale-simple-domain-binding.t
+- discarded COUNT characters of noise
+- found func ld at line LINE
+- found 2 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func ldn at line LINE
+- found 4 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func ld at line LINE
+- found 2 arguments
+- discarded COUNT characters of noise
+- found func l at line LINE
+- found 1 arguments
+- discarded COUNT characters of noise
+- found func ld at line LINE
+- found 2 arguments
 - discarded COUNT characters of noise
 pl => /t/40-error.t
 - discarded COUNT characters of noise

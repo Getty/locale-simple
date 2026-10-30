@@ -57,6 +57,24 @@ Revision history for Locale-Simple
    with commas or brackets, calls over several lines) in all six languages,
    together with the translation calls inside those arguments. Before, such
    calls were dropped, e.g. l("Hello %s", $name) or ln(..., items.length).
+ - Perl, Python: ld, ldn, ldp and ldnp bind their domain to the l_dir
+   directory on first use, so they need no ltd() call first. A later l_dir
+   moves every bound domain to the new directory.
+ - Perl, Python: dry mode writes the same block in both (# domain:, msgctxt,
+   msgid, msgid_plural) as UTF-8 with LF line ends on every platform, with
+   backslash, newline, tab, carriage return and double quote escaped; the
+   scraper's .pot escapes the same way.
+ - Python: dry mode formats its result with the module's sprintf, so %1$s
+   placeholders work there too.
+ - Python: sprintf formats each placeholder on its own: a % in an argument
+   stays as it is, %% gives one %, and a placeholder without an argument
+   stays unchanged.
+ - Python: ltd() stops with the "please set a locale directory" message
+   when l_dir() was not called, as l() does.
+ - Perl: an empty msgid returns an empty string without a lookup, and
+   l_dry(undef) turns the l_dir check back on, as in the other runtimes.
+ - Perl: on a platform whose POSIX has no LC_MESSAGES (Windows), l_lang sets
+   the environment only.
  - Scraper: files are named by their path relative to the directory the
    scraper runs in, in the #: lines, the file field and the --md5 hash.
  - Scraper: symlinks that point nowhere are skipped and the files after them

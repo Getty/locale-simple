@@ -46,7 +46,7 @@ original msgid when no translation exists.
 | `ln($msgid, $msgid_plural, $n, @args)` | plural forms (e.g. 1 message vs. N messages) |
 | `lp($ctxt, $msgid, @args)` | same msgid, different contexts (`"open"` as verb vs. adjective) |
 | `lnp($ctxt, $msgid, $msgid_plural, $n, @args)` | plural + context |
-| `ld($domain, $msgid, @args)` | translation in a different domain without switching `ltd` |
+| `ld($domain, $msgid, @args)` | translation in a different domain without switching `ltd`; binds the domain to `l_dir` on first use |
 | `ldn`, `ldp`, `ldnp` | domain + the above variants |
 
 `@args` is fed through `sprintf`, so Perl positional formats work:
@@ -106,8 +106,10 @@ Keep msgids constant; pass dynamic data through `@args`.
 `l_dry($filename)` makes every call append its msgid block (`# domain:`,
 `msgctxt`, `msgid`, `msgid_plural`) to `$filename` and return the formatted
 msgid instead of a translation — a test or staging run collects every msgid
-the code really reaches. `l_dry($filename, 1)` keeps that behaviour and skips
-the file:
+the code really reaches. The file is UTF-8 with LF line ends, with
+backslash, newline, tab, carriage return and double quote escaped, byte for
+byte what the Python package writes. `l_dry($filename, 1)` keeps that
+behaviour and skips the file; `l_dry(undef)` leaves dry-run mode:
 
 ```perl
 l_dry('seen_msgids.po') if $ENV{COLLECT_MSGIDS};
