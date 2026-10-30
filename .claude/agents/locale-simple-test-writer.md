@@ -27,7 +27,7 @@ stuck, hand it to `review` when done. Never `done`, never create cards. Never
 
 ## What lives in this agent (and in no skill)
 
-- **Repo knowledge lives in skill `locale-simple-core`** — the three runtimes, the
+- **Repo knowledge lives in skill `locale-simple-core`** — the six runtimes, the
   shared helper API, the scraper quirks, the release path. Read it before writing a
   test; do not restate it back.
 - **Six suites, six languages, one API.** A behaviour that only one runtime has

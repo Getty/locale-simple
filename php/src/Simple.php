@@ -529,7 +529,7 @@ function ldp(string $td, string $ctxt, string $id, mixed ...$args): string
 // ----------------------------------------------------------------------
 // Deferred-translation markers: identity, the scraper sees the msgid.
 // The plural variants return [singular, plural] so the call site can
-// spread them: ln(...Nn_('1 file', '%d files'), $n).
+// spread them with the count: ln(...Nn_('1 file', '%d files'), ...[$n]).
 // ----------------------------------------------------------------------
 
 function N_(string $id): string

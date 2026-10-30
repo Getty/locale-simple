@@ -68,7 +68,7 @@ request in several languages at once there is a value with the same operations:
 let t = locale_simple::Translator::new();
 t.l_dir("data/locale"); t.ltd("myapp"); t.l_lang("fr");
 t.l("Hello", &[]);
-t.ln("%d file", "%d files", 3, &[&3]);
+t.ln("%d file", "%d files", 3, &[]);   // n is prepended, as with ln!
 ```
 
 All translators and the package functions share one catalog cache, so each

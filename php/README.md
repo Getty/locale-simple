@@ -47,7 +47,9 @@ All names are functions in the namespace `Locale\Simple`.
 | `N_`, `Nn_`, `Np_`, `Nnp_`, `Nd_`, `Ndn_`, `Ndp_`, `Ndnp_` | deferred markers for the scraper |
 
 The deferred markers return their argument; the plural ones return an array
-`[singular, plural]` you can spread: `ln(...Nn_('1 file', '%d files'), $n)`.
+`[singular, plural]`. Spread it together with the count:
+`ln(...Nn_('1 file', '%d files'), ...[$n])`, or destructure it:
+`[$sg, $pl] = Nn_('1 file', '%d files'); ln($sg, $pl, $n)`.
 
 ## Behaviour worth knowing
 

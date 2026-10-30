@@ -49,7 +49,8 @@ work. Too few arguments return the string unformatted instead of throwing.
 
 `N_`, `Nn_`, `Np_`, `Nnp_`, `Nd_`, `Ndn_`, `Ndp_`, `Ndnp_` return their msgid
 unchanged (the scraper finds them); the plural ones return `[singular, plural]`
-for spreading: `ln(...Nn_('1 file', '%d files'), $n)`.
+— spread it together with the count, `ln(...Nn_('1 file', '%d files'), ...[$n])`,
+or destructure it, `[$sg, $pl] = Nn_('1 file', '%d files'); ln($sg, $pl, $n)`.
 
 ## Dry run and no-locales
 
