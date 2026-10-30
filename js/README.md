@@ -81,6 +81,8 @@ console.log(ld("emails", "Welcome, %s", name)); // explicit domain
 | `ldp(domain, ctxt, msgid, ...args)` | `dpgettext` | Domain + context |
 | `ldnp(domain, ctxt, msgid, msgidPlural, n, ...args)` | `dnpgettext` | The full thing |
 
+An empty msgid returns an empty string without a lookup.
+
 ### Configuration
 
 | Call | Purpose |
@@ -90,8 +92,29 @@ console.log(ld("emails", "Welcome, %s", name)); // explicit domain
 | `l_lang(code)` | Set the language (`de_DE`, `pt-BR`, …); a list like `de_AT:fr` tries `de_AT`, `de`, `fr`, then a bundle loaded without language |
 | `ltd(domain)` | Default text domain |
 | `l_dir(path)` | Accepted for API symmetry; the browser has no locale directory |
-| `l_dry(on, noWrite?)` | Dry-run mode: log the msgid of every call to `console.debug` |
+| `l_dry(on, noWrite?)` | Dry-run mode: write the msgid block of every call to `console.debug` (see below) |
 | `l_nolocales(on)` | Accepted for API symmetry; a no-op in JavaScript |
+
+## Dry-run mode
+
+`l_dry(true)` makes every translation return its msgid (or the plural for
+`n != 1`), formatted with its arguments, and write its block in one
+`console.debug` call. The block holds the lines `# domain: ...`,
+`msgctxt "..."`, `msgid "..."` and `msgid_plural "..."` that apply, with
+backslash, newline, tab, carriage return and double quote escaped as in a
+`.po` file. It ends with a newline, so the console shows it followed by a blank
+line, the same bytes the Perl and Python packages write to their dry-run file:
+
+```
+# domain: myapp
+msgctxt "menu"
+msgid "%d file"
+msgid_plural "%d files"
+
+```
+
+An empty msgid writes no block. `l_dry(true, true)` keeps dry-run mode without
+the output.
 
 ## Plural forms
 

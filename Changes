@@ -69,6 +69,17 @@ Revision history for Locale-Simple
  - Python: sprintf formats each placeholder on its own: a % in an argument
    stays as it is, %% gives one %, and a placeholder without an argument
    stays unchanged.
+ - Perl, Python: the translation functions format each placeholder on its
+   own: a placeholder without an argument stays as it is, extra arguments
+   are ignored, both without a warning, and ' plus a character (%'*8s) pads
+   with that character. Python also takes %b, reads numbers from string
+   arguments and applies flags and precision as Perl's sprintf does.
+ - Python: the l_dir check stops through sys.exit, also under python -S.
+ - Perl: a domain, msgctxt, msgid_plural, dry-run file or locale directory
+   of "0" counts as set.
+ - JavaScript: dry mode writes the block of the other runtimes, escaped the
+   same way, in one console.debug call per translation; an empty msgid
+   returns an empty string without a lookup and writes no block.
  - Python: ltd() stops with the "please set a locale directory" message
    when l_dir() was not called, as l() does.
  - Perl: an empty msgid returns an empty string without a lookup, and

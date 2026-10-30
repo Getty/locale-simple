@@ -289,7 +289,26 @@ function getPluralIndex(n, rule) {
 }
 
 /**
- * Write dry-run output (for extracting translatable strings)
+ * Escape a string for a quoted .po line: backslash, newline, tab, carriage
+ * return and double quote, as the other runtimes write them.
+ * @param {string} text
+ * @returns {string}
+ */
+function poEscape(text) {
+  return String(text)
+    .replace(/\\/g, '\\\\')
+    .replace(/\n/g, '\\n')
+    .replace(/\t/g, '\\t')
+    .replace(/\r/g, '\\r')
+    .replace(/"/g, '\\"');
+}
+
+/**
+ * Write dry-run output (for extracting translatable strings): the block of
+ * the other runtimes, `# domain:`, `msgctxt`, `msgid` and `msgid_plural` as
+ * they apply, in one console.debug call. The lines are joined with \n and end
+ * with \n, so the console shows the block followed by a blank line, the bytes
+ * the other runtimes write to their dry-run file.
  * @param {string|null} domain
  * @param {string|null} msgctxt
  * @param {string} msgid
@@ -299,11 +318,12 @@ function writeDry(domain, msgctxt, msgid, msgid_plural) {
   if (noWrite) return;
   if (typeof console !== 'object' || typeof console.debug !== 'function') return;
 
-  if (domain) console.debug('# domain: ' + domain);
-  if (msgctxt) console.debug('msgctxt "' + msgctxt + '"');
-  if (msgid) console.debug('msgid "' + msgid + '"');
-  if (msgid_plural) console.debug('msgid_plural "' + msgid_plural + '"');
-  console.debug('');
+  const lines = [];
+  if (domain) lines.push('# domain: ' + domain);
+  if (msgctxt) lines.push('msgctxt "' + poEscape(msgctxt) + '"');
+  lines.push('msgid "' + poEscape(msgid) + '"');
+  if (msgid_plural) lines.push('msgid_plural "' + poEscape(msgid_plural) + '"');
+  console.debug(lines.join('\n') + '\n');
 }
 
 const hasOwn = Object.prototype.hasOwnProperty;
@@ -560,6 +580,9 @@ export function ldp(domain, msgctxt, msgid, ...args) {
  * @returns {string} Translated string
  */
 export function ldnp(domain, msgctxt, msgid, msgid_plural, n, ...args) {
+  // An empty msgid is the .po header: it comes back empty, with no lookup
+  // and no dry-run block.
+  if (msgid === '') return '';
   const td = domain || currentDomain || '';
 
   // Add n to args if plural

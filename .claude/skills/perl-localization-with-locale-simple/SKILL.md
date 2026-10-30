@@ -49,7 +49,10 @@ original msgid when no translation exists.
 | `ld($domain, $msgid, @args)` | translation in a different domain without switching `ltd`; binds the domain to `l_dir` on first use |
 | `ldn`, `ldp`, `ldnp` | domain + the above variants |
 
-`@args` is fed through `sprintf`, so Perl positional formats work:
+`@args` is formatted with `sprintf`, placeholder by placeholder, so Perl
+positional formats work and `'` plus a pad character (`%'*8s`) pads with it.
+A placeholder without an argument stays as it is, extra arguments are
+ignored:
 
 ```perl
 l('Hello %s, you have %d messages', $name, $count);

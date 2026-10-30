@@ -16,7 +16,11 @@ export function l_dir(dir: string): void;
 export function l_lang(lang: string): void;
 
 /**
- * Enable dry-run mode for string extraction
+ * Enable dry-run mode for string extraction: every translation returns its
+ * msgid (or the plural for n != 1), formatted with its arguments, and writes
+ * its block (`# domain:`, `msgctxt`, `msgid`, `msgid_plural`, escaped as in a
+ * .po file) in one console.debug call. A true noWrite keeps dry-run mode
+ * without the output.
  */
 export function l_dry(dry: boolean, noWrite?: boolean): void;
 
@@ -78,7 +82,7 @@ export function loadLocaleData(
 ): void;
 
 /**
- * Translate a string
+ * Translate a string. An empty msgid returns an empty string without a lookup.
  */
 export function l(msgid: string, ...args: unknown[]): string;
 

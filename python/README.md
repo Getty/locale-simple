@@ -24,8 +24,9 @@ everywhere.
   languages, so one translation bundle covers the whole stack.
 - **`sprintf` baked in.** Both classic (`%s`) and positional (`%1$s`)
   placeholders — exactly like Perl's `sprintf` and gettext's `xgettext`
-  format strings expect. Argument values go in as they are, so a `%` in them
-  stays.
+  format strings expect, `%b` and the `'` pad flag (`%'*8s`) included.
+  Argument values go in as they are, so a `%` in them stays, and a
+  placeholder without an argument stays as it is.
 - **Boring and small.** Single-file module, no surprises, no magic.
 
 ## Install

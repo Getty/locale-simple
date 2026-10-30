@@ -135,6 +135,71 @@ describe('Locale Simple', () => {
       assert.strictEqual(ln('You have %d message', 'You have %d messages', 1), 'You have 1 message');
       assert.strictEqual(ln('You have %d message', 'You have %d messages', 4), 'You have 4 messages');
     });
+
+    // The block of the other runtimes (python/test.py DRY_SHARED,
+    // t/21-dryrun.t): one console.debug call per block, its lines joined
+    // with \n and ended by \n, so the console shows the bytes of their
+    // dry-run file.
+    const DRY_SHARED =
+      'msgid "Hello"\n' +
+      '\n' +
+      '# domain: othertest\n' +
+      'msgid "Hello"\n' +
+      '\n' +
+      'msgctxt "alien"\n' +
+      'msgid "Hello"\n' +
+      '\n' +
+      'msgid "%2$s has %1$d message"\n' +
+      'msgid_plural "%2$s has %1$d messages"\n' +
+      '\n' +
+      '# domain: othertest\n' +
+      'msgctxt "inbox"\n' +
+      'msgid "You have %d message"\n' +
+      'msgid_plural "You have %d messages"\n' +
+      '\n' +
+      String.raw`msgid "Say \"%s\"\\n\nGrüße"` + '\n' +
+      '\n' +
+      String.raw`msgid "Tab\there\rand CR"` + '\n' +
+      '\n';
+
+    it('should write the shared dry-run block to console.debug', (t) => {
+      const debug = t.mock.method(console, 'debug', () => {});
+      l_dry(true);
+      assert.deepStrictEqual(
+        [
+          l('Hello'),
+          l(''),
+          ld('othertest', 'Hello'),
+          lp('alien', 'Hello'),
+          ln('%2$s has %1$d message', '%2$s has %1$d messages', 2, 'harry'),
+          ldnp('othertest', 'inbox', 'You have %d message', 'You have %d messages', 1),
+          l('Say "%s"\\n\nGrüße', 'hi'),
+          l('Tab\there\rand CR'),
+        ],
+        [
+          'Hello',
+          '',
+          'Hello',
+          'Hello',
+          'harry has 2 messages',
+          'You have 1 message',
+          'Say "hi"\\n\nGrüße',
+          'Tab\there\rand CR',
+        ]
+      );
+      const calls = debug.mock.calls.map((call) => call.arguments);
+      assert.ok(calls.every((args) => args.length === 1), 'one argument per call');
+      assert.strictEqual(calls.map(([block]) => block + '\n').join(''), DRY_SHARED);
+    });
+  });
+
+  describe('l("") - empty msgid', () => {
+    it('should return an empty string without a lookup', () => {
+      loadTranslations('header', 'de_DE', { '': 'Project-Id-Version: test\n' });
+      ltd('header');
+      assert.strictEqual(l(''), '');
+      assert.strictEqual(ld('header', ''), '');
+    });
   });
 
   describe('lnp() - context + plural', () => {

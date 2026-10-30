@@ -43,10 +43,10 @@ settings stick for the whole process. For web apps this matters (see
 | `ld(domain, msgid, *args)` | translation in a different domain, bound to `l_dir` on first use |
 | `ldn`, `ldp`, `ldnp` | domain variants |
 
-`*args` go through the module's own `sprintf`, which supports positional
-style (`%1$s`, `%2$d`) just like Perl. Argument values go in as they are, so a
-`%` in them stays; `%%` in the format gives one `%`; a placeholder without an
-argument stays as it is:
+`*args` go through the module's own `sprintf`, which formats like Perl's:
+positional style (`%1$s`, `%2$d`), `%b`, and `'` plus a pad character
+(`%'*8s`). Argument values go in as they are, so a `%` in them stays; `%%` in
+the format gives one `%`; a placeholder without an argument stays as it is:
 
 ```python
 print(l('Hello %s, you have %d messages', name, count))

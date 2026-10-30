@@ -1,4 +1,9 @@
 
+#: t/21-dryrun.t:144
+#, locale-simple-format 0
+msgid "Hello"
+msgstr ""
+
 #: t/60-N-markers.t:17
 #, locale-simple-format app
 msgctxt "menu"
@@ -59,6 +64,12 @@ msgstr ""
 #: t/data/dummy.rs:25
 #, locale-simple-format rust_dom
 msgid "Rust after attribute"
+msgstr ""
+
+#: t/21-dryrun.t:144
+#, locale-simple-format
+msgctxt "0"
+msgid "Hello"
 msgstr ""
 
 #: t/data/dummy.php:17
@@ -124,6 +135,12 @@ msgid "%2$s has %1$d message"
 msgid_plural "%2$s has %1$d messages"
 msgstr[0] ""
 
+#: t/21-dryrun.t:144 t/21-dryrun.t:144
+#, locale-simple-format
+msgid "%d file"
+msgid_plural "0"
+msgstr ""
+
 #: t/60-N-markers.t:34
 #, locale-simple-format
 msgid "%d item"
@@ -176,7 +193,7 @@ msgstr ""
 msgid "Greet"
 msgstr ""
 
-#: lib/Locale/Simple.pm:LINE t/20-locale-simple.t:17 t/21-dryrun.t:21 t/21-dryrun.t:74 t/21-dryrun.t:121 t/23-locale-simple-c-locale.t:51 t/30-locale-simple-other.t:18 t/30-locale-simple-other.t:26 t/31-locale-simple-domain-binding.t:32 t/31-locale-simple-domain-binding.t:55 t/31-locale-simple-domain-binding.t:69 t/60-N-markers.t:14 t/data/test.py:38
+#: lib/Locale/Simple.pm:LINE t/20-locale-simple.t:17 t/21-dryrun.t:21 t/21-dryrun.t:74 t/21-dryrun.t:121 t/21-dryrun.t:164 t/23-locale-simple-c-locale.t:51 t/30-locale-simple-other.t:18 t/30-locale-simple-other.t:26 t/31-locale-simple-domain-binding.t:32 t/31-locale-simple-domain-binding.t:55 t/31-locale-simple-domain-binding.t:69 t/40-error.t:51 t/60-N-markers.t:14 t/data/test.py:38
 #, locale-simple-format
 msgid "Hello"
 msgstr ""

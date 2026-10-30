@@ -60,7 +60,10 @@ my %tds;
 my $dir;
 
 sub l_nolocales { $nolocales = shift }
-sub l_dry { $dry = shift; $nowrite = shift; $nolocales = $dry ? 1 : 0 }
+sub l_dry { $dry = shift; $nowrite = shift; $nolocales = _set($dry) ? 1 : 0 }
+
+# A string counts as set when it is defined and not empty, "0" included.
+sub _set { defined $_[0] && length $_[0] }
 
 sub gettext_escape {
 	my ( $content ) = @_;
@@ -78,6 +81,51 @@ sub sprintf_compare {
 	my @placeholder_first = sort { $a cmp $b } map { my @chars = split(//,$_); pop @chars; } ($first =~ m/$re/g);
 	my @placeholder_second = sort { $a cmp $b } map { my @chars = split(//,$_); pop @chars; } ($second =~ m/$re/g);
 	return join("",@placeholder_first) eq join("",@placeholder_second);
+}
+
+# One placeholder of mo-reader.md §5: %%, or the N$ position, the flags (with
+# '<char> as pad character), width, .precision and the conversion.
+my $placeholder = qr{
+	( % (?: % | (?: ([0-9]+) \$ )? ( (?: [-+\ 0\#] | '. )* ) ( \* | [0-9]+ )?
+	  (?: \. ( \* | [0-9]* ) )? ( [bcdeEfFgGiosuxX] ) ) )
+}xs;
+
+# One pass over the format: the text between placeholders is copied, and each
+# placeholder is formatted on its own with CORE::sprintf and its own
+# arguments, so an argument value is never read as a format. %2$s picks its
+# argument, a placeholder without N$ takes the next one in order (a * width or
+# precision too). A placeholder without an argument stays as it is; extra
+# arguments are ignored. python/locale_simple.py formats the same way.
+sub _sprintf {
+	my ( $format, @args ) = @_;
+	my $next = 0;
+	$format =~ s{$placeholder}{_placeholder( \@args, \$next, $1, $2, $3, $4, $5, $6 )}ge;
+	return $format;
+}
+
+sub _placeholder {
+	my ( $args, $next, $all, $index, $flags, $width, $precision, $conversion ) = @_;
+	return '%' if $all eq '%%';
+	my @picks;
+	for my $star ( $width, $precision ) {
+		push @picks, ${$next}++ if defined $star && $star eq '*';
+	}
+	push @picks, defined $index ? $index - 1 : ${$next}++;
+	return $all if grep { $_ < 0 || $_ > $#{$args} } @picks;
+	my @values = @{$args}[@picks];
+	my $tail = ( defined $precision ? '.'.$precision : '' ).$conversion;
+	my $pad;
+	$pad = $1 while $flags =~ s/'(.)//s;
+	return CORE::sprintf( '%'.$flags.( defined $width ? $width : '' ).$tail, @values )
+		unless defined $pad && defined $width;
+	# '<char>: the formatted value is filled up to the width with that character.
+	my $size = $width eq '*' ? shift @values : $width;
+	my $left = $flags =~ tr/-// || $size < 0;
+	$flags =~ tr/-0//d;
+	my $body = CORE::sprintf( '%'.$flags.$tail, @values );
+	my $fill = abs($size) - length $body;
+	return $body if $fill <= 0;
+	return $left ? $body.( $pad x $fill ) : ( $pad x $fill ).$body;
 }
 
 sub coderef_hash {{
@@ -154,36 +202,34 @@ sub ldp { return ldnp(shift,shift,shift,undef,undef,@_) }
 sub ldnp {
 	my ($td, $ctxt, $id, $idp, $n) = (shift,shift,shift,shift,shift);
 	return $id if defined $id && $id eq '';
-	die "please set a locale directory with l_dir() before using other translate functions" unless $dir || $nolocales;
+	die "please set a locale directory with l_dir() before using other translate functions" unless _set($dir) || $nolocales;
 	my @args = @_;
-	unshift @args, $n if $idp;
+	unshift @args, $n if defined $idp;
 	my $return;
-	if ($dry) {
+	if (_set($dry)) {
 		if (!$nowrite) {
 			my @save;
-			push @save, '# domain: '.$td if $td;
-			push @save, 'msgctxt "'.gettext_escape($ctxt).'"' if $ctxt;
+			push @save, '# domain: '.$td if _set($td);
+			push @save, 'msgctxt "'.gettext_escape($ctxt).'"' if _set($ctxt);
 			push @save, 'msgid "'.gettext_escape($id).'"';
-			push @save, 'msgid_plural "'.gettext_escape($idp).'"' if $idp;
+			push @save, 'msgid_plural "'.gettext_escape($idp).'"' if _set($idp);
 			wd(@save);
 		}
-		no warnings 'redundant';
-		$return = sprintf($idp && $n != 1 ? $idp : $id, @args);
+		$return = _sprintf(defined $idp && $n != 1 ? $idp : $id, @args);
 	} else {
-		_bind_textdomain($td) if $td && !$tds{$td};
+		_bind_textdomain($td) if _set($td) && !$tds{$td};
 		# L::TD handles msg ids as bytes internally
 		utf8::encode($id);
 		my $gt = dnpgettext($td, $ctxt, $id, $idp, $n);
 		# Fixing bad utf8 handling
 		utf8::decode($gt);
-		no warnings 'redundant';
-		$return = sprintf($gt,@args);
+		$return = _sprintf($gt,@args);
 	}
 	return $return;
 }
 
 sub ltd {
-	die "please set a locale directory with l_dir() before using other translate functions" unless $dir || $nolocales;
+	die "please set a locale directory with l_dir() before using other translate functions" unless _set($dir) || $nolocales;
 	my $td = shift;
 	_bind_textdomain($td) unless $tds{$td};
 	textdomain($td);
@@ -303,6 +349,15 @@ required positional arguments. Perl positional-argument syntax
 (C<%1$s>, C<%2$d>) is supported and recommended for anything that needs to
 be reordered during translation. An empty msgid returns an empty string
 without a lookup.
+
+The format takes the conversions C<b c d e E f F g G i o s u x X>, the flags
+C<+>, C<->, C<0>, space, C<#> and C<'> followed by a pad character
+(C<%'*8s> fills with C<*>), a width and a C<.precision> (either may be C<*>),
+the C<N$> position and C<%%>. Each placeholder is formatted on its own as
+C<sprintf> formats it, so an argument value is never read as a format. A
+placeholder without an argument stays in the text as it is, and extra
+arguments are ignored, both without a warning. The Python package formats
+the same way.
 
 =head2 l($msgid, @args)
 

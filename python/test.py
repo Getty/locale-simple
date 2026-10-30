@@ -107,6 +107,89 @@ def percent_in_values():
     testeq(l('%2$s and %1$s', 'a'), '%2$s and a')
 
 
+# The sprintf of the translation functions, row by row: the conversions,
+# flags, width, precision and N$ position of mo-reader.md §5, as C and Perl
+# format them. A placeholder without an argument stays as it is, extra
+# arguments are ignored. The same rows run in t/25-sprintf.t.
+SPRINTF_ROWS = (
+    ('%2$s %1$s', ('a', 'b'), 'b a'),
+    ('%1$s %s', ('a', 'b'), 'a a'),
+    ('[%5d]', (42,), '[   42]'),
+    ('[%-5d]', (42,), '[42   ]'),
+    ('[%05d]', (42,), '[00042]'),
+    ('[%05d]', (-42,), '[-0042]'),
+    ('%.3d', (5,), '005'),
+    ('[%06.3d]', (5,), '[   005]'),
+    ('%.0d', (0,), ''),
+    ('%+.0d', (0,), '+'),
+    ('%.2f', (3.14159,), '3.14'),
+    ('[%5.1f]', (3.14159,), '[  3.1]'),
+    ('%.f', (2.7,), '3'),
+    ('%f', (1.5,), '1.500000'),
+    ('%F', (1.5,), '1.500000'),
+    ('%e', (1234.5,), '1.234500e+03'),
+    ('%.1e', (0.00012,), '1.2e-04'),
+    ('100%% %s', ('x',), '100% x'),
+    ("[%'*8s]", ('ab',), '[******ab]'),
+    ("[%-'*8s]", ('ab',), '[ab******]'),
+    ("[%'*6d]", (-42,), '[***-42]'),
+    ("[%'.8s]", ('ab',), '[......ab]'),
+    ("[%'é5s]", ('ab',), '[éééab]'),
+    ("[%'*s]", ('ab',), '[ab]'),
+    ('[%06s]', ('ab',), '[0000ab]'),
+    ('[%-06s]', ('ab',), '[ab    ]'),
+    ('%+d %+d', (5, -5), '+5 -5'),
+    ('% d', (5,), ' 5'),
+    ('%+x % u', (255, 3), 'ff 3'),
+    ('%b %o %x %X', (5, 8, 255, 255), '101 10 ff FF'),
+    ('[%08b]', (5,), '[00000101]'),
+    ('[%-6b]', (5,), '[101   ]'),
+    ('%x', (-1,), 'ffffffffffffffff'),
+    ('%u', (3,), '3'),
+    ('%c', (65,), 'A'),
+    ('%c', (233,), 'é'),
+    ('%.3s', ('abcdef',), 'abc'),
+    ('%d', ('12',), '12'),
+    ('%d', (3.9,), '3'),
+    ('%x', ('255',), 'ff'),
+    ('%.1f', ('2.25e1',), '22.5'),
+    ('%s', ('a', 'b', 'c'), 'a'),
+    ('%s and %s', ('a',), 'a and %s'),
+    ('%2$s and %1$s', ('a',), '%2$s and a'),
+    ('%3$s', ('a',), '%3$s'),
+    ('%2$05d', (0, 7), '00007'),
+    ('50% off', (), '50% off'),
+    ('100%', (), '100%'),
+    ('%y', ('a',), '%y'),
+    ('plain', (), 'plain'),
+    ('héllo %s', ('wörld',), 'héllo wörld'),
+    ('[%4s]', ('é',), '[   é]'),
+)
+
+# Beyond §5, Perl and Python also take a * width or precision, the # flag and
+# the conversions i, E, g and G.
+SPRINTF_ROWS_PERL_PYTHON = (
+    ('[%*d]', (5, 42), '[   42]'),
+    ('[%-*d]', (5, 42), '[42   ]'),
+    ('[%*d]', (-5, 42), '[42   ]'),
+    ('%.*f', (1, 3.14159), '3.1'),
+    ("[%'*-*s]", (5, 'ab'), '[ab***]'),
+    ('[%*d]', (5,), '[%*d]'),
+    ('%#o %#x %#X %#b', (8, 255, 255, 5), '010 0xff 0XFF 0b101'),
+    ('%#x', (0,), '0'),
+    ('%i', (7,), '7'),
+    ('%E', (1234.5,), '1.234500E+03'),
+    ('%g %G', (0.0001, 1e-10), '0.0001 1E-10'),
+)
+
+
+@test
+def sprintf_table():
+    import locale_simple
+    for format, args, want in SPRINTF_ROWS + SPRINTF_ROWS_PERL_PYTHON:
+        testeq(locale_simple.sprintf(format, *args), want)
+
+
 @test
 def context_plural():
     # lnp: context + plural. No context-plural msgid in the fixture, so we
@@ -269,6 +352,51 @@ def dry_run_shared_format():
 
 
 @test
+def zero_strings():
+    # "0" is a domain, msgctxt, msgid_plural, file name and locale directory
+    # like any other string: it gets its line, and a msgid_plural of "0" puts
+    # n in front of the arguments and is picked for n != 1. t/21-dryrun.t and
+    # t/40-error.t check the same.
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.po') as tf:
+        dry_file = tf.name
+    try:
+        l_dry(dry_file)
+        testeq(
+            [ld('0', 'Hello'), lp('0', 'Hello'), ln('%d file', '0', 1), ln('%d file', '0', 2)],
+            ['Hello', 'Hello', '1 file', '0']
+        )
+        l_dry(None)
+        with open(dry_file, 'rb') as f:
+            testeq(f.read(), (
+                '# domain: 0\nmsgid "Hello"\n\n'
+                'msgctxt "0"\nmsgid "Hello"\n\n'
+                'msgid "%d file"\nmsgid_plural "0"\n\n'
+                'msgid "%d file"\nmsgid_plural "0"\n\n'
+            ).encode('utf-8'))
+        l_dry('0', True)
+        testeq(l('Hello'), 'Hello')
+    finally:
+        os.unlink(dry_file)
+        l_dry(None)
+        l_dir(LOCALE_DIR)
+        ltd('test')
+        l_lang('de_DE')
+    workdir = tempfile.mkdtemp()
+    try:
+        os.mkdir(os.path.join(workdir, '0'))
+        r = subprocess.run(
+            [sys.executable, '-c',
+             'import sys\nsys.path.insert(0, sys.argv[1])\n'
+             "from locale_simple import *\nl_dir('0')\nprint(l('Hello'))",
+             os.path.dirname(os.path.abspath(__file__))],
+            cwd=workdir, capture_output=True, text=True,
+        )
+        testeq((r.returncode, r.stdout, r.stderr), (0, 'Hello\n', ''))
+    finally:
+        shutil.rmtree(workdir)
+
+
+@test
 def dry_run_line_ends():
     # The dry-run file has LF line ends on every platform. On Windows, text
     # mode writes '\r\n' for '\n' unless open() gets newline='\n'; this open()
@@ -362,10 +490,10 @@ def deferred_markers():
 NO_DIR = 'please set a locale directory with l_dir() before using other translate functions\n'
 
 
-def fresh(code):
+def fresh(code, *options):
     # A new interpreter, so no l_dir() of this file applies.
     return subprocess.run(
-        [sys.executable, '-c', 'from locale_simple import *\n' + code],
+        [sys.executable, *options, '-c', 'from locale_simple import *\n' + code],
         cwd=os.path.dirname(os.path.abspath(__file__)),
         capture_output=True, text=True,
     )
@@ -387,4 +515,14 @@ def ltd_needs_dir():
     testeq((r.returncode, r.stderr), (1, NO_DIR))
 
 
-exit(err)
+@test
+def stop_without_site():
+    # The stop works the same when Python starts without the site module
+    # (python -S), which is where the interactive exit() helper comes from.
+    r = fresh("l('Hello')", '-S')
+    testeq((r.returncode, r.stderr), (1, NO_DIR))
+    r = fresh("ltd('test')", '-S')
+    testeq((r.returncode, r.stderr), (1, NO_DIR))
+
+
+sys.exit(err)

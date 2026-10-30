@@ -40,4 +40,17 @@ l_dry(undef);
 eval { ltd('test') };
 like($@,qr/please set a locale directory/,"leaving dry-run mode brings the check back for ltd");
 
+# A locale directory named "0" counts as set, as in python/test.py.
+{
+	require Cwd;
+	require File::Temp;
+	my $cwd = Cwd::getcwd();
+	chdir File::Temp::tempdir( CLEANUP => 1 ) or die $!;
+	mkdir '0' or die $!;
+	l_dir('0');
+	my $got = eval { l('Hello') };
+	chdir $cwd or die $!;
+	is($got,'Hello','a locale directory named "0" counts as set');
+}
+
 done_testing;

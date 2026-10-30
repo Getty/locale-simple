@@ -134,4 +134,35 @@ like($@,qr/please set a locale directory/,'l_dry(undef) brings back the l_dir ch
 	is($bytes,qq{# domain: othertest\nmsgid "Hello"\n\n},'dry-run file keeps LF line ends');
 }
 
+# "0" is a domain, msgctxt, msgid_plural and file name like any other string:
+# it gets its line, and a msgid_plural of "0" puts n in front of the arguments
+# and is picked for n != 1. python/test.py checks the same.
+{
+	my $zero = $tmpdir.'/zero.po';
+	l_dry($zero);
+	is_deeply(
+		[ ld('0','Hello'), lp('0','Hello'), ln('%d file','0',1), ln('%d file','0',2) ],
+		[ 'Hello', 'Hello', '1 file', '0' ],
+		'"0" as domain, msgctxt and msgid_plural',
+	);
+	l_dry(undef);
+	is(io($zero)->binary->all,<<'__EOT__','dry-run blocks keep their "0" lines');
+# domain: 0
+msgid "Hello"
+
+msgctxt "0"
+msgid "Hello"
+
+msgid "%d file"
+msgid_plural "0"
+
+msgid "%d file"
+msgid_plural "0"
+
+__EOT__
+	l_dry('0',1);
+	is(eval { l('Hello') },'Hello','l_dry("0") switches dry-run mode on');
+	l_dry(undef);
+}
+
 done_testing;
