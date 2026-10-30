@@ -38,8 +38,9 @@ macros collecting `Display` arguments:
 | `lp!(ctxt, msgid, args…)`, `lnp!(ctxt, msgid, plural, n, args…)` | context |
 | `ld!`, `ldn!`, `ldp!`, `ldnp!` | explicit domain first |
 
-The setup calls stay functions: `l_dir`, `l_lang`, `l_dry(Some(path), nowrite)`,
-`l_nolocales`, `ltd`. The result is always a `String`.
+The setup calls stay functions: `l_dir`, `l_lang`, `l_dry(Some(path), nowrite)`
+(`path` is a `PathBuf`: `l_dry(Some("seen.po".into()), false)`), `l_nolocales`,
+`ltd`. The result is always a `String`.
 
 **Deferred markers are lower-case**, unlike every other runtime: `n_!`, `nn_!`,
 `np_!`, `nnp_!`, `nd_!`, `ndn_!`, `ndp_!`, `ndnp_!` (snake_case macros). Plural

@@ -43,7 +43,7 @@ settings stick for the whole process. For web apps this matters (see
 | `ld(domain, msgid, *args)` | translation in a different domain |
 | `ldn`, `ldp`, `ldnp` | domain variants |
 
-`*args` is fed through Python's `%` formatting, which supports positional
+`*args` go through the module's own `sprintf`, which supports positional
 style (`%1$s`, `%2$d`) just like Perl:
 
 ```python
@@ -84,11 +84,12 @@ extraction workflow covers Python.
 
 ```python
 from locale_simple import l_dry
-l_dry('seen_msgids.po', nowrite=False)
+l_dry('seen_msgids.po')
 ```
 
-With `l_dry` active, every call appends its msgid to the file (in `.po`
-format) *and* still returns the translated string.
+With `l_dry` active, every call appends its msgid block (`# domain:`,
+`msgctxt`, `msgid`, `msgid_plural`) to the file and returns the formatted msgid
+instead of a translation. `l_dry('seen_msgids.po', True)` skips the file.
 
 ## Skipping locales entirely (tests / scripts)
 

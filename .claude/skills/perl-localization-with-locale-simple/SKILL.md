@@ -103,9 +103,11 @@ Keep msgids constant; pass dynamic data through `@args`.
 
 ## Dry-run mode
 
-`l_dry($filename)` makes every call *also* append its msgid to `$filename` in
-`.po` format, while still returning translations — useful when you want the
-live system to collect unseen msgids:
+`l_dry($filename)` makes every call append its msgid block (`# domain:`,
+`msgctxt`, `msgid`, `msgid_plural`) to `$filename` and return the formatted
+msgid instead of a translation — a test or staging run collects every msgid
+the code really reaches. `l_dry($filename, 1)` keeps that behaviour and skips
+the file:
 
 ```perl
 l_dry('seen_msgids.po') if $ENV{COLLECT_MSGIDS};
@@ -141,5 +143,5 @@ done_testing;
   decodes the gettext result. Don't `Encode::encode` around `l()` — you'll get
   mojibake.
 - **`@EXPORT` collisions** — `l` is a short, common name. If another module
-  also exports `l`, use `Locale::Simple qw(ltd l_lang)` and keep `l` qualified
+  also exports `l`, import the setup explicitly, `use Locale::Simple qw(l_dir ltd l_lang)`, and keep `l` qualified
   (`Locale::Simple::l(…)`).

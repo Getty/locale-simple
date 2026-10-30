@@ -30,7 +30,7 @@ my $gettext_context_glue = "\004";
 
 sub usage {
     return "$0 {-p} {file.po} > {outputfile.json}
-    -p  : do pretty-printing of json data\n";
+    -p  : pretty-print, with the bundle wrapped in its domain name\n";
 }
 
 &main;
@@ -192,7 +192,9 @@ The output is an annonymous associative array. So, if you plan to load this via 
 
 =head1 OPTIONS
 
- -p : pretty-print the output. Makes the output more human-readable.
+ -p : pretty-print the output and wrap the bundle in its domain, the file
+      name without .po: {"myapp": {...}}. This is the shape loadLocaleData
+      takes as its second argument.
 
 =head1 BUGS
 
