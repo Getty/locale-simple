@@ -25,7 +25,10 @@ everywhere.
   languages, so one translation bundle covers the whole stack.
 - **`sprintf` baked in.** Both classic (`%s`) and positional (`%1$s`)
   placeholders — exactly like Perl's `sprintf` and gettext's `xgettext`
-  format strings expect.
+  format strings expect, with the conversions `b c d e E f F g G i o s u x X`,
+  the flags `+ - 0` and space, `'` plus a pad character (`%'*8s`), width and
+  precision. Argument values go in as they are, so a `%` in them stays, and a
+  placeholder without an argument stays as it is.
 - **Tiny.** A single ESM module, no runtime dependencies, fully
   tree-shakeable.
 

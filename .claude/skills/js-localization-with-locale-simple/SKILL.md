@@ -74,7 +74,9 @@ loadLocaleData('myapp', { myapp: de });
 | `ldn`, `ldp`, `ldnp` | domain variants |
 
 The bundled `sprintf` supports positional args (`%1$s`, `%2$d`) so format
-strings stay compatible with the Perl/Python sides.
+strings stay compatible with the Perl/Python sides; it meets the shared rows
+of `t/data/sprintf.json`, `'` plus a pad character (`%'*8s`) included. A
+placeholder without an argument stays as it is.
 
 ## Workflow with the Perl scraper
 

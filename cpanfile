@@ -8,6 +8,7 @@ requires 'curry';
 on test => sub {
     requires 'Test::More', '0.98';
     requires 'Capture::Tiny';
+    requires 'JSON::PP';
     requires 'Test::InDistDir';
     requires 'Test::Regression';
 };

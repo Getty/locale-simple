@@ -22,8 +22,187 @@ const translations = {};
 // Registered domains
 const domains = new Set();
 
+// One placeholder of mo-reader.md §5: %%, or the N$ position, the flags (with
+// '<char> as pad character), width, .precision and the conversion.
+const PLACEHOLDER = /%%|%(?:(\d+)\$)?((?:[-+ 0]|'.)*)(\d+)?(?:\.(\d*))?([bcdeEfFgGiosuxX])/gsu;
+
+// The leading number of a string, read the way Perl reads it.
+const LEADING_NUMBER = /^\s*[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/;
+
+const RADIX = { b: 2, o: 8, x: 16, X: 16 };
+
 /**
- * sprintf implementation supporting positional and sequential placeholders
+ * The number an argument stands for: a string gives its leading number, as
+ * in Perl, and 0 without one.
+ * @param {any} value
+ * @returns {number}
+ */
+function toNumber(value) {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  const m = LEADING_NUMBER.exec(String(value));
+  return m ? parseFloat(m[0]) : 0;
+}
+
+/**
+ * Sign and digits of b d i o u x X, as C and Perl write them: the fraction is
+ * dropped, b o u x X show a negative number as unsigned 64-bit, and the
+ * precision is the minimum number of digits.
+ * @returns {[string, string]}
+ */
+function integerParts(flags, conversion, digits, value) {
+  const number = Math.trunc(toNumber(value));
+  let big = BigInt(Number.isFinite(number) ? number : 0);
+  let sign = '';
+  if (conversion === 'd' || conversion === 'i') {
+    if (big < 0) {
+      sign = '-';
+      big = -big;
+    } else if (flags.includes('+')) {
+      sign = '+';
+    } else if (flags.includes(' ')) {
+      sign = ' ';
+    }
+  } else {
+    big = BigInt.asUintN(64, big);
+  }
+  let text = big.toString(RADIX[conversion] || 10);
+  if (conversion === 'X') text = text.toUpperCase();
+  if (digits !== undefined) {
+    text = digits === 0 && big === BigInt(0) ? '' : text.padStart(digits, '0');
+  }
+  return [sign, text];
+}
+
+const TEN = BigInt(10);
+
+/**
+ * The exact decimal value of a finite number >= 0 as [digits, scale], so that
+ * number = digits / 10^scale.
+ * @param {number} number
+ * @returns {[bigint, number]}
+ */
+function exactDecimal(number) {
+  if (number === 0) return [BigInt(0), 0];
+  const view = new DataView(new ArrayBuffer(8));
+  view.setFloat64(0, number);
+  const bits = view.getBigUint64(0);
+  const biased = Number((bits >> BigInt(52)) & BigInt(0x7ff));
+  let mantissa = bits & ((BigInt(1) << BigInt(52)) - BigInt(1));
+  let exponent = -1074;
+  if (biased !== 0) {
+    mantissa += BigInt(1) << BigInt(52);
+    exponent = biased - 1075;
+  }
+  if (exponent >= 0) return [mantissa << BigInt(exponent), 0];
+  return [mantissa * BigInt(5) ** BigInt(-exponent), -exponent];
+}
+
+/**
+ * digits / 10^scale rounded to `keep` decimal places (keep may be negative),
+ * a tie to the even neighbour as in C; the result counts in units of 10^-keep.
+ * @returns {bigint}
+ */
+function roundTo(digits, scale, keep) {
+  if (keep >= scale) return digits * TEN ** BigInt(keep - scale);
+  const divisor = TEN ** BigInt(scale - keep);
+  const quotient = digits / divisor;
+  const twice = (digits % divisor) * BigInt(2);
+  const up = twice > divisor || (twice === divisor && quotient % BigInt(2) === BigInt(1));
+  return up ? quotient + BigInt(1) : quotient;
+}
+
+function fixed(number, precision) {
+  const [digits, scale] = exactDecimal(number);
+  const text = roundTo(digits, scale, precision).toString().padStart(precision + 1, '0');
+  return precision ? text.slice(0, -precision) + '.' + text.slice(-precision) : text;
+}
+
+/**
+ * Mantissa digits (precision + 1 of them) and decimal exponent of number.
+ * @returns {[string, number]}
+ */
+function exponentParts(number, precision) {
+  if (number === 0) return ['0'.repeat(precision + 1), 0];
+  const [digits, scale] = exactDecimal(number);
+  let exponent = digits.toString().length - 1 - scale;
+  let rounded = roundTo(digits, scale, precision - exponent);
+  if (rounded.toString().length > precision + 1) {
+    rounded /= TEN;
+    exponent += 1;
+  }
+  return [rounded.toString(), exponent];
+}
+
+function exponential(mantissa, exponent) {
+  const digits = mantissa.length > 1 ? mantissa[0] + '.' + mantissa.slice(1) : mantissa;
+  return digits + 'e' + (exponent < 0 ? '-' : '+') + String(Math.abs(exponent)).padStart(2, '0');
+}
+
+function withoutTrailingZeros(text) {
+  return text.includes('.') ? text.replace(/\.?0+$/, '') : text;
+}
+
+/**
+ * Sign and digits of e E f F g G, as C and Perl write them.
+ * @returns {[string, string]}
+ */
+function floatParts(flags, conversion, digits, value) {
+  let number = toNumber(value);
+  let sign = '';
+  if (number < 0 || Object.is(number, -0)) {
+    sign = '-';
+    number = -number;
+  } else if (flags.includes('+')) {
+    sign = '+';
+  } else if (flags.includes(' ')) {
+    sign = ' ';
+  }
+  if (!Number.isFinite(number)) return [sign, Number.isNaN(number) ? 'NaN' : 'Inf'];
+  const precision = digits === undefined ? 6 : digits;
+  let text;
+  if (conversion === 'f' || conversion === 'F') {
+    text = fixed(number, precision);
+  } else if (conversion === 'e' || conversion === 'E') {
+    text = exponential(...exponentParts(number, precision));
+  } else {
+    // %g: %e or %f by the exponent, with the trailing zeros dropped
+    const significant = precision === 0 ? 1 : precision;
+    const [mantissa, exponent] = exponentParts(number, significant - 1);
+    if (exponent < -4 || exponent >= significant) {
+      const [head, tail] = exponential(mantissa, exponent).split('e');
+      text = withoutTrailingZeros(head) + 'e' + tail;
+    } else {
+      text = withoutTrailingZeros(fixed(number, significant - 1 - exponent));
+    }
+  }
+  if (conversion === 'E' || conversion === 'G') text = text.toUpperCase();
+  return [sign, text];
+}
+
+/**
+ * Fill sign and text up to the width: with the '<char> pad character, with
+ * spaces on the right for -, with zeros after the sign for 0 where it applies,
+ * else with spaces on the left. The width counts characters.
+ */
+function justify(sign, text, flags, width, pad, zero) {
+  const body = sign + text;
+  const fill = width - Array.from(body).length;
+  if (fill <= 0) return body;
+  const left = flags.includes('-');
+  if (pad !== undefined) return left ? body + pad.repeat(fill) : pad.repeat(fill) + body;
+  if (left) return body + ' '.repeat(fill);
+  if (zero && flags.includes('0')) return sign + '0'.repeat(fill) + text;
+  return ' '.repeat(fill) + body;
+}
+
+/**
+ * sprintf with the conversions, flags, width, precision and N$ position of
+ * mo-reader.md §5 (t/data/sprintf.json holds the shared rows). One pass over
+ * the format: each placeholder is formatted on its own with its own argument,
+ * so an argument value is never read as a format. %2$s picks its argument, a
+ * placeholder without N$ takes the next one in order. A placeholder without
+ * an argument stays as it is; extra arguments are ignored.
  * @param {string} format - Format string with %s, %d, %1$s style placeholders
  * @param {...any} args - Arguments to substitute
  * @returns {string} Formatted string
@@ -31,75 +210,42 @@ const domains = new Set();
 function sprintf(format, ...args) {
   if (!format) return '';
 
-  let argIndex = 0;
+  let next = 0;
 
-  return format.replace(
-    /%%|%(?:(\d+)\$)?([+-]?)([ 0])?(\d+)?(?:\.(\d+))?([sdifoxXeEgGcb%])/g,
-    (match, position, sign, pad, width, precision, type) => {
-      if (match === '%%') return '%';
+  return format.replace(PLACEHOLDER, (match, position, flagText, width, precision, conversion) => {
+    if (match === '%%') return '%';
 
-      const idx = position ? parseInt(position, 10) - 1 : argIndex++;
-      let value = args[idx];
+    const index = position ? parseInt(position, 10) - 1 : next++;
+    if (index < 0 || index >= args.length || args[index] === undefined) return match;
+    const value = args[index];
 
-      if (value === undefined) return match;
+    let pad;
+    const flags = flagText.replace(/'(.)/gsu, (all, char) => {
+      pad = char;
+      return '';
+    });
+    const digits = precision === undefined ? undefined : parseInt(precision || '0', 10);
 
-      switch (type) {
-        case 's':
-          value = String(value);
-          break;
-        case 'd':
-        case 'i':
-          value = parseInt(value, 10).toString();
-          break;
-        case 'f':
-          value = precision !== undefined
-            ? parseFloat(value).toFixed(parseInt(precision, 10))
-            : parseFloat(value).toString();
-          break;
-        case 'o':
-          value = parseInt(value, 10).toString(8);
-          break;
-        case 'x':
-          value = parseInt(value, 10).toString(16);
-          break;
-        case 'X':
-          value = parseInt(value, 10).toString(16).toUpperCase();
-          break;
-        case 'e':
-          value = parseFloat(value).toExponential(precision ? parseInt(precision, 10) : undefined);
-          break;
-        case 'E':
-          value = parseFloat(value).toExponential(precision ? parseInt(precision, 10) : undefined).toUpperCase();
-          break;
-        case 'g':
-        case 'G':
-          value = parseFloat(value).toPrecision(precision ? parseInt(precision, 10) : undefined);
-          if (type === 'G') value = value.toUpperCase();
-          break;
-        case 'c':
-          value = String.fromCharCode(parseInt(value, 10));
-          break;
-        case 'b':
-          value = parseInt(value, 10).toString(2);
-          break;
+    let sign = '';
+    let text;
+    let zero = true;
+    if (conversion === 's' || conversion === 'c') {
+      if (conversion === 's') {
+        text = String(value);
+      } else {
+        const code = Math.trunc(toNumber(value));
+        text = code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '�';
       }
-
-      // Handle width padding
-      if (width) {
-        const padChar = pad === '0' ? '0' : ' ';
-        const padWidth = parseInt(width, 10);
-        if (value.length < padWidth) {
-          if (sign === '-') {
-            value = value.padEnd(padWidth, padChar);
-          } else {
-            value = value.padStart(padWidth, padChar);
-          }
-        }
-      }
-
-      return value;
+      if (digits !== undefined) text = Array.from(text).slice(0, digits).join('');
+    } else if ('eEfFgG'.includes(conversion)) {
+      [sign, text] = floatParts(flags, conversion, digits, value);
+    } else {
+      [sign, text] = integerParts(flags, conversion, digits, value);
+      zero = digits === undefined;
     }
-  );
+
+    return justify(sign, text, flags, width ? parseInt(width, 10) : 0, pad, zero);
+  });
 }
 
 // Plural rules per loaded bundle: { domain: { lang: { nplurals, evaluate } } }

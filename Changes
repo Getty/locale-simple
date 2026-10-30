@@ -74,6 +74,12 @@ Revision history for Locale-Simple
    are ignored, both without a warning, and ' plus a character (%'*8s) pads
    with that character. Python also takes %b, reads numbers from string
    arguments and applies flags and precision as Perl's sprintf does.
+ - JavaScript: sprintf follows the same rules as Perl and Python: u, F and
+   ' plus a pad character, the + and space flags, precision on integers, 0
+   on strings, numbers read from string arguments, negative b o u x X as
+   unsigned 64-bit, two-digit exponents and ties rounded to the even digit.
+ - Tests: the sprintf rows live in t/data/sprintf.json, shared by the
+   suites like t/data/plural-forms.json.
  - Python: the l_dir check stops through sys.exit, also under python -S.
  - Perl: a domain, msgctxt, msgid_plural, dry-run file or locale directory
    of "0" counts as set.

@@ -174,11 +174,20 @@ helper, so §3.1 is covered as well.
 - **Go:** `fmt.Sprintf` uses `%[1]s` for positions; `%1$s` yields `%!s(…)`. Needs an
   own implementation.
 - **Rust:** `format!` is compile-time and has no `%`. Needs an own implementation.
-- **Missing argument:** the placeholder is left unchanged in the output (as in
-  `js/src/index.js`, the reference). No panic, no error.
+- **Missing argument:** the placeholder is left unchanged in the output. No panic, no
+  error, no warning.
 - **Extra arguments** are ignored.
+- **Arguments** are read as Perl reads them: a numeric conversion takes the leading
+  number of a string (0 without one), an integer conversion drops the fraction, and
+  `b o u x X` show a negative number as unsigned 64-bit.
+- **Flags and precision** work as in C: `+` and space apply to `d` and the floating
+  conversions, the precision of an integer conversion is its minimum digit count
+  (`%.0d` of 0 is empty) and turns `0` off, `0` also pads `s` and `c`, and a floating
+  conversion rounds a tie to the even digit.
 
-`js/src/index.js` is the reference for the missing-argument rule only. Its conversion
-set (`sdifoxXeEgGcb`) and flags differ from the set above (no `u`/`F`, no `'<char>`,
-no forced `+`): the own-implementation runtimes implement the full set listed here and
-match JS where JS already covers it.
+Shared vectors: `t/data/sprintf.json`.
+
+- `rows[]` — `{format, args, want}`, `args` as JSON strings and numbers. Every
+  runtime suite iterates over all rows.
+- `perl_python_rows[]` — the same shape, for what Perl and Python take beyond this
+  section: a `*` width or precision, the `#` flag and the conversions `i E g G`.
