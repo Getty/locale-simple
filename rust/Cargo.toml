@@ -1,6 +1,6 @@
 [package]
 name = "locale-simple"
-version = "0.110.0"
+version = "0.200.0"
 edition = "2021"
 rust-version = "1.65"
 license = "MIT"

@@ -1,6 +1,6 @@
 name: Publish Rust to crates.io
 
-# Fires on the release tag (v0.110.0) like publish-js.yml. The crate version is
+# Fires on the release tag (v0.200.0) like publish-js.yml. The crate version is
 # the tag without the "v". crates.io Trusted Publishing (OIDC): no token in the
 # repository. One-time setup on crates.io: the crate locale-simple, Trusted
 # Publisher -> repository Getty/locale-simple, workflow publish-rust.yml.

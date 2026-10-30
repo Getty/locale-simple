@@ -6,9 +6,9 @@ Revision history for Locale-Simple
    on a system without a locale for the language (a minimal container, a
    daemon without LANG). libintl-perl 1.36 and later ignore LANGUAGE under
    C, so l_lang() now moves LC_MESSAGES to C.UTF-8 in that case.
- - Release tags are now vMAJOR.MINOR.0 (e.g. v0.110.0), valid SemVer for all
+ - Release tags are now vMAJOR.MINOR.0 (e.g. v0.200.0), valid SemVer for all
    ecosystems. The npm package follows the tag and jumps from 0.1.9 to
-   0.110.0 (monotonic, so allowed); npm versions now match the CPAN release.
+   0.200.0 (monotonic, so allowed); npm versions now match the CPAN release.
  - Scraper: recognise PHP sources (.php, option --php for more extensions),
    including heredoc and nowdoc strings and namespace-qualified calls.
    String literal forms now depend on the language type.
