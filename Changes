@@ -94,7 +94,9 @@ Revision history for Locale-Simple
    the environment only.
  - Scraper: Perl and PHP double-quoted strings and PHP heredocs that
    interpolate a variable are skipped and reported, as they are no constant
-   msgid; escaped \$ and \@ stay text.
+   msgid. In Perl that is any unescaped $ (such as $%, $1, $::name or
+   $ name) and an @ before a name, digit, ::, ', $, +, - or {; escaped \$
+   and \@ stay text.
  - Scraper: Python raw, unicode and triple-quoted strings are read and
    adjacent literals joined; f-strings and bytes are skipped and reported.
  - Scraper: a JavaScript template literal without ${...} is a msgid.

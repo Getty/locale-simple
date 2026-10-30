@@ -399,8 +399,11 @@ my %escapes = (
             # Case changes and \Q act on the text that follows: not read.
             [ qr/[lLuUQEF]/ => \&reject ],
         ],
-        other        => "drop",
-        interpolates => qr/[\$\@](?:[A-Za-z_]|\{)/,
+        other => "drop",
+        # Every $ names a variable (a lone one does not compile); an @ does
+        # before a name, ::, ', $, +, -, a digit or {. Under use utf8 the
+        # name may start with any letter.
+        interpolates => qr/\$|\@[0-9:'{\$+\-_\p{XIDS}]/,
     },
     js => {
         rules => [
@@ -472,7 +475,7 @@ my %escapes = (
             [ qr/u\{/                    => \&reject ],
         ],
         other        => "keep",
-        interpolates => qr/\$(?:[A-Za-z_\x80-\xff]|\{)|\{\$/,
+        interpolates => qr/\$[A-Za-z_{[:^ascii:]]|\{\$/,
     },
 );
 
@@ -487,8 +490,10 @@ sub unescape {
     my ( $rules, $other, $interpolates ) = @{ $escapes{$table} }{qw( rules other interpolates )};
     my $result = "";
     my $plain  = sub {
-        $self->fail( "interpolated variable" ) if $interpolates and $_[0] =~ $interpolates;
-        return $_[0];
+        my ( $bytes ) = @_;
+        utf8::decode( my $chars = $bytes );    # UTF-8 text is matched as characters
+        $self->fail( "interpolated variable" ) if $interpolates and $chars =~ $interpolates;
+        return $bytes;
     };
   ESCAPE: while ( $text =~ /\G([^\\]*)\\/gc ) {
         $result .= $plain->( $1 );

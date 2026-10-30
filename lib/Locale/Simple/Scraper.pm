@@ -315,10 +315,12 @@ C<\\> and C<\'>. A character named by its code point is stored as UTF-8. A
 literal with an escape the language rejects is skipped, and so is a Perl
 literal with a case change such as C<\U>.
 
-A literal that interpolates is not constant either: Perl double quotes with
-C<$name>, C<@list>, C<${...}> or C<@{...}> in them, PHP double quotes and
-heredocs with C<$name>, C<{$...}> or C<${...}>. An escaped C<\$> or C<\@> is
-text. Python reads plain, raw (C<r"...">) and C<u"..."> strings in single or
+A literal that interpolates is not constant either. In Perl double quotes
+every C<$> is a variable (C<$name>, C<$1>, C<$::name>, C<${...}>, C<$%> as in
+C<"$%.2f">, C<$ total> after a space; a final C<$> does not compile), and so
+is an C<@> before a name, C<::>, C<'>, C<$>, C<+>, C<->, a digit or C<{>.
+PHP double quotes and heredocs interpolate C<$name>, C<{$...}> and
+C<${...}>. An escaped C<\$> or C<\@> is text. Python reads plain, raw (C<r"...">) and C<u"..."> strings in single or
 triple quotes, raw ones keeping their backslashes, and joins adjacent
 literals (C<"a" "b">); f-strings and bytes are not msgids. A JavaScript
 template literal is a msgid while it holds no C<${...}>. A call with a

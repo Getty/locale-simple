@@ -9,7 +9,9 @@ use Locale::Simple::Scraper 'scrape';
 # Only literals whose text the program looks up go into the .pot. A Perl or
 # PHP double-quoted literal (or PHP heredoc) holding a variable is not one, nor
 # is a Python f-string or bytes literal, nor a JavaScript template literal with
-# ${ or a tag. Such a call is skipped and reported; the calls in its arguments
+# ${ or a tag. In Perl double quotes every unescaped $ names a variable (or
+# does not compile), and so does an @ before a name, ::, ', $, +, -, a digit or
+# {. Such a call is skipped and reported; the calls in its arguments
 # are still read. Python raw and triple-quoted strings are msgids, raw ones
 # keeping their backslashes, and adjacent Python literals join. A JavaScript
 # template literal without ${ is a msgid. Whitespace before a literal that is
@@ -37,6 +39,8 @@ my %expected = (
         entry('PL escaped $name and @items and ${name} and %2$s'),
         entry('PL at @ sign, 100% and 5 $'),
         entry('PL single $name @items ${name}'),
+        entry('PL lone @ and @. and @! and @, and @% and @@ stay'),
+        entry( u8("PL euro \@\x{20ac} and arabic digit \@\x{663} stay") ),
     ],
     php => [
         entry('PHP inner of interpolation'),
@@ -84,21 +88,22 @@ my %expected = (
 # finds no calls in it.
 my $func     = lc 'L';
 my %reported = (
-    pl  => '("PL hello $name',
-    php => '("PHP hello $name',
-    py  => '(f"PY f-string',
-    js  => '(`JS template ${name}',
+    pl  => [ '("PL hello $name', '("PL total $%.2f', '("PL final dollar' ],
+    php => ['("PHP hello $name'],
+    py  => ['(f"PY f-string'],
+    js  => ['(`JS template ${name}'],
 );
 
 for my $lang ( sort keys %expected ) {
     my ( $entries, $err ) = scrape_entries("literals.$lang");
     is_deeply( $entries, [ sort_entries( @{ $expected{$lang} } ) ], "$lang: only constant literals give a msgid" );
-    next if !$reported{$lang};
-    like(
-        $err,
-        qr/Expected translation token:\n \|\Q$func$reported{$lang}\E/,
-        "$lang: a skipped literal is reported"
-    );
+    for my $call ( @{ $reported{$lang} || [] } ) {
+        like(
+            $err,
+            qr/Expected translation token:\n \|\Q$func$call\E/,
+            "$lang: the skipped $func$call... is reported"
+        );
+    }
 }
 
 done_testing;
