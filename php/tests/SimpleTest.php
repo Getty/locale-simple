@@ -96,6 +96,47 @@ final class SimpleTest extends TestCase
         }
     }
 
+    // What t/21-dryrun.t and python/test.py expect from the same calls, byte for byte.
+    private const DRY_SHARED = 'msgid "Hello"' . "\n"
+        . "\n"
+        . '# domain: othertest' . "\n"
+        . 'msgid "Hello"' . "\n"
+        . "\n"
+        . 'msgctxt "alien"' . "\n"
+        . 'msgid "Hello"' . "\n"
+        . "\n"
+        . 'msgid "%2$s has %1$d message"' . "\n"
+        . 'msgid_plural "%2$s has %1$d messages"' . "\n"
+        . "\n"
+        . '# domain: othertest' . "\n"
+        . 'msgctxt "inbox"' . "\n"
+        . 'msgid "You have %d message"' . "\n"
+        . 'msgid_plural "You have %d messages"' . "\n"
+        . "\n"
+        . 'msgid "Say \"%s\"\\\\n\nGrüße"' . "\n"
+        . "\n"
+        . 'msgid "Tab\there\rand CR"' . "\n"
+        . "\n";
+
+    public function testDryRunSharedFormat(): void
+    {
+        $file = tempnam(sys_get_temp_dir(), 'dry');
+        try {
+            l_dry($file);
+            $this->assertSame('Hello', l('Hello'));
+            $this->assertSame('', l(''));
+            $this->assertSame('Hello', ld('othertest', 'Hello'));
+            $this->assertSame('Hello', lp('alien', 'Hello'));
+            $this->assertSame('harry has 2 messages', ln('%2$s has %1$d message', '%2$s has %1$d messages', 2, 'harry'));
+            $this->assertSame('You have 1 message', ldnp('othertest', 'inbox', 'You have %d message', 'You have %d messages', 1));
+            $this->assertSame("Say \"hi\"\\n\nGrüße", l("Say \"%s\"\\n\nGrüße", 'hi'));
+            $this->assertSame("Tab\there\rand CR", l("Tab\there\rand CR"));
+            $this->assertSame(self::DRY_SHARED, file_get_contents($file));
+        } finally {
+            unlink($file);
+        }
+    }
+
     public function testDryRunNowriteWritesNothing(): void
     {
         $file = tempnam(sys_get_temp_dir(), 'dry');

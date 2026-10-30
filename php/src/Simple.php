@@ -408,9 +408,13 @@ final class Internal
         }
     }
 
+    /**
+     * Escapes backslash, newline, tab, carriage return and double quote for a
+     * dry-run line, in that order, as gettext_escape in Perl and Python does.
+     */
     public static function escape(string $s): string
     {
-        return str_replace(['\\', "\n", '"'], ['\\\\', '\\n', '\\"'], $s);
+        return str_replace(['\\', "\n", "\t", "\r", '"'], ['\\\\', '\\n', '\\t', '\\r', '\\"'], $s);
     }
 }
 
@@ -484,6 +488,8 @@ function ldnp(string $td, ?string $ctxt, string $id, ?string $idp, ?int $n, mixe
             if ($idp !== null && $idp !== '') {
                 $save[] = 'msgid_plural "' . Internal::escape($idp) . '"';
             }
+            // file_put_contents appends in binary mode ("ab"): the bytes go out
+            // unchanged, LF line ends on every platform.
             file_put_contents(Internal::$dry, implode("\n", $save) . "\n\n", FILE_APPEND);
         }
         return Internal::format($idp !== null && $n !== 1 ? $idp : $id, $args);

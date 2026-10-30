@@ -100,6 +100,56 @@ fn dry_run() {
     l_dry(None, false);
 }
 
+/// What t/21-dryrun.t and python/test.py expect from the same calls, byte for byte.
+const DRY_SHARED: &str = concat!(
+    "msgid \"Hello\"\n",
+    "\n",
+    "# domain: othertest\n",
+    "msgid \"Hello\"\n",
+    "\n",
+    "msgctxt \"alien\"\n",
+    "msgid \"Hello\"\n",
+    "\n",
+    "msgid \"%2$s has %1$d message\"\n",
+    "msgid_plural \"%2$s has %1$d messages\"\n",
+    "\n",
+    "# domain: othertest\n",
+    "msgctxt \"inbox\"\n",
+    "msgid \"You have %d message\"\n",
+    "msgid_plural \"You have %d messages\"\n",
+    "\n",
+    r#"msgid "Say \"%s\"\\n\nGrüße""#,
+    "\n",
+    "\n",
+    r#"msgid "Tab\there\rand CR""#,
+    "\n",
+    "\n",
+);
+
+#[test]
+fn dry_run_shared_format() {
+    let _g = setup();
+    let file = support::temp_dir().join("shared.po");
+    l_dry(Some(file.clone()), false);
+    assert_eq!(l!("Hello"), "Hello");
+    assert_eq!(l!(""), "");
+    assert_eq!(ld!("othertest", "Hello"), "Hello");
+    assert_eq!(lp!("alien", "Hello"), "Hello");
+    assert_eq!(
+        ln!("%2$s has %1$d message", "%2$s has %1$d messages", 2, "harry"),
+        "harry has 2 messages"
+    );
+    assert_eq!(
+        ldnp!("othertest", "inbox", "You have %d message", "You have %d messages", 1),
+        "You have 1 message"
+    );
+    assert_eq!(l!("Say \"%s\"\\n\nGrüße", "hi"), "Say \"hi\"\\n\nGrüße");
+    assert_eq!(l!("Tab\there\rand CR"), "Tab\there\rand CR");
+    let bytes = std::fs::read(&file).unwrap();
+    assert_eq!(std::str::from_utf8(&bytes).expect("UTF-8"), DRY_SHARED);
+    l_dry(None, false);
+}
+
 #[test]
 fn dry_run_nowrite() {
     let _g = setup();

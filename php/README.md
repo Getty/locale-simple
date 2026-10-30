@@ -37,7 +37,7 @@ All names are functions in the namespace `Locale\Simple`.
 | `l_dir($dir)` | directory holding `<lang>/LC_MESSAGES/<domain>.mo` |
 | `l_lang($lang)` | language; without it `LC_ALL`, `LC_MESSAGES`, `LANG`, `LANGUAGE` decide |
 | `ltd($domain)` | default text domain |
-| `l_dry($file, $nowrite = false)` | dry run: append the msgids of every call to `$file`; `l_dry(null)` leaves it |
+| `l_dry($file, $nowrite = false)` | dry run: append the msgids of every call to `$file`, UTF-8 with LF line ends and backslash, newline, tab, carriage return and double quote escaped, the same bytes as the Perl, Python, Go and Rust packages; `l_dry(null)` leaves it |
 | `l_nolocales($on)` | skip the "set `l_dir()` first" check |
 | `l($id, ...$args)` | translate |
 | `ln($id, $plural, $n, ...$args)` | plural; `$n` is prepended to the sprintf arguments |

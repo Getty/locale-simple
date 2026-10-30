@@ -60,10 +60,10 @@ Revision history for Locale-Simple
  - Perl, Python: ld, ldn, ldp and ldnp bind their domain to the l_dir
    directory on first use, so they need no ltd() call first. A later l_dir
    moves every bound domain to the new directory.
- - Perl, Python: dry mode writes the same block in both (# domain:, msgctxt,
-   msgid, msgid_plural) as UTF-8 with LF line ends on every platform, with
-   backslash, newline, tab, carriage return and double quote escaped; the
-   scraper's .pot escapes the same way.
+ - Perl, Python, PHP, Go, Rust: dry mode writes the same block in all five
+   (# domain:, msgctxt, msgid, msgid_plural) as UTF-8 with LF line ends on
+   every platform, with backslash, newline, tab, carriage return and double
+   quote escaped; the scraper's .pot escapes the same way.
  - Python: dry mode formats its result with the module's sprintf, so %1$s
    placeholders work there too.
  - Python: sprintf formats each placeholder on its own: a % in an argument

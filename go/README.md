@@ -48,7 +48,9 @@ full form and all other helpers delegate to it. An empty `msgctxt` or
 The plural markers return two values: `sg, pl := ls.Nn_("1 file", "%d files")`.
 
 `LDry(file, nowrite)` appends the msgid blocks of every call to `file` instead
-of translating; `LDry("", false)` leaves dry-run mode.
+of translating; `LDry("", false)` leaves dry-run mode. The file is UTF-8 with LF
+line ends, with backslash, newline, tab, carriage return and double quote
+escaped, byte for byte what the Perl, Python, PHP and Rust packages write.
 
 ### Translator (Go extension)
 

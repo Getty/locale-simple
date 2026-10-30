@@ -55,7 +55,9 @@ or destructure it, `[$sg, $pl] = Nn_('1 file', '%d files'); ln($sg, $pl, $n)`.
 ## Dry run and no-locales
 
 `l_dry('seen.po')` appends every call's msgid block to the file and still
-returns text; `l_dry(null)` leaves it. `l_nolocales(true)` lifts the
+returns text; `l_dry(null)` leaves it. The file is UTF-8 with LF line ends, with
+backslash, newline, tab, carriage return and double quote escaped, byte for
+byte what the Perl, Python, Go and Rust packages write. `l_nolocales(true)` lifts the
 "set l_dir() first" check (a `RuntimeException` otherwise).
 
 ## Plural forms

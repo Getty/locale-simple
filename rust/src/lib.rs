@@ -375,10 +375,18 @@ fn lookup(
     fallback(msgid, plural, n).to_string()
 }
 
+/// Escapes backslash, newline, tab, carriage return and double quote for a
+/// dry-run line, in that order, as `gettext_escape` in Perl and Python does.
 fn escape(s: &str) -> String {
-    s.replace('\\', "\\\\").replace('\n', "\\n").replace('"', "\\\"")
+    s.replace('\\', "\\\\")
+        .replace('\n', "\\n")
+        .replace('\t', "\\t")
+        .replace('\r', "\\r")
+        .replace('"', "\\\"")
 }
 
+/// Appends one block to `file`. The bytes go out as built here, with `\n` line
+/// ends on every platform, in UTF-8.
 fn write_dry(file: &std::path::Path, domain: &str, ctxt: Option<&str>, msgid: &str, plural: Option<&str>) {
     let mut b = String::new();
     if !domain.is_empty() {

@@ -92,6 +92,47 @@ func TestDryRun(t *testing.T) {
 	}
 }
 
+// What t/21-dryrun.t and python/test.py expect from the same calls, byte for byte.
+const dryShared = "msgid \"Hello\"\n" +
+	"\n" +
+	"# domain: othertest\n" +
+	"msgid \"Hello\"\n" +
+	"\n" +
+	"msgctxt \"alien\"\n" +
+	"msgid \"Hello\"\n" +
+	"\n" +
+	"msgid \"%2$s has %1$d message\"\n" +
+	"msgid_plural \"%2$s has %1$d messages\"\n" +
+	"\n" +
+	"# domain: othertest\n" +
+	"msgctxt \"inbox\"\n" +
+	"msgid \"You have %d message\"\n" +
+	"msgid_plural \"You have %d messages\"\n" +
+	"\n" +
+	`msgid "Say \"%s\"\\n\nGrüße"` + "\n" +
+	"\n" +
+	`msgid "Tab\there\rand CR"` + "\n" +
+	"\n"
+
+func TestDryRunSharedFormat(t *testing.T) {
+	setup(t)
+	file := filepath.Join(t.TempDir(), "shared.po")
+	LDry(file, false)
+	eq(t, L("Hello"), "Hello")
+	eq(t, L(""), "")
+	eq(t, Ld("othertest", "Hello"), "Hello")
+	eq(t, Lp("alien", "Hello"), "Hello")
+	eq(t, Ln("%2$s has %1$d message", "%2$s has %1$d messages", 2, "harry"), "harry has 2 messages")
+	eq(t, Ldnp("othertest", "inbox", "You have %d message", "You have %d messages", 1), "You have 1 message")
+	eq(t, L("Say \"%s\"\\n\nGrüße", "hi"), "Say \"hi\"\\n\nGrüße")
+	eq(t, L("Tab\there\rand CR"), "Tab\there\rand CR")
+	b, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eq(t, string(b), dryShared)
+}
+
 func TestDryRunNowrite(t *testing.T) {
 	setup(t)
 	file := filepath.Join(t.TempDir(), "dry.po")

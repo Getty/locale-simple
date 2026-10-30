@@ -47,7 +47,7 @@ println!("{}", ld!("emails", "Welcome, %s", name));                  // explicit
 | `l_dir(dir)` | directory holding `<lang>/LC_MESSAGES/<domain>.mo` |
 | `l_lang(lang)` | language; without it `LC_ALL`, `LC_MESSAGES`, `LANG`, `LANGUAGE` decide |
 | `ltd(domain)` | default text domain |
-| `l_dry(Some(path), nowrite)` | dry run: append the msgids of every call to the file (`path` is a `PathBuf`: `l_dry(Some("seen.po".into()), false)`); `l_dry(None, false)` leaves it |
+| `l_dry(Some(path), nowrite)` | dry run: append the msgids of every call to the file (`path` is a `PathBuf`: `l_dry(Some("seen.po".into()), false)`), UTF-8 with LF line ends and backslash, newline, tab, carriage return and double quote escaped, the same bytes as the Perl, Python, PHP and Go packages; `l_dry(None, false)` leaves it |
 | `l_nolocales(on)` | skip the "set `l_dir()` first" check |
 | `l!(id, args…)` | translate |
 | `ln!(id, plural, n, args…)` | plural; `n` is prepended to the sprintf arguments |

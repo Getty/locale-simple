@@ -232,12 +232,19 @@ func lookup(dir, effective, domain, msgctxt, msgid, msgidPlural string, n int) s
 	return fallback(msgid, msgidPlural, n)
 }
 
+// gettextEscape escapes backslash, newline, tab, carriage return and double
+// quote for a dry-run line, in that order, as gettext_escape in Perl and
+// Python does.
 func gettextEscape(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, "\n", `\n`)
+	s = strings.ReplaceAll(s, "\t", `\t`)
+	s = strings.ReplaceAll(s, "\r", `\r`)
 	return strings.ReplaceAll(s, `"`, `\"`)
 }
 
+// writeDry appends one block to file. The bytes go out as built here, with
+// "\n" line ends on every platform and the strings' UTF-8 unchanged.
 func writeDry(file, domain, msgctxt, msgid, msgidPlural string) {
 	var b strings.Builder
 	if domain != "" {
