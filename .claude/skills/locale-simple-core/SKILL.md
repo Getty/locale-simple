@@ -103,8 +103,15 @@ The quirks that carry weight:
   regenerate with `TEST_REGRESSION_GEN=1 prove -l t/50-scrape.t` and read the
   `t/out/` diff. The test scrapes `lib/` too, so POD edits in `Locale::Simple` move
   `t/out/scrape_00_err`.
-- **The scraper ignores `python`, `js`, `node_modules` and the generated
-  `t/author-*`/`t/release-*` tests** — the `@default` list in `t/50-scrape.t`.
+- **The `@default` list in `t/50-scrape.t` keeps out** `python`, `js`,
+  `node_modules`, `xt/`, the generated `t/author-*`/`t/release-*` tests and every
+  fixture directory (`n-`, `arg-`, `escape-`, `literal-fixtures`). A new fixture
+  directory gets its `--ignore` there, or it moves the references.
+- **Only constant literals become msgids.** The msgid, plural, context and domain
+  must be literals in the language's own forms and escapes; interpolating literals
+  (Perl `$`/`@`, PHP `$name`) and Python f-/b-strings are skipped and reported.
+  The count and later arguments may be any code. `t/52`–`t/55` pin this per
+  language; their fixtures were checked against the real interpreters.
 - **`with_ws` sets both `$patterns{ws}` and `$patterns{_skip}`.** `Parser::MGC` skips
   `_skip` (whitespace and comments).
 - **Go fixtures under `t/data/` start with `//go:build ignore`** — the root `go.mod`
