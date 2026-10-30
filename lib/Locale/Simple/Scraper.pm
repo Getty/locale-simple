@@ -315,6 +315,16 @@ C<\\> and C<\'>. A character named by its code point is stored as UTF-8. A
 literal with an escape the language rejects is skipped, and so is a Perl
 literal with a case change such as C<\U>.
 
+A literal that interpolates is not constant either: Perl double quotes with
+C<$name>, C<@list>, C<${...}> or C<@{...}> in them, PHP double quotes and
+heredocs with C<$name>, C<{$...}> or C<${...}>. An escaped C<\$> or C<\@> is
+text. Python reads plain, raw (C<r"...">) and C<u"..."> strings in single or
+triple quotes, raw ones keeping their backslashes, and joins adjacent
+literals (C<"a" "b">); f-strings and bytes are not msgids. A JavaScript
+template literal is a msgid while it holds no C<${...}>. A call with a
+string that is not constant is skipped and reported on STDERR; the calls in
+its arguments are still extracted.
+
 That holds for the msgid, the plural msgid, the context and the domain. The
 count and the arguments after them can be any code, such as C<$name>,
 C<< $obj->count >>, C<count($items)>, C<items.len()> or C<n as i64>. Such an

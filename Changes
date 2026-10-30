@@ -92,6 +92,14 @@ Revision history for Locale-Simple
    l_dry(undef) turns the l_dir check back on, as in the other runtimes.
  - Perl: on a platform whose POSIX has no LC_MESSAGES (Windows), l_lang sets
    the environment only.
+ - Scraper: Perl and PHP double-quoted strings and PHP heredocs that
+   interpolate a variable are skipped and reported, as they are no constant
+   msgid; escaped \$ and \@ stay text.
+ - Scraper: Python raw, unicode and triple-quoted strings are read and
+   adjacent literals joined; f-strings and bytes are skipped and reported.
+ - Scraper: a JavaScript template literal without ${...} is a msgid.
+ - Scraper: a PHP heredoc or a Rust raw string after a space, as in
+   l( <<<EOT, is read.
  - Scraper: files are named by their path relative to the directory the
    scraper runs in, in the #: lines, the file field and the --md5 hash.
  - Scraper: symlinks that point nowhere are skipped and the files after them

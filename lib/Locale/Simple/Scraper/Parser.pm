@@ -161,11 +161,13 @@ sub quoted_qr {
 }
 
 # Literals that never hold a msgid but must not be read as code: JavaScript
-# template literals, Go runes and Rust chars (one character or one escape; a
-# Rust lifetime has no closing quote and stays code).
+# template literals, Python strings with any prefix (f-strings, bytes), Go
+# runes and Rust chars (one character or one escape; a Rust lifetime has no
+# closing quote and stays code).
 sub code_only_literals {
     my $char = qr/'(?:\\.[^'\\\n]*|[^'\\\n])'/;
-    my %literals = ( js => [qr/`(?:[^`\\]|\\.)*`/s], go => [$char], rs => [$char] );
+    my $python = qr/(?<!\w)[rRbBfFuUtT]{0,2}(?:"""(?:[^\\]|\\.)*?"""|'''(?:[^\\]|\\.)*?'''|"(?:[^\\"\n]|\\.)*"|'(?:[^\\'\n]|\\.)*')/s;
+    my %literals = ( js => [qr/`(?:[^`\\]|\\.)*`/s], py => [$python], go => [$char], rs => [$char] );
     return @{ $literals{ shift->type } || [] };
 }
 
@@ -234,9 +236,9 @@ sub concat_op {
 # opening). Quoted forms name the escape table their contents are read with.
 sub literal_forms {
     my %forms = (
-        js => [ quoted( q["], "js" ),     quoted( q['], "js" ) ],
+        js => [ quoted( q["], "js" ), quoted( q['], "js" ), [ q[`], "js_template_contents", q[`] ] ],
         pl => [ quoted( q["], "perl" ),   quoted( q['], "single" ) ],
-        py => [ quoted( q["], "python" ), quoted( q['], "python" ) ],
+        py => ["python_strings"],
         tx => [ quoted( q["], "xslate" ), quoted( q['], "single" ) ],
         # No single quotes: in Go they delimit a rune, not a string.
         go  => [ quoted( q["], "go" ), [ q[`], "go_backtick_string_contents", q[`] ] ],
@@ -257,9 +259,13 @@ sub literal_scopes {
     return map { $self->literal_scope( $_ ) } $self->literal_forms;
 }
 
+# Whitespace before a literal is skipped; inside it, it is text.
 sub literal_scope {
     my ( $self, $form ) = @_;
-    return $self->c_with_ws( $form ) if !ref $form;
+    if ( !ref $form ) {
+        my $read = $self->c_with_ws( $form );
+        return sub { $self->skip_ws; $self->$read };
+    }
     my ( $open, $contents, $close, @args ) = @{$form};
     return $self->curry::scope_of( $open, $self->c_with_ws( $contents, @args ), $close );
 }
@@ -275,10 +281,62 @@ sub quoted_string_contents {
     return $text;
 }
 
+# Python: adjacent literals join, also over lines and comments. Each is plain,
+# raw (r) or unicode (u), in single or triple quotes; raw ones keep their
+# backslashes. Other prefixes (f, b, t and their raw forms) give no constant
+# str: not read.
+sub python_strings {
+    my ( $self ) = @_;
+    my @parts = ( $self->python_string );
+    while (
+        defined(
+            my $part = $self->maybe(
+                sub {
+                    $self->expect( qr/(?:\s|#[^\n]*|\\\r?\n)*/ );
+                    $self->python_string;
+                }
+            )
+        )
+      )
+    {
+        push @parts, $part;
+    }
+    my $text = join "", @parts;
+    $self->fail( "no string contents found" ) if !length $text;
+    return $text;
+}
+
+sub python_string {
+    my ( $self ) = @_;
+    my ( undef, $prefix, $quote ) = $self->expect( qr/([rRuU]?)("""|'''|"|')/ );
+    my $q = quotemeta substr( $quote, 0, 1 );
+    my $body =
+      length $quote == 3
+      ? qr/(?:[^\\$q]++|\\.|$q(?!$q$q))*/s
+      : qr/(?:[^\\$q\n]++|\\.)*/s;
+    my $text = $self->expect( $body );
+    $self->expect( qr/\Q$quote\E/ );
+    return lc $prefix eq "r" ? $text : $self->unescape( $text, "python" );
+}
+
+# A JavaScript template literal is a msgid while it holds no ${ substitution.
+# Its line breaks are LF.
+sub js_template_contents {
+    my ( $self ) = @_;
+    my $text = $self->maybe_expect( qr/(?:[^\\`\$]++|\\.|\$(?!\{))+/s );
+    $self->fail( "no string contents found" ) if !defined $text;
+    $text =~ s/\r\n?/\n/g;
+    $text = $self->unescape( $text, "js_template" );
+    $self->fail( "no string contents found" ) if !length $text;
+    return $text;
+}
+
 # Escapes inside string literals, per table: the patterns tried after a
 # backslash, each with the text it stands for, and what becomes of an escape
 # no pattern takes: the character alone (drop), backslash and character
-# (keep), or no msgid at all (fail: the language rejects it). The scraper
+# (keep), or no msgid at all (fail: the language rejects it). A table may
+# name the variables the literal interpolates: such a literal is no constant
+# and gives no msgid either; escaped sigils stay text. The scraper
 # reads and writes bytes, so a character named by its code point is stored
 # as its UTF-8 bytes; Go and PHP byte escapes are stored as the byte.
 my %c_escape = ( a => "\a", b => "\b", e => "\e", f => "\f", n => "\n", r => "\r", t => "\t", v => "\x0b" );
@@ -315,6 +373,18 @@ sub named_char {
 
 sub reject { die "escape the language rejects\n" }
 
+my @js_tail = (
+    [ qr/([bfnrtv])/        => \&c_escape ],
+    [ qr/x([0-9A-Fa-f]{2})/ => sub { code_point( hex $_[0] ) } ],
+    [ qr/u([Dd][89ABab][0-9A-Fa-f]{2})\\u([Dd][C-Fc-f][0-9A-Fa-f]{2})/ => sub {
+            code_point( 0x10000 + ( hex( $_[0] ) - 0xD800 ) * 0x400 + hex( $_[1] ) - 0xDC00 );
+        }
+    ],
+    [ qr/u([0-9A-Fa-f]{4})/   => sub { code_point( hex $_[0] ) } ],
+    [ qr/u\{([0-9A-Fa-f]+)\}/ => sub { code_point( hex $_[0] ) } ],
+    [ qr/[xu]/                => \&reject ],
+);
+
 my %escapes = (
     perl => {
         rules => [
@@ -329,22 +399,25 @@ my %escapes = (
             # Case changes and \Q act on the text that follows: not read.
             [ qr/[lLuUQEF]/ => \&reject ],
         ],
-        other => "drop",
+        other        => "drop",
+        interpolates => qr/[\$\@](?:[A-Za-z_]|\{)/,
     },
     js => {
         rules => [
-            [ qr/(?:\r\n|\n|\r|\xE2\x80[\xA8\xA9])/                      => sub { "" } ],
-            [ qr/0(?![0-9])/                                             => sub { "\0" } ],
-            [ qr/([0-3][0-7]{0,2}|[4-7][0-7]?)/                          => sub { code_point( oct $_[0] ) } ],
-            [ qr/([bfnrtv])/                                             => \&c_escape ],
-            [ qr/x([0-9A-Fa-f]{2})/                                      => sub { code_point( hex $_[0] ) } ],
-            [ qr/u([Dd][89ABab][0-9A-Fa-f]{2})\\u([Dd][C-Fc-f][0-9A-Fa-f]{2})/ => sub {
-                    code_point( 0x10000 + ( hex( $_[0] ) - 0xD800 ) * 0x400 + hex( $_[1] ) - 0xDC00 );
-                }
-            ],
-            [ qr/u([0-9A-Fa-f]{4})/     => sub { code_point( hex $_[0] ) } ],
-            [ qr/u\{([0-9A-Fa-f]+)\}/   => sub { code_point( hex $_[0] ) } ],
-            [ qr/[xu]/                  => \&reject ],
+            [ qr/(?:\r\n|\n|\r|\xE2\x80[\xA8\xA9])/ => sub { "" } ],
+            [ qr/0(?![0-9])/                        => sub { "\0" } ],
+            [ qr/([0-3][0-7]{0,2}|[4-7][0-7]?)/     => sub { code_point( oct $_[0] ) } ],
+            @js_tail,
+        ],
+        other => "drop",
+    },
+    # Templates take no octal escapes, nor \8 and \9.
+    js_template => {
+        rules => [
+            [ qr/(?:\n|\xE2\x80[\xA8\xA9])/ => sub { "" } ],
+            [ qr/0(?![0-9])/              => sub { "\0" } ],
+            [ qr/[0-9]/                   => \&reject ],
+            @js_tail,
         ],
         other => "drop",
     },
@@ -398,7 +471,8 @@ my %escapes = (
             [ qr/u\{([0-9A-Fa-f]+)\}/    => sub { code_point( hex $_[0] ) } ],
             [ qr/u\{/                    => \&reject ],
         ],
-        other => "keep",
+        other        => "keep",
+        interpolates => qr/\$(?:[A-Za-z_\x80-\xff]|\{)|\{\$/,
     },
 );
 
@@ -410,10 +484,14 @@ $escapes{php_heredoc} = {
 
 sub unescape {
     my ( $self, $text, $table ) = @_;
-    my ( $rules, $other ) = @{ $escapes{$table} }{qw( rules other )};
+    my ( $rules, $other, $interpolates ) = @{ $escapes{$table} }{qw( rules other interpolates )};
     my $result = "";
+    my $plain  = sub {
+        $self->fail( "interpolated variable" ) if $interpolates and $_[0] =~ $interpolates;
+        return $_[0];
+    };
   ESCAPE: while ( $text =~ /\G([^\\]*)\\/gc ) {
-        $result .= $1;
+        $result .= $plain->( $1 );
         for my $rule ( @{$rules} ) {
             my ( $pattern, $meaning ) = @{$rule};
             next if $text !~ /\G$pattern/gc;
@@ -426,7 +504,7 @@ sub unescape {
         $self->fail( "escape not read: \\$1" ) if $other eq "fail";
         $result .= $other eq "keep" ? "\\$1" : $1;
     }
-    return $result . substr( $text, pos( $text ) || 0 );
+    return $result . $plain->( substr( $text, pos( $text ) || 0 ) );
 }
 
 # Heredoc and nowdoc: the closing identifier is the one that was opened, so

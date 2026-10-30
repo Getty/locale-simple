@@ -218,11 +218,6 @@ msgstr ""
 msgid "PHP heredoc \"quoted\" and it's fine\nsecond line"
 msgstr ""
 
-#: t/data/dummy.php:16
-#, locale-simple-format
-msgid "PHP interpolated $name here"
-msgstr ""
-
 #: t/data/dummy.php:11
 #, locale-simple-format
 msgid "PHP nowdoc one $notvar"

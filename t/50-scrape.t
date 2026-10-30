@@ -15,7 +15,7 @@ done_testing;
 sub run {
     #$ENV{TEST_REGRESSION_GEN}++;
 
-    my @default = qw(--ignore blib --ignore \.build --ignore python --ignore js --ignore node_modules --ignore xbin --ignore setup.py --ignore release-pod-syntax\.t --ignore ^t/author- --ignore ^xt/ --ignore Locale-Simple- --ignore n-fixtures --ignore arg-fixtures --ignore escape-fixtures --ignore ^\.claude --ignore ^misc/agent-context/ --ignore ^t/release- --ignore ^php/ --ignore ^go/ --ignore ^rust/ --ignore vendor);
+    my @default = qw(--ignore blib --ignore \.build --ignore python --ignore js --ignore node_modules --ignore xbin --ignore setup.py --ignore release-pod-syntax\.t --ignore ^t/author- --ignore ^xt/ --ignore Locale-Simple- --ignore n-fixtures --ignore arg-fixtures --ignore escape-fixtures --ignore literal-fixtures --ignore ^\.claude --ignore ^misc/agent-context/ --ignore ^t/release- --ignore ^php/ --ignore ^go/ --ignore ^rust/ --ignore vendor);
     my @groups  = (
         { desc => "base test",                  argv => \@default, },
         { desc => "force error on wrong quote", argv => [ @default, qw(--pl 1pl --only 1pl) ], },
