@@ -4,7 +4,7 @@ import { l_lang, ltd, loadTranslations, loadLocaleData, l, ln } from '../src/ind
 
 const PF = 'nplurals=2; plural=n != 1;';
 
-// Lookup across the candidate chain, .claude/rules/mo-reader.md §2. Every test
+// Lookup across the candidate chain, .claude/skills/locale-simple-core/references/mo-reader.md §2. Every test
 // uses its own domain; the language strings come from l_lang().
 describe('locale chain lookup', () => {
   it('a de bundle answers l_lang("de_DE")', () => {

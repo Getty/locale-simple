@@ -1,5 +1,5 @@
 {
- "_comment": "Shared test vectors for .claude/rules/mo-reader.md; every runtime with its own .mo reader runs them.",
+ "_comment": "Shared test vectors for .claude/skills/locale-simple-core/references/mo-reader.md; every runtime with its own .mo reader runs them.",
  "plural_forms": [
   {
    "lang": "en",

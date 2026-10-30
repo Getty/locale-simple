@@ -1,5 +1,5 @@
 /**
- * The locale chain of .claude/rules/mo-reader.md §2, shared with the PHP, Go
+ * The locale chain of .claude/skills/locale-simple-core/references/mo-reader.md §2, shared with the PHP, Go
  * and Rust readers. Internal module, bundled into dist/; not part of the
  * package's public API.
  */

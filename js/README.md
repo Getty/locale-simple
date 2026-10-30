@@ -87,7 +87,7 @@ console.log(ld("emails", "Welcome, %s", name)); // explicit domain
 |---|---|
 | `loadTranslations(domain, lang, data, pluralForms?)` | Register a translation bundle (plain `{msgid: msgstr}` map; arrays for plurals). `pluralForms` is the `Plural-Forms` header value; omitted means `n != 1` |
 | `loadLocaleData(domain, data)` | Register `po2json` output (`{ [domain]: bundle }`, Gettext.js format); the `Language` and `Plural-Forms` headers of the bundle select the language and the plural form |
-| `l_lang(code)` | Set primary language (`de_DE`, `pt_BR`, …) |
+| `l_lang(code)` | Set the language (`de_DE`, `pt-BR`, …); a list like `de_AT:fr` tries `de_AT`, `de`, `fr`, then a bundle loaded without language |
 | `ltd(domain)` | Default text domain |
 | `l_dir(path)` | Accepted for API symmetry; the browser has no locale directory |
 | `l_dry(on, noWrite?)` | Dry-run mode: log the msgid of every call to `console.debug` |

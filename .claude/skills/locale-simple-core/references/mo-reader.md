@@ -1,12 +1,3 @@
----
-paths:
-  - "php/**"
-  - "go/**"
-  - "rust/**"
-  - "js/**"
-  - "t/data/plural-forms.json"
----
-
 # .mo Reader Specification
 
 Single specification for the runtimes that bring their own gettext reader: PHP, Go,

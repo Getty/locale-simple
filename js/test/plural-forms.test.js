@@ -5,7 +5,7 @@ import { l_lang, ltd, loadTranslations, loadLocaleData, ln } from '../src/index.
 import { candidates } from '../src/locale-chain.js';
 
 // Shared with every runtime that has its own .mo reader, see
-// .claude/rules/mo-reader.md
+// .claude/skills/locale-simple-core/references/mo-reader.md
 const vectors = JSON.parse(
   readFileSync(new URL('../../t/data/plural-forms.json', import.meta.url), 'utf8')
 );

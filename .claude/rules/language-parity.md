@@ -17,7 +17,8 @@ Six runtimes implement one API: Perl (`lib/Locale/Simple.pm`), Python
 (`python/locale_simple.py`), JavaScript (`js/src/index.js`), PHP
 (`php/src/Simple.php`), Go (`go/`) and Rust (`rust/`). A behavior change to one is a
 change to all six, or a deliberate entry under "Accepted asymmetries" below. The shared
-`.mo` reader specification is `.claude/rules/mo-reader.md`.
+`.mo` reader specification is
+`.claude/skills/locale-simple-core/references/mo-reader.md` (here: mo-reader.md).
 
 ## 1. What must stay in sync
 
@@ -69,6 +70,8 @@ Not drift; the parity check must not report these. Each is deliberate and has a 
 - **Own `.mo` reader in PHP, Go and Rust.** Perl and Python use libc gettext. JavaScript
   reads JSON produced by `bin/po2json` and never touches `.mo` bytes, but shares the
   plural evaluator and the locale chain of mo-reader.md.
+- **JavaScript ends the locale chain with `''`:** a bundle loaded without a language
+  answers last, before the msgid. The `.mo` runtimes have no language-less catalog.
 - **`loadTranslations` / `loadLocaleData` are JavaScript-only:** a browser has no
   directory. PHP, Go and Rust read `.mo` files directly and implement `l_dir` for real.
 - **`l_nolocales` is a no-op only in JavaScript;** the other five have a directory, and
@@ -80,16 +83,7 @@ Not drift; the parity check must not report these. Each is deliberate and has a 
 
 ## 4. Verification
 
-```bash
-prove -lr t/                                      # Perl (recursive; -l is mandatory)
-python python/test.py                             # Python
-cd js && npm install && npm test                  # JavaScript
-composer install && composer test                 # PHP (PHPUnit)
-go test ./go/...                                  # Go
-cargo test --manifest-path rust/Cargo.toml        # Rust
-```
-
-`dzil test` runs Python, JavaScript, PHP, Go and Rust alongside the Perl suite; the last
-three through `xbin/run-sibling-tests.pl`, which **skips visibly** when a toolchain is
-missing or too old. A skipped suite is not a passed suite: say which ran and which did
-not. CI (`.github/workflows/test.yml`) runs all six without skipping.
+The six suite commands are in skill `locale-simple-core` ("Build and test"). `dzil test`
+runs all six, PHP, Go and Rust through `xbin/run-sibling-tests.pl`, which **skips
+visibly** when a toolchain is missing or too old. A skipped suite is not a passed suite:
+say which ran and which did not. CI (`.github/workflows/test.yml`) runs all six.

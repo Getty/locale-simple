@@ -1,4 +1,4 @@
-//! The GNU `.mo` reader (spec: `.claude/rules/mo-reader.md` §1) and the
+//! The GNU `.mo` reader (spec: `.claude/skills/locale-simple-core/references/mo-reader.md` §1) and the
 //! process-wide catalog cache shared by the package functions and every
 //! `Translator`.
 

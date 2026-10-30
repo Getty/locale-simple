@@ -41,7 +41,7 @@ func resetCatalogs() {
 	catalogMu.Unlock()
 }
 
-// parseMo reads the GNU .mo format (spec: .claude/rules/mo-reader.md §1).
+// parseMo reads the GNU .mo format (spec: .claude/skills/locale-simple-core/references/mo-reader.md §1).
 // Any structural problem rejects the whole file and yields nil.
 func parseMo(d []byte) *catalog {
 	if len(d) < 28 {

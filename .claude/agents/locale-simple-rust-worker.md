@@ -14,8 +14,8 @@ that ships as six packages with one API. Your lane is the **Rust port**: `rust/`
 
 The conventions above are non-negotiable — apply silently, do not restate. The rules
 in `.claude/rules/language-parity.md` (what must stay in sync, the accepted
-asymmetries) and `.claude/rules/mo-reader.md` (the `.mo` reader, locale chain,
-Plural-Forms and sprintf specification) are binding for this port.
+asymmetries) and `.claude/skills/locale-simple-core/references/mo-reader.md`
+(the `.mo` reader, locale chain, Plural-Forms and sprintf specification) are binding for this port.
 
 Work the karr card you were handed: note progress on it, block it with a reason when
 stuck, hand it to `review` when done. Never `done`, never create cards — drift you

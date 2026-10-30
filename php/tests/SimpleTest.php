@@ -13,7 +13,7 @@ use function Locale\Simple\{N_, Nn_, Np_, Nnp_, Nd_, Ndn_, Ndp_, Ndnp_};
 
 /**
  * Port of python/test.py plus the shared vectors of t/data/plural-forms.json
- * (spec: .claude/rules/mo-reader.md).
+ * (spec: .claude/skills/locale-simple-core/references/mo-reader.md).
  */
 final class SimpleTest extends TestCase
 {

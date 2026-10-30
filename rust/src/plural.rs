@@ -1,4 +1,4 @@
-//! The Plural-Forms evaluator (spec: `.claude/rules/mo-reader.md` §3). The
+//! The Plural-Forms evaluator (spec: `.claude/skills/locale-simple-core/references/mo-reader.md` §3). The
 //! expression is data from a file: a tokenizer and a recursive-descent parser
 //! build a closure tree, nothing is executed any other way.
 

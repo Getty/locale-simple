@@ -23,26 +23,26 @@ helpers of every runtime you touch.
 | Commits, `Changes`, card → done, pre-release audit | `locale-simple-release-manager` |
 | Read-only research, audit, gap analysis | `locale-simple-worker` ("read-only, change nothing") |
 
-Behavior-relevant = runtime behavior, the public helper API of the three packages, the
+Behavior-relevant = runtime behavior, the public helper API of the six packages, the
 scraper's output, the tests. Pure prose docs and `Changes` notes are not. The lane split
 in detail: skill `locale-simple-core`.
 
 ## Release
 
-`prove -l t/`, `python python/test.py`, `npm test` and `dzil build` are fine anytime. One
-release publishes three packages (CPAN, PyPI, npm): a PyPI upload and an npm publish fall
-under the publish gate like the CPAN upload, and the npm publish runs asynchronously in CI
-after the tag push — an unauthorized tag push is an irreversible release. The pre-release
+The six suites and `dzil build` are fine anytime. One release publishes six packages: CPAN
+and PyPI from `dzil release`; npm and crates.io from CI on the tag push; Packagist and the
+Go proxy from the tag itself. Every upload and every tag push falls under the publish gate
+like the CPAN upload — an unauthorized tag push is an irreversible release. The pre-release
 audit goes through `locale-simple-release-manager`, which reports and never releases. The
-npm package's `bugs` field points at the GitHub issues, so every issue is visible to every
-consumer.
+`bugs` fields of all six packages point at the GitHub issues, so every issue is visible to
+every consumer.
 
 ## Deviations from the house rules
 
 - **No new card for a finding outside the current card** — write it as a note on the card
   in hand.
 
-## Perl / Python / JavaScript specifics — reference, don't restate
+## Runtime specifics — reference, don't restate
 
 Layout, build and test commands, the release path and the scraper quirks live in skill
 `locale-simple-core`.

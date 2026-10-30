@@ -120,7 +120,9 @@ For UMD / browser `<script>`:
 ## Switching language at runtime
 
 `l_lang(newLang)` is cheap — it just flips a pointer to the per-domain data
-you already loaded. For SPAs:
+you already loaded. A missing translation falls back along the chain:
+`l_lang('de_AT:fr')` tries `de_AT`, `de`, `fr`, then a bundle loaded without a
+language, then the msgid. For SPAs:
 
 ```js
 async function setLanguage(lang) {

@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Locale Simple — gettext-style translation helpers with sprintf formatting.
  * Same API as the Perl, Python and JavaScript siblings.
  *
- * Reads GNU .mo files itself (spec: .claude/rules/mo-reader.md), so
+ * Reads GNU .mo files itself (spec: .claude/skills/locale-simple-core/references/mo-reader.md), so
  * ext-gettext is not needed. All 21 names are plain functions in the
  * namespace Locale\Simple.
  */

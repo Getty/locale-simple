@@ -1,7 +1,6 @@
-# export-ignore acts on `git archive`, not only on Composer: it also shapes the
-# GitHub "Source code" downloads and the zip the Go module proxy builds
-# (cmd/go: `git archive --format=zip`). Never ignore go/, go.mod, php/,
-# composer.json or rust/ here: the proxy caches a module version for good.
+# export-ignore shapes `git archive`: the Packagist download and the GitHub
+# "Source code" zips. The Go module zip ignores it and always holds the whole
+# repository. Keep composer.json and php/ out of this list.
 #
 # Check after every change:
 #   git archive --format=zip HEAD | zipinfo -1 -
