@@ -78,6 +78,15 @@ Revision history for Locale-Simple
    ' plus a pad character, the + and space flags, precision on integers, 0
    on strings, numbers read from string arguments, negative b o u x X as
    unsigned 64-bit, two-digit exponents and ties rounded to the even digit.
+ - PHP: sprintf is the package's own and meets the shared rows: a
+   placeholder without an argument stays as it is and the others are
+   formatted; precision on integers, the space flag, 0 with - on strings, a
+   multibyte ' pad character, %c for any code point, width in characters
+   and two-digit exponents.
+ - Go, Rust: sprintf takes a precision on integer conversions (%.0d of 0 is
+   empty), pads s and c with the 0 flag and reads the leading number of a
+   string argument; Go keeps %0$s as it is, Rust writes -0.0 with its sign
+   and gives U+FFFD for a %c without a character.
  - Tests: the sprintf rows live in t/data/sprintf.json, shared by the
    suites like t/data/plural-forms.json.
  - Python: the l_dir check stops through sys.exit, also under python -S.

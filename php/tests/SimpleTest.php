@@ -205,38 +205,33 @@ final class SimpleTest extends TestCase
     // sprintf
     // ------------------------------------------------------------------
 
-    /** @return array<string, array{string, list<mixed>, string}> */
-    public static function sprintfCases(): array
+    /**
+     * The "rows" of t/data/sprintf.json (mo-reader.md §5), shared with every
+     * runtime. "perl_python_rows" are the Perl and Python extras.
+     *
+     * @return array<string, array{string, list<mixed>, string}>
+     */
+    public static function sprintfRows(): array
     {
-        return [
-            'positional' => ['%2$s %1$s', ['a', 'b'], 'b a'],
-            'mixed positional and sequential' => ['%1$s %s', ['a', 'b'], 'a a'],
-            'width' => ['[%5d]', [42], '[   42]'],
-            'left width' => ['[%-5d]', [42], '[42   ]'],
-            'zero pad' => ['[%05d]', [42], '[00042]'],
-            'precision' => ['%.2f', [3.14159], '3.14'],
-            'percent' => ['100%% %s', ['x'], '100% x'],
-            'custom pad' => ["[%'*8s]", ['ab'], '[******ab]'],
-            'plus flag' => ['%+d', [5], '+5'],
-            'binary' => ['%b', [5], '101'],
-            'octal' => ['%o', [8], '10'],
-            'hex' => ['%x %X', [255, 255], 'ff FF'],
-            'char' => ['%c', [65], 'A'],
-            'unsigned' => ['%u', [3], '3'],
-            'extra args ignored' => ['%s', ['a', 'b', 'c'], 'a'],
-            'missing arg leaves the string' => ['%s and %s', ['a'], '%s and %s'],
-            'missing positional arg' => ['%3$s', ['a'], '%3$s'],
-            'no placeholders' => ['plain', [], 'plain'],
-        ];
+        $vectors = json_decode(file_get_contents(__DIR__ . '/../../t/data/sprintf.json'), true, 512, JSON_THROW_ON_ERROR);
+        $rows = [];
+        foreach ($vectors['rows'] as $i => $r) {
+            $rows["row $i: " . $r['format'] . ' ' . json_encode($r['args'], JSON_UNESCAPED_UNICODE)] = [$r['format'], $r['args'], $r['want']];
+        }
+        return $rows;
     }
 
     /**
+     * Through l() without a directory: the msgid comes back formatted.
+     *
      * @param list<mixed> $args
      */
-    #[DataProvider('sprintfCases')]
-    public function testSprintf(string $fmt, array $args, string $want): void
+    #[DataProvider('sprintfRows')]
+    public function testSprintfRow(string $format, array $args, string $want): void
     {
-        $this->assertSame($want, Internal::format($fmt, $args));
+        Internal::reset();
+        l_nolocales(true);
+        $this->assertSame($want, l($format, ...$args));
     }
 
     public function testMissingArgumentThroughL(): void

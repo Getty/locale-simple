@@ -42,8 +42,10 @@ Swoole/RoadRunner/ReactPHP do not switch `l_lang` per request on a shared worker
 | `lnp($ctxt, $msgid, $plural, $n, ...$args)` | context + plural |
 | `ld($domain, $msgid, ...$args)`, `ldn`, `ldp`, `ldnp` | explicit domain |
 
-Formatting is PHP's own `sprintf`, so `%1$s`, width, precision and `'`-padding
-work. Too few arguments return the string unformatted instead of throwing.
+Formatting is the package's own sprintf: `%s %d %u %c %b %o %x %X %e %f %F`,
+flags `+ - 0 space '<char>` (`%'*8s`), width, precision and `%1$s` positions,
+formatted as in the other runtimes. A placeholder without an argument stays
+unchanged; extra arguments are ignored.
 
 ## Deferred markers
 

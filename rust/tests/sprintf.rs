@@ -1,43 +1,52 @@
+//! The "rows" of t/data/sprintf.json (mo-reader.md §5), shared with every
+//! runtime, through `l` without a directory, which returns the msgid
+//! formatted. "perl_python_rows" are the Perl and Python extras.
 #![deny(warnings)]
 
-use locale_simple::internal::sprintf;
+use locale_simple::{l, l_nolocales};
+use serde_json::Value;
+use std::fmt::Display;
+
+/// A JSON argument as a Rust caller would pass it: a string without its JSON
+/// quotes, an integer as `i64`, any other number as `f64`.
+fn arg(v: &Value) -> Box<dyn Display> {
+    match v {
+        Value::String(s) => Box::new(s.clone()),
+        Value::Number(n) => match n.as_i64() {
+            Some(i) => Box::new(i),
+            None => Box::new(n.as_f64().expect("a number")),
+        },
+        other => panic!("unexpected argument {}", other),
+    }
+}
 
 #[test]
-fn sprintf_table() {
-    let cases: Vec<(&str, Vec<&dyn std::fmt::Display>, &str)> = vec![
-        ("%2$s %1$s", vec![&"a", &"b"], "b a"),
-        ("%1$s %s", vec![&"a", &"b"], "a a"),
-        ("[%5d]", vec![&42], "[   42]"),
-        ("[%-5d]", vec![&42], "[42   ]"),
-        ("[%05d]", vec![&42], "[00042]"),
-        ("[%05d]", vec![&-42], "[-0042]"),
-        ("%.2f", vec![&1.23456], "1.23"),
-        ("%f", vec![&1.5], "1.500000"),
-        ("%F", vec![&1.5], "1.500000"),
-        ("%e", vec![&1234.5], "1.234500e+03"),
-        ("%.1e", vec![&0.00012], "1.2e-04"),
-        ("100%% %s", vec![&"x"], "100% x"),
-        ("[%'*8s]", vec![&"ab"], "[******ab]"),
-        ("[%-'*8s]", vec![&"ab"], "[ab******]"),
-        ("%+d %+d", vec![&5, &-5], "+5 -5"),
-        ("% d", vec![&5], " 5"),
-        ("%b %o %x %X", vec![&5, &8, &255, &255], "101 10 ff FF"),
-        ("%c", vec![&65], "A"),
-        ("%u", vec![&3], "3"),
-        ("%.3s", vec![&"abcdef"], "abc"),
-        ("%d", vec![&"12"], "12"),
-        ("%d", vec![&3.9], "3"),
-        ("%s", vec![&"a", &"b", &"c"], "a"),
-        ("%s and %s", vec![&"a"], "a and %s"),
-        ("%3$s", vec![&"a"], "%3$s"),
-        ("%2$05d", vec![&0, &7], "00007"),
-        ("50% off", vec![], "50% off"),
-        ("%y", vec![&"a"], "%y"),
-        ("plain", vec![], "plain"),
-        ("héllo %s", vec![&"wörld"], "héllo wörld"),
-        ("[%4s]", vec![&"é"], "[   é]"),
-    ];
-    for (fmt, args, want) in cases {
-        assert_eq!(sprintf(fmt, &args), want, "sprintf({:?})", fmt);
+fn sprintf_rows() {
+    let text = std::fs::read_to_string("../t/data/sprintf.json").expect("sprintf.json");
+    let vectors: Value = serde_json::from_str(&text).expect("valid JSON");
+    let rows = vectors["rows"].as_array().expect("rows");
+    assert!(!rows.is_empty());
+    l_nolocales(true);
+    let mut misses = Vec::new();
+    for row in rows {
+        let format = row["format"].as_str().unwrap();
+        let want = row["want"].as_str().unwrap();
+        let boxed: Vec<Box<dyn Display>> =
+            row["args"].as_array().unwrap().iter().map(arg).collect();
+        let args: Vec<&dyn Display> = boxed.iter().map(|b| b.as_ref()).collect();
+        let got = l(format, &args);
+        if got != want {
+            misses.push(format!(
+                "l({:?}, {}) = {:?}, want {:?}",
+                format, row["args"], got, want
+            ));
+        }
     }
+    assert!(
+        misses.is_empty(),
+        "{} of {} rows miss:\n{}",
+        misses.len(),
+        rows.len(),
+        misses.join("\n")
+    );
 }

@@ -393,19 +393,187 @@ final class Internal
     }
 
     // ------------------------------------------------------------------
-    // sprintf (spec §5)
+    // sprintf (spec §5, rows in t/data/sprintf.json)
     // ------------------------------------------------------------------
 
+    /** One placeholder: %%, or the N$ position, flags, width, .precision, conversion. */
+    private const PLACEHOLDER = '/%%|%(?:(\d+)\$)?((?:[-+ 0]|\'.)*)(\d+)?(?:\.(\d*))?([bcdeufFosxX])/s';
+
+    /** The number at the start of a string, the way Perl reads a string as a number. */
+    private const LEADING_NUMBER = '/^\s*[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/';
+
     /**
+     * Formats with the conversions b c d e u f F o s x X, the flags + - 0
+     * space '<char>, width, .precision, the N$ position and %%. Each
+     * placeholder is formatted on its own: a placeholder without an argument
+     * stays unchanged, extra arguments are ignored.
+     *
      * @param list<mixed> $args
      */
     public static function format(string $fmt, array $args): string
     {
-        try {
-            return sprintf($fmt, ...$args);
-        } catch (\ArgumentCountError | \ValueError) {
+        if (!str_contains($fmt, '%')) {
             return $fmt;
         }
+        // A UTF-8 format reads a '<char> pad as one character, any other
+        // format byte by byte.
+        $mode = preg_match('//u', $fmt) === 1 ? 'u' : '';
+        $next = 0;
+        $out = preg_replace_callback(
+            self::PLACEHOLDER . $mode,
+            static function (array $m) use ($args, &$next, $mode): string {
+                if ($m[0] === '%%') {
+                    return '%';
+                }
+                $index = $m[1] !== null ? (int) $m[1] - 1 : $next++;
+                if ($index < 0 || !array_key_exists($index, $args)) {
+                    return $m[0];
+                }
+                return self::conversion($m, $args[$index], $mode);
+            },
+            $fmt,
+            flags: PREG_UNMATCHED_AS_NULL
+        );
+        return $out ?? $fmt;
+    }
+
+    /**
+     * One placeholder with its argument. The 0 flag pads s, c and the
+     * floating conversions, and the integer conversions without a precision;
+     * a precision on an integer conversion is its minimum digit count.
+     *
+     * @param array<int, ?string> $m
+     */
+    private static function conversion(array $m, mixed $arg, string $mode): string
+    {
+        $left = $plus = $space = $zero = false;
+        $pad = null;
+        preg_match_all('/\'(.)|[-+ 0]/s' . $mode, (string) $m[2], $flags, PREG_SET_ORDER);
+        foreach ($flags as $flag) {
+            if (isset($flag[1])) {
+                $pad = $flag[1];
+            } elseif ($flag[0] === '-') {
+                $left = true;
+            } elseif ($flag[0] === '+') {
+                $plus = true;
+            } elseif ($flag[0] === ' ') {
+                $space = true;
+            } else {
+                $zero = true;
+            }
+        }
+        $width = (int) $m[3];
+        $precision = $m[4] !== null ? (int) $m[4] : null;
+        $conv = (string) $m[5];
+        $sign = '';
+        $zeroPads = true;
+
+        switch ($conv) {
+            case 's':
+                $text = is_array($arg) ? 'Array' : (string) $arg;
+                if ($precision !== null) {
+                    $text = implode('', array_slice(self::chars($text), 0, $precision));
+                }
+                break;
+            case 'c':
+                $text = self::character(self::integer($arg));
+                break;
+            case 'e':
+            case 'f':
+            case 'F':
+                $v = (float) self::number($arg);
+                $negative = $v < 0 || ($v == 0 && fdiv(1, $v) < 0);
+                $sign = $negative ? '-' : ($plus ? '+' : ($space ? ' ' : ''));
+                $text = sprintf('%.' . ($precision ?? 6) . ($conv === 'e' ? 'e' : 'F'), abs($v));
+                if ($conv === 'e') {
+                    // C writes at least two exponent digits
+                    $text = (string) preg_replace('/e([+-])(\d)$/', 'e${1}0$2', $text);
+                }
+                break;
+            default: // b d o u x X
+                $n = self::integer($arg);
+                if ($conv === 'd') {
+                    $sign = $n < 0 ? '-' : ($plus ? '+' : ($space ? ' ' : ''));
+                    $text = ltrim(sprintf('%d', $n), '-');
+                } else {
+                    // PHP writes a negative number as unsigned 64-bit here
+                    $text = sprintf('%' . $conv, $n);
+                }
+                if ($precision !== null) {
+                    $text = ($precision === 0 && $n === 0) ? '' : str_pad($text, $precision, '0', STR_PAD_LEFT);
+                    $zeroPads = false;
+                }
+        }
+
+        $fill = $width - count(self::chars($sign . $text));
+        if ($fill <= 0) {
+            return $sign . $text;
+        }
+        if ($left) {
+            return $sign . $text . str_repeat($pad ?? ' ', $fill);
+        }
+        if ($zero && $zeroPads && $pad === null) {
+            return $sign . str_repeat('0', $fill) . $text;
+        }
+        return str_repeat($pad ?? ' ', $fill) . $sign . $text;
+    }
+
+    /**
+     * An argument as a number: ints and floats as they are, anything else the
+     * leading number of its text (0 without one).
+     */
+    private static function number(mixed $arg): int|float
+    {
+        if (is_int($arg) || is_float($arg)) {
+            return $arg;
+        }
+        if (is_bool($arg) || $arg === null) {
+            return (int) $arg;
+        }
+        if (is_array($arg) || !preg_match(self::LEADING_NUMBER, (string) $arg, $m)) {
+            return 0;
+        }
+        return strpbrk($m[0], '.eE') === false ? (int) $m[0] : (float) $m[0];
+    }
+
+    /** An argument for an integer conversion: the fraction dropped. */
+    private static function integer(mixed $arg): int
+    {
+        $n = self::number($arg);
+        return is_float($n) ? (is_finite($n) ? (int) $n : 0) : $n;
+    }
+
+    /** The UTF-8 character of a code point, U+FFFD for none. */
+    private static function character(int $cp): string
+    {
+        if ($cp < 0 || $cp > 0x10FFFF || ($cp >= 0xD800 && $cp <= 0xDFFF)) {
+            $cp = 0xFFFD;
+        }
+        if ($cp < 0x80) {
+            return \chr($cp);
+        }
+        if ($cp < 0x800) {
+            return \chr(0xC0 | ($cp >> 6)) . \chr(0x80 | ($cp & 0x3F));
+        }
+        if ($cp < 0x10000) {
+            return \chr(0xE0 | ($cp >> 12)) . \chr(0x80 | (($cp >> 6) & 0x3F)) . \chr(0x80 | ($cp & 0x3F));
+        }
+        return \chr(0xF0 | ($cp >> 18)) . \chr(0x80 | (($cp >> 12) & 0x3F))
+            . \chr(0x80 | (($cp >> 6) & 0x3F)) . \chr(0x80 | ($cp & 0x3F));
+    }
+
+    /**
+     * The characters of a UTF-8 string, its bytes when it is not UTF-8.
+     *
+     * @return list<string>
+     */
+    private static function chars(string $s): array
+    {
+        if ($s === '') {
+            return [];
+        }
+        $chars = preg_split('//u', $s, -1, PREG_SPLIT_NO_EMPTY);
+        return $chars === false ? str_split($s) : $chars;
     }
 
     /**

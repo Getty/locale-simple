@@ -58,8 +58,10 @@ The deferred markers return their argument; the plural ones return an array
   `n != 1` and raises one `E_USER_WARNING` per process.
 - A language like `de_AT:fr` is tried as `de_AT`, `de`, `fr`; an empty
   translation falls through to the next candidate and finally to the msgid.
-- `sprintf` is PHP's own, so `%1$s`, width, precision and `'`-padding work. With
-  too few arguments the string is returned unformatted instead of throwing.
+- `sprintf` is the package's own: `%s %d %u %c %b %o %x %X %e %f %F`, flags
+  `+ - 0 space '<char>`, width, precision and `%1$s` positions, formatted as in
+  the other runtimes. A placeholder without an argument stays unchanged; extra
+  arguments are ignored.
 - Without `l_dir()` (and without `l_nolocales(true)`) a call throws a
   `RuntimeException`.
 

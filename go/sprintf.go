@@ -2,6 +2,7 @@ package simple
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -10,7 +11,8 @@ import (
 // sprintf formats with the C-style conversions of the shared spec (§5):
 // b c d e u f F o s x X, flags + - 0 space '<char>, width, .precision, the
 // N$ position and %%. A placeholder without a matching argument stays in the
-// output unchanged; surplus arguments are ignored.
+// output unchanged; surplus arguments are ignored. t/data/sprintf.json holds
+// the rows every runtime meets.
 func sprintf(format string, args []any) string {
 	if !strings.Contains(format, "%") {
 		return format
@@ -36,12 +38,12 @@ func sprintf(format string, args []any) string {
 			continue
 		}
 		idx := next
-		if spec.pos > 0 {
+		if spec.hasPos {
 			idx = spec.pos - 1
 		} else {
 			next++
 		}
-		if idx >= len(args) {
+		if idx < 0 || idx >= len(args) {
 			out.WriteString(spec.raw)
 			continue
 		}
@@ -52,11 +54,13 @@ func sprintf(format string, args []any) string {
 
 type spec struct {
 	raw       string
+	hasPos    bool
 	pos       int
 	plus      bool
 	left      bool
 	zero      bool
 	space     bool
+	custom    bool // '<char> given: pad holds the character
 	pad       rune
 	width     int
 	precision int // -1: none
@@ -76,6 +80,7 @@ func parseSpec(s string) (sp spec, size int, ok bool) {
 		j++
 	}
 	if j > i && j < len(s) && s[j] == '$' {
+		sp.hasPos = true
 		sp.pos, _ = strconv.Atoi(s[i:j])
 		i = j + 1
 	}
@@ -95,7 +100,7 @@ flags:
 				return sp, 0, false
 			}
 			r, w := utf8.DecodeRuneInString(s[i+1:])
-			sp.pad = r
+			sp.custom, sp.pad = true, r
 			i += w
 		default:
 			break flags
@@ -126,39 +131,25 @@ flags:
 	return sp, i + 1, true
 }
 
+// render formats one argument. The 0 flag pads s, c and the floating
+// conversions, and the integer conversions without a precision; a precision
+// on an integer conversion is its minimum digit count.
 func (sp spec) render(arg any) string {
 	var body string
 	sign := ""
-	numeric := true
+	zeroPads := true
 	switch sp.verb {
 	case 's':
-		numeric = false
 		body = fmt.Sprint(arg)
 		if sp.precision >= 0 && utf8.RuneCountInString(body) > sp.precision {
 			body = string([]rune(body)[:sp.precision])
 		}
 	case 'c':
-		numeric = false
-		body = string(rune(toInt(arg)))
-	case 'd':
 		v := toInt(arg)
-		if v < 0 {
-			sign = "-"
-			body = strconv.FormatUint(uint64(-v), 10)
-		} else {
-			sign = sp.plusSign()
-			body = strconv.FormatInt(v, 10)
+		if v < 0 || v > utf8.MaxRune {
+			v = utf8.RuneError
 		}
-	case 'u':
-		body = strconv.FormatUint(uint64(toInt(arg)), 10)
-	case 'b':
-		body = strconv.FormatUint(uint64(toInt(arg)), 2)
-	case 'o':
-		body = strconv.FormatUint(uint64(toInt(arg)), 8)
-	case 'x':
-		body = strconv.FormatUint(uint64(toInt(arg)), 16)
-	case 'X':
-		body = strings.ToUpper(strconv.FormatUint(uint64(toInt(arg)), 16))
+		body = string(rune(v)) // a surrogate gives U+FFFD as well
 	case 'e', 'f', 'F':
 		v := toFloat(arg)
 		prec := sp.precision
@@ -175,8 +166,38 @@ func (sp spec) render(arg any) string {
 		} else {
 			sign = sp.plusSign()
 		}
+	default: // b d o u x X
+		v := toInt(arg)
+		switch sp.verb {
+		case 'd':
+			if v < 0 {
+				sign = "-"
+				body = strconv.FormatUint(uint64(-v), 10)
+			} else {
+				sign = sp.plusSign()
+				body = strconv.FormatInt(v, 10)
+			}
+		case 'u':
+			body = strconv.FormatUint(uint64(v), 10)
+		case 'b':
+			body = strconv.FormatUint(uint64(v), 2)
+		case 'o':
+			body = strconv.FormatUint(uint64(v), 8)
+		case 'x':
+			body = strconv.FormatUint(uint64(v), 16)
+		case 'X':
+			body = strings.ToUpper(strconv.FormatUint(uint64(v), 16))
+		}
+		if sp.precision >= 0 {
+			if sp.precision == 0 && v == 0 {
+				body = ""
+			} else if len(body) < sp.precision {
+				body = strings.Repeat("0", sp.precision-len(body)) + body
+			}
+			zeroPads = false
+		}
 	}
-	return sp.justify(sign, body, numeric)
+	return sp.justify(sign, body, zeroPads)
 }
 
 func (sp spec) plusSign() string {
@@ -189,7 +210,9 @@ func (sp spec) plusSign() string {
 	return ""
 }
 
-func (sp spec) justify(sign, body string, numeric bool) string {
+// justify fills sign and body up to the width: with the '<char> character
+// around both, else with spaces, or with zeros between sign and body.
+func (sp spec) justify(sign, body string, zeroPads bool) string {
 	fill := sp.width - utf8.RuneCountInString(sign) - utf8.RuneCountInString(body)
 	if fill <= 0 {
 		return sign + body
@@ -197,12 +220,23 @@ func (sp spec) justify(sign, body string, numeric bool) string {
 	switch {
 	case sp.left:
 		return sign + body + strings.Repeat(string(sp.pad), fill)
-	case sp.zero && numeric && sp.pad == ' ':
+	case sp.zero && zeroPads && !sp.custom:
 		return sign + strings.Repeat("0", fill) + body
 	}
 	return strings.Repeat(string(sp.pad), fill) + sign + body
 }
 
+// leadingNumber matches the number at the start of a string, the way Perl
+// reads a string as a number.
+var leadingNumber = regexp.MustCompile(`^\s*[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?`)
+
+// numberText is the leading number of the argument's text, "" without one.
+func numberText(arg any) string {
+	return strings.TrimSpace(leadingNumber.FindString(fmt.Sprint(arg)))
+}
+
+// toInt reads an argument for an integer conversion: numbers drop their
+// fraction, anything else gives the leading number of its text (0 without).
 func toInt(arg any) int64 {
 	switch v := arg.(type) {
 	case int:
@@ -235,7 +269,7 @@ func toInt(arg any) int64 {
 		}
 		return 0
 	}
-	s := strings.TrimSpace(fmt.Sprint(arg))
+	s := numberText(arg)
 	if i, err := strconv.ParseInt(s, 10, 64); err == nil {
 		return i
 	}
@@ -245,6 +279,7 @@ func toInt(arg any) int64 {
 	return 0
 }
 
+// toFloat reads an argument for a floating conversion, the same way.
 func toFloat(arg any) float64 {
 	switch v := arg.(type) {
 	case float64:
@@ -252,7 +287,7 @@ func toFloat(arg any) float64 {
 	case float32:
 		return float64(v)
 	}
-	if f, err := strconv.ParseFloat(strings.TrimSpace(fmt.Sprint(arg)), 64); err == nil {
+	if f, err := strconv.ParseFloat(numberText(arg), 64); err == nil {
 		return f
 	}
 	return float64(toInt(arg))

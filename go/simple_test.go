@@ -198,45 +198,36 @@ func TestDeferredMarkers(t *testing.T) {
 // sprintf
 // ----------------------------------------------------------------------
 
-func TestSprintf(t *testing.T) {
-	cases := []struct {
-		format string
-		args   []any
-		want   string
-	}{
-		{"%2$s %1$s", []any{"a", "b"}, "b a"},
-		{"%1$s %s", []any{"a", "b"}, "a a"},
-		{"[%5d]", []any{42}, "[   42]"},
-		{"[%-5d]", []any{42}, "[42   ]"},
-		{"[%05d]", []any{42}, "[00042]"},
-		{"[%05d]", []any{-42}, "[-0042]"},
-		{"%.2f", []any{3.14159}, "3.14"},
-		{"%f", []any{1.5}, "1.500000"},
-		{"%F", []any{1.5}, "1.500000"},
-		{"%e", []any{1234.5}, "1.234500e+03"},
-		{"100%% %s", []any{"x"}, "100% x"},
-		{"[%'*8s]", []any{"ab"}, "[******ab]"},
-		{"[%-'*8s]", []any{"ab"}, "[ab******]"},
-		{"%+d %+d", []any{5, -5}, "+5 -5"},
-		{"% d", []any{5}, " 5"},
-		{"%b %o %x %X", []any{5, 8, 255, 255}, "101 10 ff FF"},
-		{"%c", []any{65}, "A"},
-		{"%u", []any{3}, "3"},
-		{"%.3s", []any{"abcdef"}, "abc"},
-		{"%d", []any{"12"}, "12"},
-		{"%d", []any{3.9}, "3"},
-		{"%s", []any{"a", "b", "c"}, "a"},
-		{"%s and %s", []any{"a"}, "a and %s"},
-		{"%3$s", []any{"a"}, "%3$s"},
-		{"%2$05d", []any{0, 7}, "00007"},
-		{"50% off", nil, "50% off"},
-		{"%y", []any{"a"}, "%y"},
-		{"plain", nil, "plain"},
-		{"héllo %s", []any{"wörld"}, "héllo wörld"},
+// sprintfRow is one row of t/data/sprintf.json (mo-reader.md §5). JSON
+// numbers arrive as float64.
+type sprintfRow struct {
+	Format string `json:"format"`
+	Args   []any  `json:"args"`
+	Want   string `json:"want"`
+}
+
+// TestSprintfRows runs the "rows" every runtime shares through L without a
+// directory, which returns the msgid formatted. "perl_python_rows" are the
+// Perl and Python extras.
+func TestSprintfRows(t *testing.T) {
+	data, err := os.ReadFile("../t/data/sprintf.json")
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, c := range cases {
-		if got := sprintf(c.format, c.args); got != c.want {
-			t.Errorf("sprintf(%q, %v) = %q, want %q", c.format, c.args, got, c.want)
+	var vectors struct {
+		Rows []sprintfRow `json:"rows"`
+	}
+	if err := json.Unmarshal(data, &vectors); err != nil {
+		t.Fatal(err)
+	}
+	if len(vectors.Rows) == 0 {
+		t.Fatal("no rows in sprintf.json")
+	}
+	global = NewTranslator()
+	LNolocales(true)
+	for _, r := range vectors.Rows {
+		if got := L(r.Format, r.Args...); got != r.Want {
+			t.Errorf("L(%q, %v) = %q, want %q", r.Format, r.Args, got, r.Want)
 		}
 	}
 }
