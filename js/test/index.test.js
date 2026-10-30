@@ -4,6 +4,7 @@ import {
   l_dir,
   l_lang,
   l_dry,
+  l_nolocales,
   ltd,
   loadTranslations,
   loadLocaleData,
@@ -24,6 +25,7 @@ import {
   Ndp_,
   Ndnp_,
 } from '../src/index.js';
+import localeSimple from '../src/index.js';
 
 // Test translations (German)
 const testTranslations = {
@@ -215,6 +217,21 @@ describe('Locale Simple', () => {
     });
   });
 
+  describe('l_nolocales() - API symmetry', () => {
+    it('is exported, named and on the default export', () => {
+      assert.strictEqual(typeof l_nolocales, 'function');
+      assert.strictEqual(localeSimple.l_nolocales, l_nolocales);
+    });
+
+    it('is a no-op: returns undefined and changes no translation', () => {
+      assert.strictEqual(l_nolocales(true), undefined);
+      assert.strictEqual(l('Hello'), 'Hallo');
+      assert.strictEqual(ln('You have %d message', 'You have %d messages', 4), 'Du hast 4 Nachrichten');
+      assert.strictEqual(l_nolocales(false), undefined);
+      assert.strictEqual(l('Hello'), 'Hallo');
+    });
+  });
+
   describe('language switching lifecycle', () => {
     it('should switch translations when l_lang changes', () => {
       loadTranslations('test', 'en_US', { 'Hello': 'Hi there' });
@@ -311,6 +328,42 @@ describe('loadLocaleData() - po2json format', () => {
       ln('You have %d item', 'You have %d items', 7),
       'Du hast 7 Sachen'
     );
+  });
+
+  it('files each bundle under the gettext Language header', () => {
+    // bin/po2json writes the header field "Language", with a leading space
+    loadLocaleData('multi', {
+      multi: { '': { 'Language': ' de_DE' }, 'Hello': [null, 'Hallo'] },
+    });
+    loadLocaleData('multi', {
+      multi: { '': { 'Language': 'fr_FR' }, 'Hello': [null, 'Bonjour'] },
+    });
+    ltd('multi');
+
+    l_lang('de_DE');
+    assert.strictEqual(l('Hello'), 'Hallo');
+    l_lang('fr_FR');
+    assert.strictEqual(l('Hello'), 'Bonjour');
+    l_lang('de_DE');
+    assert.strictEqual(l('Hello'), 'Hallo');
+  });
+
+  it('prefers a lang field over the Language header', () => {
+    loadLocaleData('both', {
+      both: { '': { 'lang': 'it_IT', 'Language': ' de_DE' }, 'Hello': [null, 'Ciao'] },
+    });
+    ltd('both');
+    l_lang('it_IT');
+    assert.strictEqual(l('Hello'), 'Ciao');
+    l_lang('de_DE');
+    assert.strictEqual(l('Hello'), 'Hello');
+  });
+
+  it('files a bundle without language under "" (fallback for every language)', () => {
+    loadLocaleData('nolang', { nolang: { '': {}, 'Hello': [null, 'Hallo'] } });
+    ltd('nolang');
+    l_lang('xx_YY');
+    assert.strictEqual(l('Hello'), 'Hallo');
   });
 
   it('should no-op for missing domain', () => {

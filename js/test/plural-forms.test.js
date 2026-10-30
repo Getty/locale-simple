@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { l_lang, ltd, loadTranslations, loadLocaleData, ln } from '../src/index.js';
+import { candidates } from '../src/locale-chain.js';
 
 // Shared with every runtime that has its own .mo reader, see
 // .claude/rules/mo-reader.md
@@ -75,4 +76,12 @@ describe('plural forms from the Plural-Forms header', () => {
     console.warn = origWarn;
     assert.strictEqual(warnings.length, 1);
   });
+});
+
+describe('locale chain from the language string', () => {
+  for (const v of vectors.locale_fallback) {
+    it(`${JSON.stringify(v.input)} -> ${JSON.stringify(v.candidates)}`, () => {
+      assert.deepStrictEqual(candidates(v.input), v.candidates);
+    });
+  }
 });

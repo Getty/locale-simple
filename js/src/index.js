@@ -5,9 +5,13 @@
  * @module locale-simple
  */
 
+import { candidates, normalizeLang } from './locale-chain.js';
+
 // Internal state
 let currentDomain = null;
-let currentLang = null;
+// Languages tried in order: the chain of l_lang(), then "" (bundles filed
+// without a language)
+let lookupChain = [''];
 let localeDir = null;
 let dryMode = false;
 let noWrite = false;
@@ -302,8 +306,23 @@ function writeDry(domain, msgctxt, msgid, msgid_plural) {
   console.debug('');
 }
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
 /**
- * Look up a translation
+ * Own property only: msgids and languages are data, never prototype members
+ * @param {Object|undefined} obj
+ * @param {string} key
+ */
+function own(obj, key) {
+  return obj != null && hasOwn.call(obj, key) ? obj[key] : undefined;
+}
+
+/**
+ * Look up a translation across the locale chain (mo-reader.md §2): the first
+ * language whose bundle has the key with a non-empty msgstr wins (for plurals:
+ * a non-empty form, selected by that bundle's own rule); an empty or missing
+ * one falls through to the next language, after the chain to the bundle filed
+ * without a language, and finally to the msgid.
  * @param {string} domain
  * @param {string|null} msgctxt
  * @param {string} msgid
@@ -312,31 +331,19 @@ function writeDry(domain, msgctxt, msgid, msgid_plural) {
  * @returns {string}
  */
 function lookup(domain, msgctxt, msgid, msgid_plural, n) {
-  const domainData = translations[domain];
-  if (!domainData) return msgid_plural && n !== 1 ? msgid_plural : msgid;
-
-  const langKey = domainData[currentLang] ? currentLang : '';
-  const langData = domainData[langKey];
-  if (!langData) return msgid_plural && n !== 1 ? msgid_plural : msgid;
-
-  // Build lookup key (with context if present)
-  const key = msgctxt ? msgctxt + '\u0004' + msgid : msgid;
-  const entry = langData[key];
-
-  if (!entry) return msgid_plural && n !== 1 ? msgid_plural : msgid;
-
-  // Handle plural forms
-  if (msgid_plural && n !== null) {
-    if (Array.isArray(entry)) {
-      const rule = (pluralRules[domain] && pluralRules[domain][langKey]) || DEFAULT_PLURAL_RULE;
-      const idx = getPluralIndex(n, rule);
-      return entry[idx] || entry[0] || msgid;
+  const domainData = own(translations, domain);
+  if (domainData) {
+    const key = msgctxt ? msgctxt + '\u0004' + msgid : msgid;
+    for (const lang of lookupChain) {
+      const entry = own(own(domainData, lang), key);
+      if (entry === undefined) continue;
+      const forms = Array.isArray(entry) ? entry : [entry];
+      const rule = own(own(pluralRules, domain), lang) || DEFAULT_PLURAL_RULE;
+      const text = forms[msgid_plural && n !== null ? getPluralIndex(n, rule) : 0];
+      if (typeof text === 'string' && text !== '') return text;
     }
-    // Single string, use for both forms
-    return n !== 1 ? msgid_plural : entry;
   }
-
-  return Array.isArray(entry) ? entry[0] : entry;
+  return msgid_plural && n !== 1 ? msgid_plural : msgid;
 }
 
 // ============================================================================
@@ -352,11 +359,13 @@ export function l_dir(dir) {
 }
 
 /**
- * Set the current language
- * @param {string} lang - Language code (e.g., 'de_DE', 'en_US')
+ * Set the current language. A colon-separated list is tried in order, and
+ * every entry also tries its language part: 'de_AT:fr' looks in de_AT, de,
+ * fr, then in a bundle loaded without a language.
+ * @param {string} lang - Language code (e.g., 'de_DE', 'pt-BR', 'de_AT:fr')
  */
 export function l_lang(lang) {
-  currentLang = lang;
+  lookupChain = [...candidates(lang), ''];
 }
 
 /**
@@ -368,6 +377,14 @@ export function l_dry(dry, nw = false) {
   dryMode = dry;
   noWrite = nw;
 }
+
+/**
+ * Accepted for API symmetry with the siblings, where it lifts the
+ * "set l_dir first" check. JavaScript has no locale directory, so this
+ * is a no-op.
+ * @param {boolean} x - Ignored
+ */
+export function l_nolocales(x) {}
 
 /**
  * Set the current text domain
@@ -392,12 +409,14 @@ export function ltd(textdomain) {
  * });
  *
  * @param {string} domain - Domain name
- * @param {string} lang - Language code
+ * @param {string} lang - Language code, filed normalised ('pt-BR' → 'pt_BR');
+ *   '' for a bundle that answers every language
  * @param {Object} data - Translation data object
  * @param {string|{evaluate: Function}} [pluralForms] - Plural-Forms header value,
  *   e.g. "nplurals=3; plural=...;". Omitted: "n != 1".
  */
 export function loadTranslations(domain, lang, data, pluralForms) {
+  lang = normalizeLang(lang);
   if (!translations[domain]) {
     translations[domain] = {};
   }
@@ -414,9 +433,10 @@ export function loadLocaleData(domain, localeData) {
   const domainData = localeData[domain];
   if (!domainData) return;
 
-  // Extract language from header
+  // Language from the header: "lang", else the gettext field "Language"
+  // that bin/po2json writes (with a leading space); "" when neither is set
   const header = domainData[''] || {};
-  const lang = header.lang || '';
+  const lang = normalizeLang(String(header.lang || header.Language || '').trim());
 
   if (!translations[domain]) {
     translations[domain] = {};
@@ -582,6 +602,7 @@ export default {
   l_dir,
   l_lang,
   l_dry,
+  l_nolocales,
   ltd,
   loadTranslations,
   loadLocaleData,

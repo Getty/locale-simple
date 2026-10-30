@@ -38,6 +38,18 @@ Revision history for Locale-Simple
    workflow runs all six suites on every push without skipping.
  - .gitattributes keeps the Perl, Python and JavaScript sources out of
    git archive, so a composer require does not pull the whole repository.
+ - JavaScript: TypeScript finds the bundled types (src/index.d.ts), and
+   the loadLocaleData types accept po2json output with its header.
+ - JavaScript: l_nolocales is exported as a no-op, like in the other five
+   runtimes.
+ - JavaScript: loadLocaleData files a bundle under the language of its
+   gettext Language header, so bundles of several languages live side by
+   side in one domain.
+ - JavaScript: lookups follow the shared locale chain: l_lang('de_AT:fr')
+   tries de_AT, de, fr, then a bundle without language. An empty
+   translation falls through to the next language, each bundle's own
+   plural rule applies, and language tags are normalised (pt-BR is pt_BR).
+ - JavaScript: the build uses @rollup/wasm-node and runs on any CPU.
  - Packages: the PyPI wheel and the crates.io crate carry the MIT LICENSE
    file, like the npm package.
  - Documentation: the READMEs, the POD and the usage skills describe all
