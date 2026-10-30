@@ -52,6 +52,8 @@ Revision history for Locale-Simple
  - JavaScript: the build uses @rollup/wasm-node and runs on any CPU.
  - Packages: the PyPI wheel and the crates.io crate carry the MIT LICENSE
    file, like the npm package.
+ - Tests: t/10-gettext.t sets the messages locale the way l_lang() does, so
+   it passes on systems that start under the C or POSIX locale.
  - Documentation: the READMEs, the POD and the usage skills describe all
    six runtimes, the scraper's languages and loading po2json output in
    JavaScript.
