@@ -17,6 +17,11 @@ on:
 permissions:
   contents: write
 
+# Two runs for the same tag would race on gh release upload --clobber; they queue instead.
+concurrency:
+  group: release-binaries-${{ github.event.release.tag_name || inputs.tag || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     strategy:
@@ -69,6 +74,8 @@ jobs:
         id: v
         run: |
           want=$(sed -n "s/^our \$VERSION = '\(.*\)';/\1/p" lib/Locale/Simple.pm)
+          # shellcheck disable=SC2016  # $VERSION is literal text in the message
+          [ -n "$want" ] || { echo '::error::cannot read $VERSION from lib/Locale/Simple.pm' >&2; exit 1; }
           if [ -n "$TAG" ]; then
             v="${TAG#v}"
             # The tag v0.200.0 carries the dist version 0.200 that the binary prints.
@@ -149,6 +156,7 @@ jobs:
           - {os: macos, arch: arm64, runner: macos-15}
     runs-on: ${{ matrix.runner }}
     env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
       PLATFORM: ${{ matrix.os }}-${{ matrix.arch }}
     steps:
       - name: Assert no build Perl on the machine (macOS)
@@ -159,6 +167,8 @@ jobs:
             exit 1
           fi
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}          # empty on a probe run: the dispatched ref
       - uses: actions/download-artifact@v4
         with:
           pattern: locale-simple-*-${{ env.PLATFORM }}
@@ -166,7 +176,7 @@ jobs:
           path: dl
       - name: Smoke-test the binary (macOS)
         if: matrix.os == 'macos'
-        run: ./scripts/smoke-binary.sh dl/locale-simple-*-"$PLATFORM"
+        run: ./scripts/smoke-binary.sh dl/locale-simple-*-"$PLATFORM" dl/locale-simple-*-"$PLATFORM".tar.gz
       - name: Smoke-test the binary in a clean image (Linux)
         if: matrix.os == 'linux'
         env:
@@ -189,7 +199,7 @@ jobs:
             echo '::error::/usr/local/lib/perl5 exists; the smoke test would prove nothing' >&2
             exit 1
           fi
-          ./scripts/smoke-binary.sh dl/locale-simple-*-"$PLATFORM"
+          ./scripts/smoke-binary.sh dl/locale-simple-*-"$PLATFORM" dl/locale-simple-*-"$PLATFORM".tar.gz
           EOF
 
   release:
