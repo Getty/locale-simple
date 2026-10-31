@@ -200,8 +200,9 @@ l_lang('de_DE');
 ```
 
 The `po2json FILE` command remains as well and writes the bare data without
-the domain wrapper; `po2json -p FILE` writes it indented and wrapped in the
-file name as the domain.
+the domain wrapper; hand it to `loadLocaleData` as `{ myapp: data }`.
+`po2json -p FILE` writes it indented and wrapped in the file name as the
+domain.
 
 <!-- Binary downloads: a later subsection of "Command line tools" goes here. -->
 
