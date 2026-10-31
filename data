@@ -1,0 +1,20 @@
+---
+claimed_at: 2026-10-31T00:04:57Z
+claimed_by: locale-simple-worker
+class: standard
+completed: 2026-10-31T00:04:57Z
+created: 2026-10-30T23:57:53Z
+depends_on:
+- 23
+id: 24
+priority: medium
+started: 2026-10-31T00:04:42Z
+status: done
+tags:
+- agents
+- binary
+title: Agent locale-simple-binary-worker
+updated: 2026-10-31T00:04:57Z
+---
+
+Plan locale-simple-binaries (Hub), Aufgabe 7. Agent-Datei, skilletor.json, Agenten-Tabellen; housecheck 0 Fehler.
