@@ -35,3 +35,6 @@ config.yml
 # Claude Code worktrees (claude --worktree / isolated agents) -- never commit
 /.claude/worktrees/
 .phpunit.result.cache
+
+# Build artefact of scripts/build-binary.sh
+/locale-simple

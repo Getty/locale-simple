@@ -13,3 +13,4 @@ xbin/ export-ignore
 bin/ export-ignore
 dist.ini export-ignore
 cpanfile export-ignore
+scripts/ export-ignore
