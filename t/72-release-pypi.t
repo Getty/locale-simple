@@ -1,12 +1,18 @@
 use strict;
 use warnings;
 use Test::More;
+use Config;
 use Test::InDistDir;
 use Capture::Tiny 'capture';
 use File::Copy 'copy';
 use Path::Tiny;
 
-# xbin/release.pl in a throw-away tree, with a fake twine first on PATH: no network, no python.
+# xbin/release.pl in a throw-away tree, with a fake twine and a fake python first on PATH: no
+# network, no real python. The fakes are shell scripts, so the test needs a shell and a temp dir
+# that may run them.
+plan skip_all => 'fake twine and python are shell scripts, they do not run on MSWin32'
+  if $^O eq 'MSWin32';
+
 my $root = Path::Tiny->tempdir;
 $root->child('xbin')->mkpath;
 $root->child('python/dist')->mkpath;
@@ -20,9 +26,21 @@ my $twine = $root->child('fakebin/twine');
 $twine->spew("#!/bin/sh\necho \"fake twine: \$*\" >&2\nexit 1\n");
 $twine->chmod(0755);
 
+# python stops the credential-pass cases at `python -m build`, whatever python the box has.
+my $python = $root->child('fakebin/python');
+$python->spew("#!/bin/sh\necho \"fake python: \$*\" >&2\nexit 1\n");
+$python->chmod(0755);
+
+# The temp dir may be mounted noexec: run the fake once and skip when it does not answer.
+{
+    my ( undef, $probe ) = capture { system "$twine", 'probe' };
+    plan skip_all => 'no shell script runs from the temp dir (fake twine did not answer)'
+      unless $probe =~ /fake twine: probe/;
+}
+
 my $home   = Path::Tiny->tempdir;    # no .pypirc
 my $script = $root->child('xbin/release.pl')->stringify;
-my $path   = $root->child('fakebin') . ":$ENV{PATH}";
+my $path   = join $Config{path_sep}, $root->child('fakebin')->stringify, $ENV{PATH};
 
 # Runs the script with a clean credential environment plus %env.
 sub release {
@@ -63,10 +81,11 @@ like $err, qr/\.pypirc/,                          'it names ~/.pypirc';
 like $err, qr/TWINE_USERNAME and TWINE_PASSWORD/, 'and the TWINE variables';
 is $root->child('python/locale_simple.py')->slurp, qq{__version__ = "0.1"\n}, 'the version was not bumped';
 
-# Each documented source passes the check (the run then fails later, as there is no python here).
+# Each documented source passes the check (the run then stops at the fake python).
 $home->child('.pypirc')->spew("[pypi]\nusername = __token__\npassword = pypi-SECRET\n");
 ( undef, $err ) = release( [ 'python-prep', '0.200' ] );
 unlike $err, qr/no PyPI credentials/, '~/.pypirc [pypi] password is enough';
+like $err, qr/fake python: -m build/, 'and the run went on to python -m build, which the fake stopped';
 unlike $err, qr/SECRET/,              'no secret is printed';
 
 $home->child('.pypirc')->spew("[testpypi]\npassword = x\n");
