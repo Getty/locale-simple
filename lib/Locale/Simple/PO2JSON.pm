@@ -4,7 +4,6 @@ package Locale::Simple::PO2JSON;
 use strict;
 use warnings;
 
-use Carp qw( croak );
 use Encode ();
 use Exporter 'import';
 use JSON::PP ();
@@ -22,21 +21,21 @@ sub _unquote {
         defined $1 ? $ESCAPE{$1}
       : defined $2 ? chr( oct $2 )
       : defined $3 ? chr( hex $3 )
-      : croak "$path line $n: unknown escape sequence \\$4"
+      : die "$path line $n: unknown escape sequence \\$4\n"
     }gse;
     return $str;
 }
 
 sub _read_file {
     my ($path) = @_;
-    open my $fh, '<:raw', $path or croak "Cannot read PO file $path: $!";
+    open my $fh, '<:raw', $path or die "Cannot read PO file $path: $!\n";
     local $/;
     my $raw = <$fh>;
     close $fh;
     $raw = '' unless defined $raw;
     $raw =~ s/\A\xEF\xBB\xBF//;
     my $text = eval { Encode::decode( 'UTF-8', $raw, Encode::FB_CROAK() ) };
-    croak "Cannot read PO file $path: not valid UTF-8" unless defined $text;
+    die "Cannot read PO file $path: not valid UTF-8\n" unless defined $text;
     return $text;
 }
 
@@ -105,20 +104,20 @@ sub po2data {
                     $cur_flags = $flags;
                     $flags     = {};
                 }
-                croak "$path line $n: $kw not allowed here"
+                die "$path line $n: $kw not allowed here\n"
                   if defined $cur->{$kw}
                   || ( $kw eq 'msgctxt' && defined $cur->{msgid} );
                 $cur->{$kw} = $val;
                 $field = $kw;
             }
             elsif ( $kw eq 'msgid_plural' ) {
-                croak "$path line $n: msgid_plural without msgid"
+                die "$path line $n: msgid_plural without msgid\n"
                   unless $cur && defined $cur->{msgid};
                 $cur->{msgid_plural} = $val;
                 $field = $kw;
             }
             else {
-                croak "$path line $n: $kw without msgid"
+                die "$path line $n: $kw without msgid\n"
                   unless $cur && defined $cur->{msgid};
                 $idx = 0 unless defined $idx;
                 $cur->{msgstr}[$idx] = $val;
@@ -126,13 +125,13 @@ sub po2data {
             }
         }
         elsif ( $line =~ /\A\s*"(.*)"\s*\z/ ) {
-            croak "$path line $n: string without keyword" unless $cur && defined $field;
+            die "$path line $n: string without keyword\n" unless $cur && defined $field;
             my $val = _unquote( $path, $n, $1 );
             if ( $field =~ /\Amsgstr\[(\d+)\]\z/ ) { $cur->{msgstr}[$1] .= $val }
             else                                   { $cur->{$field} .= $val }
         }
         else {
-            croak "$path line $n: syntax error";
+            die "$path line $n: syntax error\n";
         }
     }
     $finish->();
