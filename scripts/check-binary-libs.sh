@@ -8,14 +8,28 @@ set -euo pipefail
 # before PAR extracts anything, so a bundled copy (pp -l) cannot help: the target must have it.
 # Debian and Ubuntu always do; install libxcrypt-compat on RHEL/Fedora/Amazon Linux and Arch.
 # The README names the same set.
-RUNTIME_LIBS=(libcrypt)
-BASE_LIBS=(libc libm libpthread libdl librt libgcc_s 'ld-linux-.*' linux-vdso libperl)
+#
+# macOS (Darwin): the needed libraries come from `otool -L`; the system libraries below ship
+# with every macOS, so the documented runtime set there is empty.
+case "$(uname -s)" in
+  Darwin)
+    RUNTIME_LIBS=()
+    BASE_LIBS=(libSystem.B 'libc\+\+.1' 'libc\+\+abi' libobjc.A libiconv.2 libresolv.9
+               libz.1 libcharset.1 libncurses.5.4 libm libpthread libdl)
+    NEEDS_TOOL=otool
+    SO_PATTERN=(-name '*.so' -o -name '*.bundle' -o -name '*.dylib' -o -name '*.so.*') ;;
+  *)
+    RUNTIME_LIBS=(libcrypt)
+    BASE_LIBS=(libc libm libpthread libdl librt libgcc_s 'ld-linux-.*' linux-vdso libperl)
+    NEEDS_TOOL=ldd
+    SO_PATTERN=(-name '*.so' -o -name '*.so.*') ;;
+esac
 
-if [ "${1:-}" = "--list" ]; then echo "${RUNTIME_LIBS[*]}"; exit 0; fi
+if [ "${1:-}" = "--list" ]; then echo "${RUNTIME_LIBS[*]:-}"; exit 0; fi
 
-command -v ldd >/dev/null 2>&1 || { echo "FAIL: ldd is not installed" >&2; exit 1; }
+command -v "$NEEDS_TOOL" >/dev/null 2>&1 || { echo "FAIL: $NEEDS_TOOL is not installed" >&2; exit 1; }
 command -v unzip >/dev/null 2>&1 || { echo "FAIL: unzip is not installed" >&2; exit 1; }
-BIN=$(realpath "${1:?usage: check-binary-libs.sh <binary> | --list}")
+BIN=$(perl -MCwd=abs_path -e 'print abs_path(shift) // ""' "${1:?usage: check-binary-libs.sh <binary> | --list}")
 [ -f "$BIN" ] || { echo "FAIL: no such file: $BIN" >&2; exit 1; }
 allowed=$(IFS='|'; echo "${RUNTIME_LIBS[*]:-}|${BASE_LIBS[*]}")
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
@@ -25,19 +39,31 @@ unzip -qq -o "$BIN" -d "$work/par" || rc=$?       # exit 1 = warning (bytes befo
 [ "$rc" -le 1 ] || { echo "FAIL: cannot unpack the PAR archive (unzip exit $rc)" >&2; exit 1; }
 
 objects=("$BIN")
-while IFS= read -r -d '' f; do objects+=("$f"); done \
-  < <(find "$work/par" -type f \( -name '*.so' -o -name '*.so.*' \) -print0 | sort -z)
+while IFS= read -r f; do objects+=("$f"); done \
+  < <(find "$work/par" -type f \( "${SO_PATTERN[@]}" \) -print | sort)
 # The loader executable plus at least one XS shared object (List::Util, Cwd, ...) must be there.
 [ "${#objects[@]}" -ge 2 ] || { echo "FAIL: no shared objects inside $BIN" >&2; exit 1; }
 
 : > "$work/needs"
+# needed_libs OBJECT: prints one library name per line (version suffixes stripped).
+needed_libs() {
+  if [ "$NEEDS_TOOL" = ldd ]; then
+    ldd "$1" >"$work/tool.out" 2>"$work/tool.err" \
+      || { grep -q 'not a dynamic executable' "$work/tool.err" "$work/tool.out" && return 0; \
+           echo "FAIL: ldd failed on ${1#"$work/par/"}: $(cat "$work/tool.err")" >&2; exit 1; }
+    awk '$1 ~ /\.so/ { lib = $1; sub(/.*\//, "", lib); sub(/\.so.*/, "", lib); print lib }' "$work/tool.out"
+  else
+    otool -L "$1" >"$work/tool.out" 2>"$work/tool.err" \
+      || { echo "FAIL: otool failed on ${1#"$work/par/"}: $(cat "$work/tool.err")" >&2; exit 1; }
+    # Line 1 is the file name; a dylib lists its own install name first, which is not a need.
+    is_dylib=; [[ "$1" == *.dylib ]] && is_dylib=1
+    awk -v dylib="$is_dylib" \
+      'NR > 1 && /^[ \t]/ { if (dylib && !skipped) { skipped = 1; next }
+         lib = $1; sub(/.*\//, "", lib); sub(/\.dylib$/, "", lib); print lib }' "$work/tool.out"
+  fi
+}
 for obj in "${objects[@]}"; do
-  ldd "$obj" >"$work/ldd.out" 2>"$work/ldd.err" \
-    || { grep -q 'not a dynamic executable' "$work/ldd.err" "$work/ldd.out" && continue; \
-         echo "FAIL: ldd failed on ${obj#"$work/par/"}: $(cat "$work/ldd.err")" >&2; exit 1; }
-  awk -v obj="${obj#"$work/par/"}" '$1 ~ /\.so/ {
-        lib = $1; sub(/.*\//, "", lib); sub(/\.so.*/, "", lib); print lib "\t" obj }' "$work/ldd.out" \
-    | sort -u >> "$work/needs"
+  needed_libs "$obj" | sort -u | awk -v obj="${obj#"$work/par/"}" '{ print $0 "\t" obj }' >> "$work/needs"
 done
 
 [ -s "$work/needs" ] || { echo "FAIL: ldd found no shared libs; a Perl binary always needs libc" >&2; exit 1; }

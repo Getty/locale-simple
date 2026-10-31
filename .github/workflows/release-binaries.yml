@@ -1,0 +1,154 @@
+name: release-binaries
+
+# A release (or a dispatch with a tag) builds that tag on every platform and attaches the
+# binaries, tarballs and one checksums file to its GitHub release. A dispatch without a
+# tag is a probe: it builds and checks the chosen ref and keeps the results as Actions
+# artifacts only, leaving every release untouched.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build and attach assets to; empty = probe run (Actions artifacts only)
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            arch: x86_64
+            runner: ubuntu-latest
+            image: perl:5.40-bookworm
+          - os: linux
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+            image: perl:5.40-bookworm
+          - os: macos
+            arch: arm64
+            runner: macos-14
+    runs-on: ${{ matrix.runner }}
+    # Linux builds run in the pinned bookworm image (glibc 2.36, and the image decides which
+    # optional libs the bundled XS modules link); macOS builds run on the runner itself.
+    container: ${{ matrix.image || null }}
+    # Values that reach a shell go through env, never inline ${{ }} in a run: body.
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      PLATFORM: ${{ matrix.os }}-${{ matrix.arch }}
+    steps:
+      - name: Install system build deps (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          apt-get update
+          apt-get install -y build-essential git unzip
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}          # empty on a probe run: the dispatched ref
+      - name: Fix safe.directory (Linux)
+        if: matrix.os == 'linux'
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Set up Perl 5.40 (macOS)
+        if: matrix.os == 'macos'
+        uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: '5.40'
+      - name: Install Perl deps and PAR::Packer
+        env:
+          TAR_OPTIONS: "--warning=no-unknown-keyword"   # quiets GNU tar
+        run: |
+          cpanm --notest --installdeps .
+          cpanm --notest PAR::Packer
+      - name: Compute version and asset base name
+        id: v
+        run: |
+          want=$(sed -n "s/^our \$VERSION = '\(.*\)';/\1/p" lib/Locale/Simple.pm)
+          if [ -n "$TAG" ]; then
+            v="${TAG#v}"
+            # The tag v0.200.0 carries the dist version 0.200 that the binary prints.
+            case "$v" in
+              "$want"|"$want".*) ;;
+              *) printf '::error::tag %s does not match the dist version %s\n' "$TAG" "$want" >&2; exit 1 ;;
+            esac
+          else
+            v="probe-$(git rev-parse --short=7 HEAD)"
+          fi
+          echo "v=$v" >> "$GITHUB_OUTPUT"
+          echo "base=locale-simple-$v-$PLATFORM" >> "$GITHUB_OUTPUT"
+      - name: Build binary
+        env:
+          LOCALE_SIMPLE_BIN_OUT: ${{ steps.v.outputs.base }}
+        run: ./scripts/build-binary.sh
+      - name: Verify binary
+        env:
+          BASE: ${{ steps.v.outputs.base }}
+        run: ./scripts/verify-binary.sh "$BASE"
+      - name: Check runtime libs
+        env:
+          BASE: ${{ steps.v.outputs.base }}
+        run: ./scripts/check-binary-libs.sh "$BASE"
+      - name: Package
+        env:
+          BASE: ${{ steps.v.outputs.base }}
+          V: ${{ steps.v.outputs.v }}
+        run: |
+          mkdir -p "pkg/$BASE"
+          cp "$BASE" "pkg/$BASE/locale-simple"
+          cp LICENSE "pkg/$BASE/LICENSE"
+          libs=$(./scripts/check-binary-libs.sh --list)
+          {
+            printf 'locale-simple %s (%s)\n\n' "$V" "$PLATFORM"
+            printf 'Run it: ./locale-simple --help\n'
+            printf 'It needs no Perl.\n\n'
+            if [ -n "$libs" ]; then
+              printf 'Runtime libraries required on the target: %s\n' "$libs"
+              printf 'Debian and Ubuntu have libcrypt.so.1; on RHEL, Fedora, Amazon Linux and Arch\n'
+              printf 'install libxcrypt-compat.\n'
+            else
+              printf 'Runtime libraries required on the target: none beyond the system.\n'
+            fi
+            if [ "$RUNNER_OS" = macOS ]; then
+              printf '\nAfter a browser download, clear the quarantine flag:\n'
+              printf '  xattr -d com.apple.quarantine locale-simple\n'
+            fi
+            printf '\nhttps://github.com/%s\n' "$GITHUB_REPOSITORY"
+          } > "pkg/$BASE/README"
+          tar -C pkg -czf "$BASE.tar.gz" "$BASE"
+      - name: Keep binary and tarball as workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.v.outputs.base }}
+          path: |
+            ${{ steps.v.outputs.base }}
+            ${{ steps.v.outputs.base }}.tar.gz
+          if-no-files-found: error
+
+  release:
+    # Tag mode only: one checksums file over every asset, then all assets onto the release.
+    # The build jobs run in a container without gh; this job runs on the plain runner.
+    needs: build
+    if: github.event.release.tag_name != '' || inputs.tag != ''
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: locale-simple-*
+          merge-multiple: true
+          path: dl
+      - name: Write checksums and upload every asset
+        run: |
+          v="${TAG#v}"
+          out="locale-simple-$v-checksums.txt"
+          ( cd dl && sha256sum locale-simple-* ) > "$out"
+          cat "$out"
+          gh release upload "$TAG" dl/locale-simple-* "$out" \
+            --clobber --repo "$GITHUB_REPOSITORY"

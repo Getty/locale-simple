@@ -7,7 +7,8 @@
 set -euo pipefail
 
 [ -n "${1:-}" ] || { echo "usage: verify-binary.sh <binary>" >&2; exit 1; }
-BIN=$(realpath "$1") || { echo "FAIL: cannot resolve path: $1" >&2; exit 1; }
+BIN=$(perl -MCwd=abs_path -e 'print abs_path(shift) // ""' "$1")
+[ -n "$BIN" ] || { echo "FAIL: cannot resolve path: $1" >&2; exit 1; }
 [ -x "$BIN" ] || { echo "FAIL: not an executable: $BIN" >&2; exit 1; }
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 work=$(mktemp -d); cache=$(mktemp -d)
@@ -16,11 +17,14 @@ mkdir -p "$work/home" "$work/cwd"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 tmo=${LOCALE_SIMPLE_VERIFY_TIMEOUT:-120}
+# timeout(1) where it exists (GNU coreutils); a perl alarm wrapper where it does not (macOS).
+if command -v timeout >/dev/null 2>&1; then TMO=(timeout "$tmo")
+else TMO=(perl -e 'alarm shift; exec @ARGV' "$tmo"); fi
 
 # The binary under a wiped environment and a fresh extraction cache.
-bin() { env -i PATH=/usr/bin:/bin HOME="$work/home" PAR_GLOBAL_TEMP="$cache" timeout "$tmo" "$BIN" "$@" </dev/null; }
+bin() { env -i PATH=/usr/bin:/bin HOME="$work/home" PAR_GLOBAL_TEMP="$cache" "${TMO[@]}" "$BIN" "$@" </dev/null; }
 # The reference: the same CLI from the checkout.
-ref() { timeout "$tmo" perl -I"$root/lib" "$root/bin/locale-simple" "$@" </dev/null; }
+ref() { "${TMO[@]}" perl -I"$root/lib" "$root/bin/locale-simple" "$@" </dev/null; }
 
 # same_as_perl CASE ARGS...: STDOUT and exit code of the binary match the checkout's perl run.
 # The reference must have printed something (a case with empty output on both sides proves
@@ -112,12 +116,13 @@ rc=0; unzip -qq -o "$BIN" -d "$work/archive" >/dev/null 2>&1 || rc=$?   # 1 = by
 [ "$rc" -le 1 ] && [ -d "$work/archive/lib" ] || fail "cannot unpack the PAR archive (unzip exit $rc)"
 perl -I"$root/lib" "$root/scripts/loaded-modules.pl" >"$work/loaded" 2>"$work/loaded.err" \
   || fail "scripts/loaded-modules.pl failed: $(cat "$work/loaded.err")"
-[ "$(wc -l <"$work/loaded")" -gt 25 ] || fail "loaded set suspiciously small ($(wc -l <"$work/loaded") modules)"
+nloaded=$(wc -l <"$work/loaded" | tr -d ' ')
+[ "$nloaded" -gt 25 ] || fail "loaded set suspiciously small ($nloaded modules)"
 # EXTRA_PACKED_CHECK="Not::Packed" adds names to the list (used to prove the check can fail).
 for m in $(cat "$work/loaded") ${EXTRA_PACKED_CHECK:-}; do
   f="$(echo "$m" | sed 's#::#/#g').pm"
   [ -f "$work/archive/lib/$f" ] || [ -f "$work/archive/arch/$f" ] || missing="${missing:-} $f"
 done
 [ -z "${missing:-}" ] || fail "modules missing inside the PAR archive:$missing (run verify where the binary was built)"
-echo "packed module set: OK ($(wc -l <"$work/loaded") modules)"
+echo "packed module set: OK ($nloaded modules)"
 echo "verify: OK"

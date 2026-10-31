@@ -16,7 +16,7 @@ perl -Ilib -MLocale::TextDomain -MParser::MGC -MMoo -MTry::Tiny -MIO::All -Mcurr
 # scanner reads source and misses what loads by name (Locale::TextDomain picks its gettext
 # backend at run time; Moo, Parser::MGC and the scraper's parsers load lazily). verify-binary.sh
 # requires the same list inside the archive.
-mapfile -t loaded < <(perl -Ilib scripts/loaded-modules.pl)
+loaded=(); while IFS= read -r m; do loaded+=("$m"); done < <(perl -Ilib scripts/loaded-modules.pl)
 [ "${#loaded[@]}" -gt 25 ] || { echo "ERROR: loaded set suspiciously small (${#loaded[@]})" >&2; exit 1; }
 mods=(); for m in "${loaded[@]}"; do mods+=(-M "$m"); done
 
