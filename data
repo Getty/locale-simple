@@ -1,0 +1,24 @@
+---
+claimed_at: 2026-10-31T10:52:45Z
+claimed_by: locale-simple-release-manager
+class: standard
+completed: 2026-10-31T10:52:49Z
+created: 2026-10-30T23:57:57Z
+depends_on:
+- 22
+- 26
+id: 28
+priority: medium
+started: 2026-10-31T10:42:36Z
+status: done
+tags:
+- release
+title: Abschluss-Audit vor dem Release
+updated: 2026-10-31T11:38:21Z
+---
+
+Plan locale-simple-binaries (Hub), Aufgabe 12. CI, housecheck, dzil build, Changes, Release-Checkliste an Getty.
+
+2026-10-31 10:52 Audit: ein Blocker (Changes ohne locale_simple_scraper_old), behoben in e3a0362; Rest grün, Bericht im Hub (task-12-report.md). Offen für Getty: npm- und crates.io-Trusted-Publisher bestätigen.
+
+2026-10-31 11:38 2026-10-31 Abschluss-Review (opus): 2 Important + 11 Minor behoben in 6a502f7 8e142c2 4e77c9b 91d3caf f6060eb, Restpunkte 42ef259 1cc7178; Nach-Review alles erledigt; Probeläufe 41196708212 und 41197459739 grün (3 Builds, 6 Smoke-Zellen, kein YAML im Binary); prove 318/319 grün normal und unter LC_ALL=C. Release-bereit auf 1cc7178, Tag und Release wartet auf Getty.
