@@ -23,10 +23,14 @@ mods=(); for m in "${loaded[@]}"; do mods+=(-M "$m"); done
 # PAR_VERBATIM=1: pp's POD-stripping filter corrupts files with POD between code.
 # -I lib: the checkout's lib/ wins over any installed copy.
 # -M 'Locale::Simple::**': the scraper's parsers load by name on some paths only.
+# -X YAML: Scraper.pm requires YAML for --output yaml, so pp packs it wherever it is installed
+# (the macOS runner has it, the Linux image does not); leaving it out gives every binary the
+# same formats (po, perl, json), and --output yaml dies with "needs the YAML module".
 PAR_VERBATIM=1 pp -o "$OUT" \
   -I lib \
   "${mods[@]}" \
   -M 'Locale::Simple::**' \
+  -X YAML \
   bin/locale-simple
 
 chmod +x "$OUT"

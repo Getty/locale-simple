@@ -57,5 +57,6 @@ for my $file ( sort keys %INC ) {
   next unless defined $INC{$file} && !ref $INC{$file} && $INC{$file} =~ m{/\Q$file\E\z};
   ( my $m = $file ) =~ s{/}{::}g;
   $m =~ s/\.pm\z//;
+  next if $m eq 'YAML';    # left out of every build (-X YAML in build-binary.sh)
   print "$m\n";
 }

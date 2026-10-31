@@ -47,6 +47,13 @@ cmp -s "$work/got" t/data/po2json/test.domain.json \
   || fail "po2json --domain test: output differs from t/data/po2json/test.domain.json"
 echo "smoke po2json --domain test: OK (byte-identical)"
 
+# scrape: the fixture directory read by t/73-scrape-smoke.t against the checked-in template.
+( cd t/data/n-fixtures && bin scrape ) >"$work/scrape.pot" 2>/dev/null \
+  || fail "scrape in t/data/n-fixtures failed"
+cmp -s "$work/scrape.pot" t/data/scrape-smoke.pot \
+  || fail "scrape in t/data/n-fixtures: output differs from t/data/scrape-smoke.pot"
+echo "smoke scrape: OK (byte-identical)"
+
 rc=0; bin po2json nope.po >/dev/null 2>&1 || rc=$?
 [ "$rc" -ne 0 ] || fail "po2json nope.po exits 0, want non-zero"
 echo "smoke po2json nope.po: OK (exit $rc)"
