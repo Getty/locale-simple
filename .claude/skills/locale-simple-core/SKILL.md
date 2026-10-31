@@ -74,11 +74,14 @@ One tag publishes all six. The tag is `v%v.0` (`tag_format`), so Perl `0.200` is
 `v0.200.0` — valid SemVer for npm, Go and crates.io.
 
 1. **`run_before_release`** — the five sibling suites, `xbin/release.pl python-prep %v`
-   (bumps `python/locale_simple.py`, `python -m build`, `twine check`), then
+   (checks the PyPI credentials, bumps `python/locale_simple.py`, `python -m build`, `twine check`), then
    `npm run build && npm pack --dry-run`.
 2. **CPAN upload, release commit, tag, push** — the bundle; the GitHub release follows
    from `[GitHub::CreateRelease]`.
-3. **`run_after_release`** — `xbin/release.pl python-upload` (twine, `~/.pypirc`).
+3. **`run_after_release`** — `xbin/release.pl python-upload` (twine). A failed upload
+   prints the by-hand retry command (`cd <repo root> && twine upload python/dist/…`)
+   on STDERR and exits 0, so the tag, the push and the GitHub release still follow;
+   the credentials are checked earlier, in `python-prep`.
 4. **On the tag push** — `publish-js.yml` (npm) and `publish-rust.yml` (crates.io)
    take the version from the tag and publish with Trusted Publishing (OIDC).
    Packagist follows through its GitHub hook, the Go module proxy on the first fetch.
@@ -88,14 +91,19 @@ One tag publishes all six. The tag is `v%v.0` (`tag_format`), so Perl `0.200` is
    machines (almalinux:9, ubuntu:22.04, debian:bullseye-slim, macOS 14 and 15) and
    attaches binaries, tarballs and one checksums file. `workflow_dispatch` with `tag`
    rebuilds a release's assets; without `tag` it is a probe run that keeps the results
-   as Actions artifacts.
+   as Actions artifacts. A dispatch with a tag runs the workflow file from the
+   dispatched ref and the scripts and code from the tag: a fix in `scripts/` or
+   `lib/` ships with the next release, a fix in the workflow file applies to a
+   rebuild of an existing tag.
 
 The Python bump runs before the release commit on purpose:
 `commit_files_after_release = python/locale_simple.py` folds it into that commit.
 npm and crates.io publish from CI so that a failing upload never leaves a half-done
 dzil release.
 
-The releasing box needs `python -m build`, `twine` and `~/.pypirc` with a PyPI token.
+The releasing box needs `python -m build`, `twine` and PyPI credentials: `~/.pypirc`
+with a `[pypi]` token, or `TWINE_USERNAME` and `TWINE_PASSWORD`. `python-prep` stops
+the release before anything is published when neither is there.
 The registries need the npm Trusted Publisher (`publish-js.yml`), the crates.io
 Trusted Publisher (`publish-rust.yml`) and the Packagist package with its GitHub hook.
 
@@ -107,15 +115,15 @@ Check with `git archive --format=zip HEAD | zipinfo -1 -`. The Go module zip ign
 ## The command line
 
 `locale-simple` has the subcommands `scrape` (options pass through to
-`Locale::Simple::Scraper`), `po2json FILE [--domain NAME] [--pretty]`, `help`
+`Locale::Simple::Scraper`; `scrape --help` prints them, the text lives in the module), `po2json FILE [--domain NAME] [--pretty]`, `help`
 (`-h`, `--help`) and `--version`. `Locale::Simple::CLI::run(@argv)` returns the
 exit code and `bin/locale-simple` passes it to `exit`:
 
 | Code | Case |
 |---|---|
 | `0` | success, `help`, `--version`; `scrape` also when it reports parse errors |
-| `1` | `scrape` died; `po2json` cannot read or parse the file (message on STDERR) |
-| `2` | missing or unknown command |
+| `1` | a command failed: `scrape` died; `po2json` cannot read or parse the file (message on STDERR) |
+| `2` | a bad call: missing or unknown command, bad options or arguments (`scrape --bogus`, `scrape --output xml`, `po2json` without file); usage on STDERR, nothing on STDOUT |
 
 `po2json` output follows `msgfmt`: no fuzzy, obsolete or untranslated entries.
 `locale-simple-binary-worker` owns the PAR-packed `locale-simple` binary and its

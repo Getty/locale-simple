@@ -149,8 +149,8 @@ behaviour.
 ## Command line tools
 
 The Perl distribution ships one command, `locale-simple`, with two subcommands.
-`locale-simple help` prints the usage and `perldoc locale-simple` lists every
-option.
+`locale-simple help` prints the usage, `locale-simple scrape --help` the scrape
+options.
 
 ### `locale-simple scrape`
 
@@ -167,9 +167,11 @@ locale-simple scrape --ignore node_modules --ignore vendor > messages.pot
 `--pl`, `--py`, `--js`, `--php`, `--go`, `--rs` and `--tx` add file extensions
 to a language (`--js mjs,ts`). `--only REGEX` limits the walk,
 `--no_line_numbers` leaves out the `#:` location comments and
-`--output po|perl|json|yaml` picks the format (`yaml` needs the `YAML` module).
-The exit code is `0`, also when the parser reports problems in a source file,
-and `1` when the scrape itself fails.
+`--output po|perl|json|yaml` picks the format (`yaml` needs the Perl install
+with the `YAML` module; the binary writes po, perl and json). The options are
+listed by `locale-simple scrape --help`. The exit code is `0`, also when the
+parser reports problems in a source file, `1` when the scrape itself fails and
+`2` for a bad call (unknown option, unknown `--output` format).
 
 `locale_simple_scraper` takes the same options and remains available under
 its name.
@@ -187,8 +189,11 @@ locale-simple po2json --domain shop --pretty myapp.po > shop.de_DE.json
 
 The output is wrapped as `{ "<domain>": ... }`. The domain defaults to the
 file name without `.po` (`myapp` above); `--domain NAME` sets it and
-`--pretty` indents the output. A file that cannot be read or parsed gives
-exit code `1`, a missing or unknown command `2`.
+`--pretty` indents the output.
+
+The exit codes of `locale-simple` are `0` for success, `1` when a command
+fails (a PO file that cannot be read or parsed) and `2` for a bad call (a
+missing or unknown command, bad options or arguments).
 
 ```js
 import { loadLocaleData, ltd, l_lang, l } from 'locale-simple';
@@ -208,7 +213,8 @@ domain.
 
 Each GitHub release carries `locale-simple` as one standalone binary per
 platform. It is the same command as above (`scrape`, `po2json`, `help`,
-`--version`) with Perl and every module packed in.
+`--version`) with Perl and every module packed in; `scrape` writes po, perl and
+json (`--output yaml` needs the Perl install with `YAML`).
 
 | Platform | Asset (`<V>` is the release version, e.g. `0.200.0`) |
 |---|---|
@@ -228,6 +234,7 @@ base=https://github.com/Getty/locale-simple/releases/download/v$V
 curl -fLO "$base/locale-simple-$V-$P"
 curl -fLO "$base/locale-simple-$V-checksums.txt"
 grep " locale-simple-$V-$P\$" "locale-simple-$V-checksums.txt" | sha256sum -c
+mkdir -p ~/.local/bin
 install -m 755 "locale-simple-$V-$P" ~/.local/bin/locale-simple
 locale-simple --version
 ```

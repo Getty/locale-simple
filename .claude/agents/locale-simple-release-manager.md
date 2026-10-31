@@ -58,8 +58,8 @@ code goes back to the worker as a note on its card, not as your own fix. **Never
 1. **`dist.ini`** — the `[@Author::GETTY]` bundle with `tag_format = v%v.0`, the
    `run_test` lines (Python, JS, and PHP, Go, Rust through
    `xbin/run-sibling-tests.pl`), the `run_before_release` chain (the five sibling
-   suites, `python-prep`, JS build and `npm pack --dry-run`), the `run_after_release` (Python upload) and
-   `commit_files_after_release`. The release branch is not set in the file — the
+   suites, `python-prep`, JS build and `npm pack --dry-run`), the `run_after_release` (Python upload, which prints the manual retry command and
+   exits 0 when twine fails) and `commit_files_after_release`. The release branch is not set in the file — the
    bundle defaults to `main`.
 2. **Versions** — the Perl version, the Python `__version__`, the npm version and
    the `rust/Cargo.toml` version must agree at release time (tag `v0.200.0` for Perl
@@ -71,8 +71,9 @@ code goes back to the worker as a note on its card, not as your own fix. **Never
    suite. The Python and JavaScript suites have no such gap. The PHP, Go and Rust
    suites skip on a missing toolchain (`xbin/run-sibling-tests.pl`): a skip is not a
    pass, name it.
-5. **Credentials and reach** — `~/.pypirc` with a PyPI token, `python -m build`
-   and `twine` on the releasing box, the npm Trusted Publisher for
+5. **Credentials and reach** — `~/.pypirc` with a `[pypi]` token (or `TWINE_USERNAME` and
+   `TWINE_PASSWORD`; `python-prep` stops the release before CPAN without one),
+   `python -m build` and `twine` on the releasing box, the npm Trusted Publisher for
    `Getty/locale-simple` and `publish-js.yml`, the crates.io Trusted Publisher for
    `publish-rust.yml`, the Packagist package with its GitHub hook, and a reachable
    `origin`. All of them are the maintainer's,

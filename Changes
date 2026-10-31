@@ -5,6 +5,15 @@ Revision history for Locale-Simple
  - New command locale-simple with the subcommands scrape and po2json
    (locale-simple help lists them; --version prints the version). It exits
    0 on success, 1 when a command fails and 2 for a bad call.
+ - locale-simple scrape --help (and -h) prints the scrape options. An
+   unknown option, a stray argument or an unknown --output format ends
+   with the usage on STDERR and exit code 2, with nothing on STDOUT;
+   locale_simple_scraper ends the same way.
+ - po2json reads several quoted strings on one line as one string
+   (msgid "a" "b" is "ab"), as msgfmt does, and accepts comment lines
+   that start with whitespace.
+ - Binary: scrape writes po, perl and json on every platform;
+   --output yaml needs the Perl install with the YAML module.
  - po2json is own code (Locale::Simple::PO2JSON, new, with po2data() and
    data2json()) and needs only JSON::PP. It reads a PO file and writes the
    JSON data for the JavaScript side with msgfmt's selection: no
