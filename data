@@ -1,0 +1,21 @@
+---
+claimed_at: 2026-10-31T00:13:54Z
+claimed_by: locale-simple-worker
+class: standard
+completed: 2026-10-31T00:13:54Z
+created: 2026-10-30T23:57:50Z
+depends_on:
+- 20
+id: 21
+priority: high
+started: 2026-10-31T00:05:48Z
+status: done
+tags:
+- perl
+- cli
+- po2json
+title: CLI locale-simple mit scrape und po2json, bin/po2json neu
+updated: 2026-10-31T00:13:54Z
+---
+
+Plan locale-simple-binaries (Hub), Aufgabe 2. Locale::Simple::CLI, bin/locale-simple, bin/po2json auf PO2JSON, Scraper-JSON über JSON::PP, locale_simple_scraper_old weg; JS-Test liest test.domain.json.
