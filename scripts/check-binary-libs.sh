@@ -4,11 +4,17 @@
 #   check-binary-libs.sh --list     print the documented runtime libs (one line)
 set -euo pipefail
 
-RUNTIME_LIBS=()   # beyond glibc the binary needs nothing; the README names the same (none)
-BASE_LIBS=(libc libm libpthread libdl librt libgcc_s libcrypt 'ld-linux-.*' linux-vdso libperl)
+# libcrypt: the pp loader executable links libperl, which links libcrypt.so.1. The loader runs
+# before PAR extracts anything, so a bundled copy (pp -l) cannot help: the target must have it.
+# Debian and Ubuntu always do; install libxcrypt-compat on RHEL/Fedora/Amazon Linux and Arch.
+# The README names the same set.
+RUNTIME_LIBS=(libcrypt)
+BASE_LIBS=(libc libm libpthread libdl librt libgcc_s 'ld-linux-.*' linux-vdso libperl)
 
-if [ "${1:-}" = "--list" ]; then echo "${RUNTIME_LIBS[*]:-}"; exit 0; fi
+if [ "${1:-}" = "--list" ]; then echo "${RUNTIME_LIBS[*]}"; exit 0; fi
 
+command -v ldd >/dev/null 2>&1 || { echo "FAIL: ldd is not installed" >&2; exit 1; }
+command -v unzip >/dev/null 2>&1 || { echo "FAIL: unzip is not installed" >&2; exit 1; }
 BIN=$(realpath "${1:?usage: check-binary-libs.sh <binary> | --list}")
 [ -f "$BIN" ] || { echo "FAIL: no such file: $BIN" >&2; exit 1; }
 allowed=$(IFS='|'; echo "${RUNTIME_LIBS[*]:-}|${BASE_LIBS[*]}")
@@ -21,15 +27,20 @@ unzip -qq -o "$BIN" -d "$work/par" || rc=$?       # exit 1 = warning (bytes befo
 objects=("$BIN")
 while IFS= read -r -d '' f; do objects+=("$f"); done \
   < <(find "$work/par" -type f \( -name '*.so' -o -name '*.so.*' \) -print0 | sort -z)
-[ "${#objects[@]}" -ge 1 ] || { echo "FAIL: nothing to check in $BIN" >&2; exit 1; }
+# The loader executable plus at least one XS shared object (List::Util, Cwd, ...) must be there.
+[ "${#objects[@]}" -ge 2 ] || { echo "FAIL: no shared objects inside $BIN" >&2; exit 1; }
 
 : > "$work/needs"
 for obj in "${objects[@]}"; do
-  { ldd "$obj" 2>/dev/null || true; } \
-    | awk -v obj="${obj#"$work/par/"}" '$1 ~ /\.so/ {
-        lib = $1; sub(/.*\//, "", lib); sub(/\.so.*/, "", lib); print lib "\t" obj }' \
+  ldd "$obj" >"$work/ldd.out" 2>"$work/ldd.err" \
+    || { grep -q 'not a dynamic executable' "$work/ldd.err" "$work/ldd.out" && continue; \
+         echo "FAIL: ldd failed on ${obj#"$work/par/"}: $(cat "$work/ldd.err")" >&2; exit 1; }
+  awk -v obj="${obj#"$work/par/"}" '$1 ~ /\.so/ {
+        lib = $1; sub(/.*\//, "", lib); sub(/\.so.*/, "", lib); print lib "\t" obj }' "$work/ldd.out" \
     | sort -u >> "$work/needs"
 done
+
+[ -s "$work/needs" ] || { echo "FAIL: ldd found no shared libs; a Perl binary always needs libc" >&2; exit 1; }
 
 echo "Shared libs the binary needs on the target (${#objects[@]} objects checked):"
 cut -f1 "$work/needs" | sort -u | sed 's/^/  /'

@@ -56,6 +56,10 @@ close $po;
     Locale::Simple::CLI::run( 'scrape', '--output', $fmt );
   }
   Locale::Simple::CLI::run( 'po2json', '--pretty', "$dir/x.po" );
+  # The paths verify-binary.sh also walks: help, version, usage errors, a missing file.
+  Locale::Simple::CLI::run(@$_) for ( [], ['help'], ['--help'], ['-h'], ['--version'], ['nope'] );
+  Locale::Simple::CLI::run( 'po2json', "$dir/nope.po" );
+  Locale::Simple::CLI::run( 'po2json' );
   open STDOUT, '>&', $oldout or die;
   open STDERR, '>&', $olderr or die;
   chdir '/';
