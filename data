@@ -1,0 +1,19 @@
+---
+claimed_at: 2026-10-31T00:17:13Z
+claimed_by: locale-simple-worker
+class: standard
+completed: 2026-10-31T00:17:13Z
+created: 2026-10-30T23:57:51Z
+depends_on:
+- 21
+id: 22
+priority: medium
+started: 2026-10-31T00:13:55Z
+status: done
+tags:
+- docs
+title: 'Doku: Command line tools, CLI in der Core-Skill, alte Links raus'
+updated: 2026-10-31T00:17:13Z
+---
+
+Plan locale-simple-binaries (Hub), Aufgabe 4 (Rest, Teil a). README-Abschnitt Command line tools, Core-Skill nennt die CLI, grep auf three runtimes/p5-locale-simple.
