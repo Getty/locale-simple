@@ -133,6 +133,9 @@ jobs:
   smoke:
     # Each artifact runs on a clean machine: no setup-perl, no build container, no Perl
     # modules from the build. The binary is proven off the machine that built it.
+    # Linux cells start the clean image with docker run on the runner host; the container
+    # gets only the mounted checkout and artifact, with no git and none of the runner's
+    # node or externals. macOS cells run on the runner itself.
     needs: build
     strategy:
       fail-fast: false
@@ -145,28 +148,9 @@ jobs:
           - {os: macos, arch: arm64, runner: macos-14}
           - {os: macos, arch: arm64, runner: macos-15}
     runs-on: ${{ matrix.runner }}
-    container: ${{ matrix.image || null }}
     env:
       PLATFORM: ${{ matrix.os }}-${{ matrix.arch }}
     steps:
-      - name: Install runtime lib and tools (dnf)
-        if: matrix.pkg == 'dnf'
-        run: |
-          # A mirror answers badly now and then; three tries keep one bad response from failing the run.
-          ok=
-          for _try in 1 2 3; do
-            if dnf install -y libxcrypt-compat tar gzip diffutils; then ok=1; break; fi
-            sleep 10
-          done
-          [ -n "$ok" ] || { echo '::error::dnf install failed three times' >&2; exit 1; }
-      - name: Assert no build Perl library tree on the machine (Linux)
-        if: matrix.os == 'linux'
-        run: |
-          # The bullseye build image compiles /usr/local/lib/perl5 into the binary's @INC.
-          if [ -e /usr/local/lib/perl5 ]; then
-            echo '::error::/usr/local/lib/perl5 exists; the smoke test would prove nothing' >&2
-            exit 1
-          fi
       - name: Assert no build Perl on the machine (macOS)
         if: matrix.os == 'macos'
         run: |
@@ -180,8 +164,33 @@ jobs:
           pattern: locale-simple-*-${{ env.PLATFORM }}
           merge-multiple: true
           path: dl
-      - name: Smoke-test the binary
+      - name: Smoke-test the binary (macOS)
+        if: matrix.os == 'macos'
         run: ./scripts/smoke-binary.sh dl/locale-simple-*-"$PLATFORM"
+      - name: Smoke-test the binary in a clean image (Linux)
+        if: matrix.os == 'linux'
+        env:
+          IMAGE: ${{ matrix.image }}
+          PKG: ${{ matrix.pkg }}
+        run: |
+          docker run --rm -i -v "$PWD:/w" -w /w -e PLATFORM -e PKG "$IMAGE" sh -s <<'EOF'
+          set -eu
+          if [ "$PKG" = dnf ]; then
+            # A mirror answers badly now and then; three tries keep one bad response from failing the run.
+            ok=
+            for _try in 1 2 3; do
+              if dnf install -y libxcrypt-compat tar gzip diffutils; then ok=1; break; fi
+              sleep 10
+            done
+            [ -n "$ok" ] || { echo '::error::dnf install failed three times' >&2; exit 1; }
+          fi
+          # The bullseye build image compiles /usr/local/lib/perl5 into the binary's @INC.
+          if [ -e /usr/local/lib/perl5 ]; then
+            echo '::error::/usr/local/lib/perl5 exists; the smoke test would prove nothing' >&2
+            exit 1
+          fi
+          ./scripts/smoke-binary.sh dl/locale-simple-*-"$PLATFORM"
+          EOF
 
   release:
     # Tag mode only: one checksums file over every asset, then all assets onto the release.
