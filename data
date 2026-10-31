@@ -1,0 +1,20 @@
+---
+claimed_at: 2026-10-31T00:48:18Z
+claimed_by: locale-simple-worker
+class: standard
+completed: 2026-10-31T00:48:18Z
+created: 2026-10-30T23:57:54Z
+depends_on:
+- 21
+- 24
+id: 25
+priority: high
+started: 2026-10-31T00:17:55Z
+status: done
+tags:
+- binary
+title: 'Binary: build-, verify- und check-libs-Skripte'
+updated: 2026-10-31T00:48:18Z
+---
+
+Plan locale-simple-binaries (Hub), Aufgabe 8. PAR::Packer nach knarr-Muster, Vergleich mit perl -Ilib unter env -i.
