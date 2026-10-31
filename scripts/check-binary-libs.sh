@@ -22,6 +22,10 @@ case "$(uname -s)" in
     RUNTIME_LIBS=(libcrypt)
     BASE_LIBS=(libc libm libpthread libdl librt libgcc_s 'ld-linux-.*' linux-vdso libperl)
     NEEDS_TOOL=ldd
+    # The glibc floor: the highest GLIBC_x.y symbol version any packed object requires. The Linux
+    # binaries build in a bullseye (glibc 2.31) image, so the target needs glibc 2.31 or newer
+    # (RHEL 9 and Ubuntu 20.04 included). The README names the same ceiling.
+    GLIBC_MAX=2.31
     SO_PATTERN=(-name '*.so' -o -name '*.so.*') ;;
 esac
 
@@ -81,3 +85,23 @@ if [ -n "$undocumented" ]; then
   exit 1
 fi
 echo "runtime-libs check: only the documented libs are needed"
+
+# glibc floor (Linux): every object's undefined GLIBC_x.y symbol versions, highest one wins.
+if [ "$NEEDS_TOOL" = ldd ]; then
+  command -v objdump >/dev/null 2>&1 || { echo "FAIL: objdump is not installed (binutils)" >&2; exit 1; }
+  : > "$work/glibc"
+  for obj in "${objects[@]}"; do
+    objdump -T "$obj" 2>/dev/null | awk '/\*UND\*/' | grep -o 'GLIBC_[0-9][0-9.]*' \
+      | sed 's/^GLIBC_//' | sort -u | sed "s|\$|\t${obj#"$work/par/"}|" >> "$work/glibc" || true
+  done
+  floor=$(cut -f1 "$work/glibc" | sort -uV | tail -n 1)
+  [ -n "$floor" ] || { echo "FAIL: no GLIBC_ symbol versions found; a Perl binary always has them" >&2; exit 1; }
+  echo "glibc floor: $floor (documented ceiling: $GLIBC_MAX)"
+  if [ "$(printf '%s\n%s\n' "$floor" "$GLIBC_MAX" | sort -V | tail -n 1)" != "$GLIBC_MAX" ]; then
+    printf '::error::glibc %s is above the documented %s, needed by: %s\n' "$floor" "$GLIBC_MAX" \
+      "$(awk -F'\t' -v f="$floor" '$1 == f {print $2}' "$work/glibc" | sort -u | paste -sd' ')" >&2
+    echo "FAIL: the binary needs glibc $floor, above the documented $GLIBC_MAX" >&2
+    exit 1
+  fi
+  echo "glibc check: floor $floor is within $GLIBC_MAX"
+fi
