@@ -540,6 +540,8 @@ pl => /lib/Locale/Simple.pm
  |identical to their C<l*()> twins. It finds them in Xslate templates
  |----------------------^
 - discarded COUNT characters of noise
+pl => /lib/Locale/Simple/PO2JSON.pm
+- discarded COUNT characters of noise
 pl => /lib/Locale/Simple/Scraper.pm
 - discarded COUNT characters of noise
 - found func l at line LINE

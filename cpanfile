@@ -4,11 +4,14 @@ requires 'Parser::MGC';
 requires 'Moo';
 requires 'Try::Tiny';
 requires 'curry';
+requires 'JSON::PP', '2.27';
 
 on test => sub {
     requires 'Test::More', '0.98';
     requires 'Capture::Tiny';
-    requires 'JSON::PP';
+    requires 'Path::Tiny';
+    requires 'Test::Fatal';
+    requires 'Test::Warn';
     requires 'Test::InDistDir';
     requires 'Test::Regression';
 };

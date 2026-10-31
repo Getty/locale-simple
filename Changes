@@ -2,6 +2,11 @@ Revision history for Locale-Simple
 
 {{$NEXT}}
 
+ - Locale::Simple::PO2JSON: new module with po2data() and data2json() that
+   read a PO file and produce the JSON data for the JavaScript side. It
+   needs only JSON::PP, keeps the entries msgfmt keeps (no untranslated,
+   fuzzy or obsolete ones) and any number of plural forms, and decodes
+   multi-line strings and escapes.
  - Perl: l_lang() translates again in a process started under the C locale
    on a system without a locale for the language (a minimal container, a
    daemon without LANG). libintl-perl 1.36 and later ignore LANGUAGE under
