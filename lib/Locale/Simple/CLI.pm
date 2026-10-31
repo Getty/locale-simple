@@ -8,13 +8,14 @@ use Getopt::Long ();
 use File::Basename ();
 use Locale::Simple ();
 use Locale::Simple::PO2JSON ();
+use Locale::Simple::Scraper ();
 
 my $USAGE = <<'END';
 Usage: locale-simple COMMAND [ARGS]
 
 Commands:
   scrape [OPTIONS]                 find translation calls in the sources below the
-                                   current directory (see locale_simple_scraper)
+                                   current directory (locale-simple scrape --help)
   po2json [--domain NAME] [--pretty] FILE.po
                                    convert a PO file to JSON for the browser
   help                             show this text
@@ -43,9 +44,12 @@ sub run {
 
 sub _scrape {
     my (@argv) = @_;
-    require Locale::Simple::Scraper;
     eval { Locale::Simple::Scraper::scrape(@argv); 1 } or do {
         my $err = $@;
+        if ( ref $err and ref $err eq 'Locale::Simple::Scraper::BadCall' ) {
+            print STDERR $err->{message}, Locale::Simple::Scraper::usage();
+            return 2;
+        }
         $err .= "\n" unless $err =~ /\n\z/;
         print STDERR $err;
         return 1;
@@ -106,6 +110,7 @@ and never calls C<exit>, so tests and packed binaries behave the same way.
 
 Runs the command named by the first argument and returns the exit code:
 C<0> on success, C<1> when the command fails (message on STDERR), C<2> for a
-missing or unknown command or bad arguments (usage on STDERR).
+bad call: a missing or unknown command, bad options or arguments (usage
+on STDERR).
 
 =cut

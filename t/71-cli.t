@@ -60,6 +60,30 @@ is $rc, 2, 'po2json without file exits 2';
     is $out, '', 'empty dir, empty output';
 }
 
+for my $h (qw( --help -h )) {
+    ( $out, $err, $rc ) = capture { Locale::Simple::CLI::run( 'scrape', $h ) };
+    is $rc, 0, "scrape $h exits 0";
+    like $out, qr/Usage: locale-simple scrape.*--output FORMAT/s, "scrape $h prints the options on STDOUT";
+    is $err, '', "scrape $h writes nothing to STDERR";
+}
+for my $bad ( [ '--bogus' ], [ '--output', 'xml' ], [ 'stray' ] ) {
+    my $g = pushd('t/data/n-fixtures');
+    ( $out, $err, $rc ) = capture { Locale::Simple::CLI::run( 'scrape', @{$bad} ) };
+    is $rc, 2, "scrape @{$bad} exits 2";
+    like $err, qr/Usage: locale-simple scrape/, "scrape @{$bad}: usage on STDERR";
+    is $out, '', "scrape @{$bad}: nothing on STDOUT";
+}
+( undef, $err, $rc ) = capture { Locale::Simple::CLI::run( 'scrape', '--output', 'xml' ) };
+like $err, qr/Unknown output format: xml/, 'the reason is named';
+
+( $out, $err ) = capture { system $^X, '-Ilib', 'bin/locale_simple_scraper', '--bogus' };
+is $? >> 8, 2, 'bin/locale_simple_scraper --bogus exits 2';
+like $err, qr/Unknown option: bogus.*Usage: locale-simple scrape/s, 'bin/locale_simple_scraper --bogus: usage on STDERR';
+is $out, '', 'bin/locale_simple_scraper --bogus: nothing on STDOUT';
+( $out ) = capture { system $^X, '-Ilib', 'bin/locale_simple_scraper', '--help' };
+is $? >> 8, 0, 'bin/locale_simple_scraper --help exits 0';
+like $out, qr/Usage: locale-simple scrape/, 'bin/locale_simple_scraper --help prints the options';
+
 ( $out, undef, $rc ) = capture { system $^X, '-Ilib', 'bin/po2json', $po };
 is $out, data2json( po2data($po) ) . "\n", 'bin/po2json keeps its shape';
 ( $out, undef, $rc ) = capture { system $^X, '-Ilib', 'bin/po2json', '-p', $po };

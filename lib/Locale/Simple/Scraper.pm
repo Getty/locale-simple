@@ -15,6 +15,34 @@ use Locale::Simple::Scraper::Parser;
 
 our @EXPORT = qw(scrape);
 
+my %OUTPUT_FORMATS = map { $_ => 1 } qw( po perl json yaml );
+
+my $USAGE = <<'END';
+Usage: locale-simple scrape [OPTIONS]
+
+Walks the current directory and writes a .pot template to STDOUT; progress and
+parse problems go to STDERR.
+
+Options:
+  --js EXT --pl EXT --py EXT --php EXT --go EXT --rs EXT --tx EXT
+                     extra file extensions for a language, comma-separated,
+                     repeatable (defaults: js; pl pm t; py; php; go; rs; tx)
+  --ignore REGEX     skip files whose path matches, repeatable
+  --only REGEX       read only files whose path matches, repeatable
+  --output FORMAT    po (default), perl, json or yaml (yaml needs the YAML module)
+  --md5              write MD5 hashes of the file names
+  --no_line_numbers  leave out the #: location comments
+  -h, --help         show this text
+END
+
+sub usage { return $USAGE }
+
+sub _bad_call {
+    my ($message) = @_;
+    $message .= "\n" unless $message =~ /\n\z/;
+    die bless { message => $message }, 'Locale::Simple::Scraper::BadCall';
+}
+
 sub scrape {
     @ARGV = @_;
 
@@ -38,16 +66,29 @@ sub scrape {
     my @only;
 
     my $output = 'po';
-    my ($md5, $no_line_numbers);
+    my ($md5, $no_line_numbers, $help);
 
-    GetOptions(
-        ( map { ( "$_=s" => $extra{$_} ) } @types ),
-        "ignore=s"        => \@ignores,
-        "only=s"          => \@only,
-        "output=s"        => \$output,
-        "md5"             => \$md5,
-        "no_line_numbers" => \$no_line_numbers,
-    );
+    my @problems;
+    my $parsed = do {
+        local $SIG{__WARN__} = sub { push @problems, @_ };
+        GetOptions(
+            ( map { ( "$_=s" => $extra{$_} ) } @types ),
+            "ignore=s"        => \@ignores,
+            "only=s"          => \@only,
+            "output=s"        => \$output,
+            "md5"             => \$md5,
+            "no_line_numbers" => \$no_line_numbers,
+            "help|h"          => \$help,
+        );
+    };
+    _bad_call( join '', @problems ) unless $parsed;
+    if ($help) {
+        print STDOUT $USAGE;
+        return;
+    }
+    _bad_call("Unexpected argument: $ARGV[0]") if @ARGV;
+    _bad_call("Unknown output format: $output (use po, perl, json or yaml)")
+      unless $OUTPUT_FORMATS{$output};
 
     # extension list
     my %e;
@@ -172,7 +213,7 @@ sub scrape {
         print JSON::PP->new->canonical->encode( \@found );
     }
     elsif ( $output eq 'yaml' ) {
-        eval { require YAML; 1 } or die "--output yaml needs the YAML module";
+        eval { require YAML; 1 } or die "--output yaml needs the YAML module\n";
         print YAML::Dump( \@found );
     }
 }
@@ -243,6 +284,14 @@ function is exported so build tools can drive it directly.
 
 Run the scraper. C<@argv> is parsed with L<Getopt::Long>. Reads files
 from the current working directory recursively and prints to STDOUT.
+C<--help> prints the options and returns. A bad call (unknown option,
+unexpected argument, unknown C<--output> format) dies with a
+C<Locale::Simple::Scraper::BadCall> object whose C<message> field holds the
+reason, before anything is written.
+
+=head2 usage()
+
+Returns the text of the options, as C<locale-simple scrape --help> prints it.
 
 =head1 OPTIONS
 

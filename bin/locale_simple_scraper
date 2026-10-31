@@ -51,6 +51,8 @@ specify via I<--output> to dump B<json>, B<yaml> or a B<perl> data structure.
 Be aware that we add the domain as flag in the B<.po> file. So double token
 may appear which only differs through a B<#,> flag.
 
+The options are listed by C<locale_simple_scraper --help> as well.
+
 =head1 SEE ALSO
 
 L<Locale::Simple>, L<Locale::Simple::Scraper>
@@ -62,4 +64,13 @@ use warnings;
 
 use Locale::Simple::Scraper 'scrape';
 
-scrape(@ARGV);
+eval { scrape(@ARGV); 1 } or do {
+    my $err = $@;
+    if ( ref $err and ref $err eq 'Locale::Simple::Scraper::BadCall' ) {
+        print STDERR $err->{message}, Locale::Simple::Scraper::usage();
+        exit 2;
+    }
+    $err .= "\n" unless $err =~ /\n\z/;
+    print STDERR $err;
+    exit 1;
+};
