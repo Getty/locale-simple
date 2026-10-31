@@ -80,8 +80,9 @@ msgfmt share/locale/de_DE/LC_MESSAGES/myapp.po \
 ```
 
 `locale-simple scrape` scans `.py` files too, so the same extraction workflow
-covers Python. `locale-simple` comes from the release binary (no Perl needed,
-[GitHub release](https://github.com/Getty/locale-simple#binary-no-perl-needed)) or `cpanm Locale::Simple`.
+covers Python. `locale-simple` comes from the
+[release binary](https://github.com/Getty/locale-simple#binary-no-perl-needed)
+(no Perl needed) or `cpanm Locale::Simple`.
 
 ## Dry-run / msgid collection
 

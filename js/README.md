@@ -50,10 +50,8 @@ locale-simple po2json locale/de_DE/LC_MESSAGES/myapp.po > locale/de_DE/myapp.jso
 ```
 
 The output is wrapped as `{ "myapp": ... }`, the domain being the file name
-without `.po`.
-
-then load the resulting bundle; the language and the plural rule come from
-its header:
+without `.po`. Then load the resulting bundle; the language and the plural
+rule come from its header:
 
 ```js
 import { l, ln, lp, ld, loadLocaleData, l_lang, ltd } from 'locale-simple';
