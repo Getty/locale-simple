@@ -1,0 +1,18 @@
+---
+claimed_at: 2026-10-31T00:05:47Z
+claimed_by: locale-simple-worker
+class: standard
+completed: 2026-10-31T00:05:47Z
+created: 2026-10-30T23:57:39Z
+id: 20
+priority: high
+started: 2026-10-30T23:59:36Z
+status: done
+tags:
+- perl
+- po2json
+title: 'Locale::Simple::PO2JSON: eigener PO-zu-JSON-Konverter (MIT)'
+updated: 2026-10-31T00:05:47Z
+---
+
+Plan locale-simple-binaries (Hub), Aufgabe 1. Eigener PO-Leser, Auswahl wie msgfmt, getrimmte Header plus lang, nur JSON::PP.
