@@ -21,6 +21,8 @@ Revision history for Locale-Simple
    writes UTF-8 msgids as they stand in the source; --output yaml uses the
    optional YAML module (recommended in the cpanfile).
    The scraper runs as locale-simple scrape and as locale_simple_scraper.
+ - bin/locale_simple_scraper_old is removed; locale-simple scrape and
+   locale_simple_scraper are the scraper.
  - Perl: l_lang() translates again in a process started under the C locale
    on a system without a locale for the language (a minimal container, a
    daemon without LANG). libintl-perl 1.36 and later ignore LANGUAGE under
