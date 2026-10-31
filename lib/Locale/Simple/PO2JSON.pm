@@ -26,6 +26,17 @@ sub _unquote {
     return $str;
 }
 
+# One or more quoted strings on a line, as msgfmt reads them: "a" "b" is "ab".
+my $STR  = qr/"(?:[^"\\]|\\.)*"/;
+my $STRS = qr/$STR(?:\s*$STR)*/;
+
+sub _unquote_all {
+    my ( $path, $n, $strings ) = @_;
+    my $val = '';
+    $val .= _unquote( $path, $n, $1 ) while $strings =~ /"((?:[^"\\]|\\.)*)"/g;
+    return $val;
+}
+
 sub _read_file {
     my ($path) = @_;
     open my $fh, '<:raw', $path or die "Cannot read PO file $path: $!\n";
@@ -83,20 +94,20 @@ sub po2data {
             $finish->();
             $flags = {};
         }
-        elsif ( $line =~ /\A#~/ ) {
+        elsif ( $line =~ /\A\s*#~/ ) {
             # obsolete entry, including #~| previous msgids
             $finish->();
             $flags = {};
         }
-        elsif ( $line =~ /\A#(.?)(.*)\z/ ) {
+        elsif ( $line =~ /\A\s*#(.?)(.*)\z/ ) {
             my ( $kind, $rest ) = ( $1, $2 );
             $finish->() if $cur && $field =~ /\Amsgstr/;
             if ( $kind eq ',' ) {
                 $flags->{$_} = 1 for grep { length } split /[\s,]+/, $rest;
             }
         }
-        elsif ( $line =~ /\A\s*(msgctxt|msgid_plural|msgid|msgstr(?:\[(\d+)\])?)\s*"(.*)"\s*\z/ ) {
-            my ( $kw, $idx, $val ) = ( $1, $2, _unquote( $path, $n, $3 ) );
+        elsif ( $line =~ /\A\s*(msgctxt|msgid_plural|msgid|msgstr(?:\[(\d+)\])?)\s*($STRS)\s*\z/ ) {
+            my ( $kw, $idx, $val ) = ( $1, $2, _unquote_all( $path, $n, $3 ) );
             if ( $kw eq 'msgctxt' || $kw eq 'msgid' ) {
                 $finish->() if $cur && $field =~ /\Amsgstr/;
                 if ( !$cur ) {
@@ -124,9 +135,9 @@ sub po2data {
                 $field = "msgstr[$idx]";
             }
         }
-        elsif ( $line =~ /\A\s*"(.*)"\s*\z/ ) {
+        elsif ( $line =~ /\A\s*($STRS)\s*\z/ ) {
             die "$path line $n: string without keyword\n" unless $cur && defined $field;
-            my $val = _unquote( $path, $n, $1 );
+            my $val = _unquote_all( $path, $n, $1 );
             if ( $field =~ /\Amsgstr\[(\d+)\]\z/ ) { $cur->{msgstr}[$1] .= $val }
             else                                   { $cur->{$field} .= $val }
         }

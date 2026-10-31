@@ -35,6 +35,17 @@ like exception { po2data('t/data/po2json/missing.po') },
   qr{\ACannot read PO file t/data/po2json/missing\.po: [^\n]+\n\z}, 'missing';
 unlike exception { po2data('t/data/po2json/missing.po') }, qr/ at \S+ line \d+/, 'no Perl location';
 
+# Several quoted strings on one line, and comments that start with whitespace.
+# The expectations are what msgfmt writes for t/data/po2json/strings.po
+# (msgfmt -o x.mo strings.po; msgunfmt x.mo): "twoparts" => "einzwei", "abc" => "xyz".
+my $s = po2data('t/data/po2json/strings.po');
+is $s->{twoparts}[1], 'einzwei', 'several strings on one line are joined';
+is $s->{abc}[1],      'xyz',     'strings across lines and on one line are joined';
+is $s->{esc}[1],      'q"uote\\', 'escapes inside joined strings';
+ok !exists $s->{two},   'the first string alone is not a msgid';
+ok !exists $s->{"two\" \"parts"}, 'the quotes between the strings are dropped';
+is scalar( grep { length } keys %{$s} ), 3, 'an indented comment does not end up in an entry';
+
 my $tmp = Path::Tiny->tempdir;
 my $n   = 0;
 my $broken = sub {
