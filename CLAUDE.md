@@ -26,11 +26,11 @@ yourself — the principle is a shared house rule (skilletor bundle
 
 | Task | Agent |
 |---|---|
-| Implement / refactor / debug the Perl, Python or JavaScript runtime, the scraper, the CLI wrappers | `locale-simple-worker` (default) |
+| Implement / refactor / debug the Perl, Python or JavaScript runtime, the scraper, the Perl code of the commands (`Locale::Simple::CLI`, `bin/*`) | `locale-simple-worker` (default) |
 | The PHP port (`php/`, `composer.json`) | `locale-simple-php-worker` |
 | The Go port (`go/`, `go.mod`) | `locale-simple-go-worker` |
 | The Rust port (`rust/`) | `locale-simple-rust-worker` |
-| The standalone binary (`bin/locale-simple` as PAR package, `scripts/*binary*`, `release-binaries.yml`) | `locale-simple-binary-worker` |
+| The standalone binary (packing `bin/locale-simple` with PAR, shipping it, `scripts/*binary*`, `release-binaries.yml`) | `locale-simple-binary-worker` |
 | Write/extend the tests of the six suites | `locale-simple-test-writer` |
 | Commits, `Changes`, card → done, pre-release audit | `locale-simple-release-manager` |
 

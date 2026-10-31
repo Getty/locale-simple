@@ -146,39 +146,64 @@ behaviour.
 | `loadTranslations(domain, lang, data, pluralForms?)` | Register translations from a plain object; `pluralForms` is a `Plural-Forms` header value (default `n != 1`) |
 | `loadLocaleData(domain, localeData)` | Register `po2json` output; the language and the plural rule come from its header |
 
-## String extraction
+## Command line tools
 
-The Perl distribution ships `locale_simple_scraper`. It walks the current
-directory and writes a `.pot` template with every `l()`/`ln()`/… call and every
-`N_` marker it can resolve statically — for all six languages in one run:
-`.pl`, `.pm`, `.t`, `.py`, `.js`, `.php`, `.go`, `.rs` and Text::Xslate `.tx`
-files.
+The Perl distribution ships one command, `locale-simple`, with two subcommands.
+`locale-simple help` prints the usage and `perldoc locale-simple` lists every
+option.
+
+### `locale-simple scrape`
+
+Walks the current directory and writes a `.pot` template with every
+`l()`/`ln()`/… call and every `N_` marker it can resolve statically, for all
+six languages in one run: `.pl`, `.pm`, `.t`, `.py`, `.js`, `.php`, `.go`,
+`.rs` and Text::Xslate `.tx` files. The template goes to STDOUT, the progress
+and parse problems to STDERR.
 
 ```bash
-locale_simple_scraper --ignore node_modules --ignore vendor > messages.pot
+locale-simple scrape --ignore node_modules --ignore vendor > messages.pot
 ```
 
 `--pl`, `--py`, `--js`, `--php`, `--go`, `--rs` and `--tx` add file extensions
-to a language (`--js mjs,ts`); `perldoc locale_simple_scraper` lists all
-options.
+to a language (`--js mjs,ts`). `--only REGEX` limits the walk,
+`--no_line_numbers` leaves out the `#:` location comments and
+`--output po|perl|json|yaml` picks the format (`yaml` needs the `YAML` module).
+The exit code is `0`, also when the parser reports problems in a source file,
+and `1` when the scrape itself fails.
 
-## JavaScript: `.po` to JSON
+`locale_simple_scraper` takes the same options and remains available under
+its name.
 
-The JavaScript package reads JSON instead of `.mo` files. `po2json`, also part
-of the Perl distribution, converts a `.po` file:
+### `locale-simple po2json`
+
+The JavaScript package reads JSON instead of `.mo` files. `po2json` converts a
+`.po` file to that JSON. Like `msgfmt`, it keeps no untranslated, fuzzy or
+obsolete entries.
 
 ```bash
-po2json data/locale/de_DE/LC_MESSAGES/myapp.po > myapp.de_DE.json
+locale-simple po2json data/locale/de_DE/LC_MESSAGES/myapp.po > myapp.de_DE.json
+locale-simple po2json --domain shop --pretty myapp.po > shop.de_DE.json
 ```
+
+The output is wrapped as `{ "<domain>": ... }`. The domain defaults to the
+file name without `.po` (`myapp` above); `--domain NAME` sets it and
+`--pretty` indents the output. A file that cannot be read or parsed gives
+exit code `1`, a missing or unknown command `2`.
 
 ```js
 import { loadLocaleData, ltd, l_lang, l } from 'locale-simple';
 import de from './myapp.de_DE.json' with { type: 'json' };
 
-loadLocaleData('myapp', { myapp: de });   // language and plural rule from the header
+loadLocaleData('myapp', de);   // language and plural rule from the header
 ltd('myapp');
 l_lang('de_DE');
 ```
+
+The `po2json FILE` command remains as well and writes the bare data without
+the domain wrapper; `po2json -p FILE` writes it indented and wrapped in the
+file name as the domain.
+
+<!-- Binary downloads: a later subsection of "Command line tools" goes here. -->
 
 ## License
 

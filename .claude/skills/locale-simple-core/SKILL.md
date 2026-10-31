@@ -37,7 +37,10 @@ the full parity table and the accepted asymmetries are `.claude/rules/language-p
 |---|---|
 | `lib/Locale/Simple.pm` | Perl implementation and the exported helpers |
 | `lib/Locale/Simple/Scraper.pm`, `Scraper/Parser.pm`, `Scraper/ParserShortcuts.pm` | the source scraper on `Parser::MGC` |
-| `bin/locale_simple_scraper`, `bin/po2json` | CLI wrappers: `.pot` extraction, `.po` → JSON for JavaScript |
+| `bin/locale-simple` | the `locale-simple` command (`Locale::Simple::CLI`), holds the POD of every subcommand |
+| `bin/locale_simple_scraper`, `bin/po2json` | the older commands: `.pot` extraction, `.po` → JSON for JavaScript |
+| `lib/Locale/Simple/CLI.pm` | `run(@argv)` of the `locale-simple` command: `scrape`, `po2json`, `help` |
+| `lib/Locale/Simple/PO2JSON.pm` | `po2data` / `data2json`: the `.po` → JSON conversion, on `JSON::PP` |
 | `python/` | `locale_simple.py`, `test.py`, `pyproject.toml`, `LICENSE` |
 | `js/` | `src/index.js`, `src/index.d.ts`, `test/` (`node:test`), `rollup.config.js`, `LICENSE` |
 | `php/`, `composer.json` | PHP package, PHPUnit suite |
@@ -92,6 +95,23 @@ Trusted Publisher (`publish-rust.yml`) and the Packagist package with its GitHub
 `lib/`, `t/`, `python/`, `js/`, `bin/`, `xbin/` out and `composer.json`, `php/` in.
 Check with `git archive --format=zip HEAD | zipinfo -1 -`. The Go module zip ignores
 `export-ignore` and always holds the whole repository.
+
+## The command line
+
+`locale-simple` has the subcommands `scrape` (options pass through to
+`Locale::Simple::Scraper`), `po2json FILE [--domain NAME] [--pretty]`, `help`
+(`-h`, `--help`) and `--version`. `Locale::Simple::CLI::run(@argv)` returns the
+exit code and `bin/locale-simple` passes it to `exit`:
+
+| Code | Case |
+|---|---|
+| `0` | success, `help`, `--version`; `scrape` also when it reports parse errors |
+| `1` | `scrape` died; `po2json` cannot read or parse the file (message on STDERR) |
+| `2` | missing or unknown command |
+
+`po2json` output follows `msgfmt`: no fuzzy, obsolete or untranslated entries.
+`locale-simple-binary-worker` owns the PAR-packed `locale-simple` binary and its
+release workflow.
 
 ## The scraper
 

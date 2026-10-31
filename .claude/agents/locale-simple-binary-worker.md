@@ -37,7 +37,7 @@ to `locale-simple-release-manager`.
   script's `-M` list; the lib-check script keeps that list honest.
 - **Docker on this machine:** `DOCKER_HOST=unix:///var/run/docker.sock`. The macOS
   build runs in the workflow on a macOS runner.
-- **po2json needs only `JSON::PP`** (core); the packed binary carries no other JSON module for it.
+- **Pack `JSON::PP` (core) as the only JSON module for `po2json`;** the CLI needs no other.
 
 ## Out of lane
 
