@@ -169,7 +169,7 @@ sub scrape {
     }
     elsif ( $output eq 'json' ) {
         require JSON::PP;
-        print JSON::PP->new->utf8->canonical->encode( \@found );
+        print JSON::PP->new->canonical->encode( \@found );
     }
     elsif ( $output eq 'yaml' ) {
         eval { require YAML; 1 } or die "--output yaml needs the YAML module";

@@ -6,7 +6,7 @@ use warnings;
 
 use Getopt::Long ();
 use File::Basename ();
-use Locale::Simple;
+use Locale::Simple ();
 use Locale::Simple::PO2JSON ();
 
 my $USAGE = <<'END';

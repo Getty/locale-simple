@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use utf8;
 use Test::More;
 use Test::InDistDir;
 use Capture::Tiny 'capture';
@@ -81,6 +82,24 @@ like $out, qr/^locale-simple /, 'bin/locale-simple runs';
         ( $out, undef, $rc ) = capture { Locale::Simple::CLI::run( 'scrape', '--output', 'yaml', '--only', 'N-calls\.pl' ) };
         like $out, qr/^---/, 'scrape yaml';
     }
+}
+
+{
+    my $g = pushd('t/data/utf8-fixtures');
+    ( $out, undef, $rc ) = capture { Locale::Simple::CLI::run( 'scrape', '--output', 'json' ) };
+    my $found = JSON::PP->new->utf8->decode($out);
+    is $found->[0]{msgid}, "Größe", 'scrape json is valid UTF-8 and decodes to the msgid';
+}
+
+{
+    local @INC = ( sub { die "YAML.pm blocked\n" if $_[1] eq 'YAML.pm'; return }, @INC );
+    local %INC = %INC;
+    delete $INC{'YAML.pm'};
+    my $g = pushd('t/data/n-fixtures');
+    ( $out, $err, $rc ) = capture { Locale::Simple::CLI::run( 'scrape', '--output', 'yaml', '--only', 'N-calls\.pl' ) };
+    is $rc, 1, 'scrape exits 1 when the scraper dies';
+    like $err, qr/--output yaml needs the YAML module/, 'message on STDERR';
+    is $out, '', 'nothing on STDOUT';
 }
 
 done_testing;

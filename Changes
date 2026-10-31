@@ -13,8 +13,9 @@ Revision history for Locale-Simple
    header carries lang, and keys come in a fixed order.
  - bin/po2json uses the new module: po2json FILE, po2json -p FILE for
    indented output wrapped in the file name as domain.
- - Scraper: --output json goes through JSON::PP with sorted keys; --output
-   yaml uses the optional YAML module (recommended in the cpanfile).
+ - Scraper: --output json goes through JSON::PP with sorted keys and
+   writes UTF-8 msgids as they stand in the source; --output yaml uses the
+   optional YAML module (recommended in the cpanfile).
    locale_simple_scraper is the one scraper command.
  - Perl: l_lang() translates again in a process started under the C locale
    on a system without a locale for the language (a minimal container, a
