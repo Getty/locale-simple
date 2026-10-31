@@ -3,19 +3,19 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { l_lang, ltd, loadLocaleData, l, ln, lp } from '../src/index.js';
 
-// The real output of bin/po2json for the shared Perl fixture. Own file, so the
-// module state starts empty: index.test.js loads the same msgids under de_DE
-// through loadTranslations and would mask where this bundle lands.
-const raw = readFileSync(
-  new URL('../../t/data/locale/de_DE/LC_MESSAGES/test.json', import.meta.url),
-  'utf8'
-);
+// The real output of `locale-simple po2json` for the shared Perl fixture,
+// already wrapped in its domain. Own file, so the module state starts empty:
+// index.test.js loads the same msgids under de_DE through loadTranslations and
+// would mask where this bundle lands.
 const data = JSON.parse(
-  raw.trim().replace(/^locale_data\['test'\]\s*=\s*/, '').replace(/;$/, '')
+  readFileSync(
+    new URL('../../t/data/po2json/test.domain.json', import.meta.url),
+    'utf8'
+  )
 );
 
-describe('loadLocaleData() with bin/po2json output', () => {
-  loadLocaleData('test', { test: data });
+describe('loadLocaleData() with locale-simple po2json output', () => {
+  loadLocaleData('test', data);
   ltd('test');
 
   it('translates under the language of the bundle', () => {

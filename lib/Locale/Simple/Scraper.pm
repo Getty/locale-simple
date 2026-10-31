@@ -168,22 +168,12 @@ sub scrape {
         print Dumper \@found;
     }
     elsif ( $output eq 'json' ) {
-        eval {
-            require JSON;
-            JSON->import;
-            print encode_json( \@found );
-        } or do {
-            die "You require the module JSON for this output";
-        };
+        require JSON::PP;
+        print JSON::PP->new->utf8->canonical->encode( \@found );
     }
     elsif ( $output eq 'yaml' ) {
-        eval {
-            require YAML;
-            YAML->import;
-            print Dump( \@found );
-        } or do {
-            die "You require the module YAML for this output";
-        };
+        eval { require YAML; 1 } or die "--output yaml needs the YAML module";
+        print YAML::Dump( \@found );
     }
 }
 
@@ -277,7 +267,8 @@ Repeatable; combines with C<--ignore>.
 =item C<--output=FORMAT>
 
 Output format — C<po> (default), C<perl> (L<Data::Dumper>),
-C<json> (requires L<JSON>) or C<yaml> (requires L<YAML>).
+C<json> (through L<JSON::PP>, keys sorted) or C<yaml> (needs the optional
+L<YAML> module).
 
 =item C<--md5>
 
