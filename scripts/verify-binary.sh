@@ -125,9 +125,9 @@ for m in $(cat "$work/loaded") ${EXTRA_PACKED_CHECK:-}; do
 done
 [ -z "${missing:-}" ] || fail "modules missing inside the PAR archive:$missing (run verify where the binary was built)"
 echo "packed module set: OK ($nloaded modules)"
-# Every binary writes the same output formats: YAML is left out of the build (-X YAML in
-# build-binary.sh), so a runner that happens to have it installed does not pack it.
-[ ! -e "$work/archive/lib/YAML.pm" ] && [ ! -e "$work/archive/arch/YAML.pm" ] \
-  || fail "YAML.pm is packed; build-binary.sh must leave it out (-X YAML)"
+# Every binary writes the same output formats: YAML and all YAML::* modules are left out of the
+# build (-X in build-binary.sh), so a runner that happens to have them installed does not pack them.
+yamlfiles="$(cd "$work/archive" && { find lib arch \( -name YAML.pm -o -path '*/YAML/*' \) 2>/dev/null || true; } | head -5)"
+[ -z "$yamlfiles" ] || fail "YAML packed ($(echo $yamlfiles)); build-binary.sh must leave out YAML and YAML::*"
 echo "no YAML packed: OK"
 echo "verify: OK"

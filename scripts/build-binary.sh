@@ -23,14 +23,33 @@ mods=(); for m in "${loaded[@]}"; do mods+=(-M "$m"); done
 # PAR_VERBATIM=1: pp's POD-stripping filter corrupts files with POD between code.
 # -I lib: the checkout's lib/ wins over any installed copy.
 # -M 'Locale::Simple::**': the scraper's parsers load by name on some paths only.
-# -X YAML: Scraper.pm requires YAML for --output yaml, so pp packs it wherever it is installed
-# (the macOS runner has it, the Linux image does not); leaving it out gives every binary the
-# same formats (po, perl, json), and --output yaml dies with "needs the YAML module".
+# -X YAML and every installed YAML::*: Scraper.pm requires YAML for --output yaml, so pp packs
+# it wherever it is installed (the macOS runner has it, the Linux image does not). `pp -X NAME`
+# drops exactly one file and has no wildcard, so YAML.pm alone would leave YAML::Dumper, ::Loader,
+# ::Mo, ::Node and the rest packed, because the scanner still follows `require YAML` into them.
+# The whole family goes, one -X per module found in @INC on this host: every binary then writes
+# the same formats (po, perl, json) and --output yaml dies with "needs the YAML module".
+# verify-binary.sh refuses an archive with any YAML file; a module the CLI needs is in the loaded
+# set and fails the build there.
+noyaml=(-X YAML)
+while IFS= read -r m; do noyaml+=(-X "$m"); done < <(perl -MFile::Find -e '
+  my %m;
+  for my $dir (grep { !ref } @INC) {
+    next unless -d "$dir/YAML";
+    find({ no_chdir => 1, wanted => sub {
+      return unless /\.pm\z/;
+      (my $n = substr $_, length($dir) + 1) =~ s{/}{::}g;
+      $n =~ s/\.pm\z//;
+      $m{$n} = 1;
+    } }, "$dir/YAML");
+  }
+  print "$_\n" for sort keys %m;')
+
 PAR_VERBATIM=1 pp -o "$OUT" \
   -I lib \
   "${mods[@]}" \
   -M 'Locale::Simple::**' \
-  -X YAML \
+  "${noyaml[@]}" \
   bin/locale-simple
 
 chmod +x "$OUT"
