@@ -1,0 +1,17 @@
+---
+claimed_at: 2026-10-31T00:21:39Z
+claimed_by: locale-simple-worker
+class: standard
+completed: 2026-10-31T00:21:39Z
+created: 2026-10-30T23:57:56Z
+id: 27
+priority: medium
+started: 2026-10-31T00:19:49Z
+status: done
+tags:
+- release
+title: Packagist und crates.io anmelden (wartet auf Tokens)
+updated: 2026-10-31T00:21:39Z
+---
+
+Plan locale-simple-binaries (Hub), Aufgabe 11. Packagist-Paket plus Hook, crates.io 0.200.0-rc.0, Trusted Publisher. Wartet auf Gettys Tokens.
