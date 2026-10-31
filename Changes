@@ -141,6 +141,9 @@ Revision history for Locale-Simple
    tests that dzil generates from xt/.
  - Tests: t/10-gettext.t sets the messages locale the way l_lang() does, so
    it passes on systems that start under the C or POSIX locale.
+ - Locale::Simple needs Perl 5.20 or newer, and the cpanfile declares it.
+ - The cpanfile declares every test prerequisite, Test::Regression and
+   Test::InDistDir among them.
  - Documentation: the READMEs, the POD and the usage skills describe all
    six runtimes, the scraper's languages and loading po2json output in
    JavaScript.

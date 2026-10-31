@@ -1,3 +1,4 @@
+requires 'perl', '5.020';
 requires 'Locale::TextDomain', '1.23';
 requires 'IO::All', '0.41';
 requires 'Parser::MGC';
