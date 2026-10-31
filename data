@@ -1,0 +1,23 @@
+---
+claimed_at: 2026-10-31T00:49:20Z
+claimed_by: locale-simple-worker
+class: standard
+completed: 2026-10-31T10:42:15Z
+created: 2026-10-30T23:57:55Z
+depends_on:
+- 25
+id: 26
+priority: high
+started: 2026-10-31T00:49:20Z
+status: done
+tags:
+- binary
+- ci
+- docs
+title: Workflow release-binaries.yml, Probelauf und Binary-Doku
+updated: 2026-10-31T10:42:24Z
+---
+
+Plan locale-simple-binaries (Hub), Aufgabe 9 plus Aufgabe 4 Teil b. Linux x86_64/aarch64, macOS arm64; Probelauf ohne Tag; README und Usage-Skills verweisen auf das Binary.
+
+2026-10-31 10:42 Erledigt: Workflow d29cff2..c66f37d, Timeouts b5fa2b8, Binary-Doku 0f288b0 + 42e4b27; Probeläufe 4 und 5 grün; Skill perl-par-binary-release in Getty/skills b4c3609, 2bb7f73, 7ea754c.
