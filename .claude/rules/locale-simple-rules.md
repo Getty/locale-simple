@@ -19,6 +19,7 @@ helpers of every runtime you touch.
 |---|---|
 | Implement / refactor / debug the Perl, Python or JavaScript runtime, the scraper, the CLI wrappers | `locale-simple-worker` (default) |
 | The PHP, Go or Rust port | `locale-simple-php-worker`, `locale-simple-go-worker`, `locale-simple-rust-worker` |
+| The standalone binary (PAR package, `scripts/*binary*`, `release-binaries.yml`) | `locale-simple-binary-worker` |
 | Write and extend the tests of the six suites | `locale-simple-test-writer` |
 | Commits, `Changes`, card → done, pre-release audit | `locale-simple-release-manager` |
 | Read-only research, audit, gap analysis | `locale-simple-worker` ("read-only, change nothing") |

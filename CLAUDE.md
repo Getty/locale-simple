@@ -30,6 +30,7 @@ yourself — the principle is a shared house rule (skilletor bundle
 | The PHP port (`php/`, `composer.json`) | `locale-simple-php-worker` |
 | The Go port (`go/`, `go.mod`) | `locale-simple-go-worker` |
 | The Rust port (`rust/`) | `locale-simple-rust-worker` |
+| The standalone binary (`bin/locale-simple` as PAR package, `scripts/*binary*`, `release-binaries.yml`) | `locale-simple-binary-worker` |
 | Write/extend the tests of the six suites | `locale-simple-test-writer` |
 | Commits, `Changes`, card → done, pre-release audit | `locale-simple-release-manager` |
 
