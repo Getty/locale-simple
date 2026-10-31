@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Verify a packed locale-simple binary against `perl -Ilib bin/locale-simple`.
 #   verify-binary.sh <binary>
+# Run it where the binary was built (same perl, same installed modules): the packed
+# module set is computed from this host's perl, and optional modules such as
+# Class::XSAccessor load only where they are installed.
 set -euo pipefail
 
 [ -n "${1:-}" ] || { echo "usage: verify-binary.sh <binary>" >&2; exit 1; }
@@ -99,17 +102,22 @@ echo "error path (po2json nope.po, exit $rc_got): OK"
 echo "output equals perl -Ilib: OK"
 
 # Packed module set. A pp binary keeps the build perl's compiled-in @INC, so a module the
-# build missed would still load on this host. Every module of the dist and the modules the
-# CLI loads by name must therefore be inside the archive itself.
+# build missed would still load on this host. The full loaded set (scripts/loaded-modules.pl,
+# the same list build-binary.sh packs: the dist, its dependencies and what those load in turn,
+# core and XS modules included) must therefore be inside the archive itself.
+# PAR puts every module, XS-backed ones such as List/Util.pm and Cwd.pm included, under the
+# archive's lib/ (their .so files go to shlib/); arch/ is accepted as well should that change.
 command -v unzip >/dev/null 2>&1 || fail "unzip is not installed (needed to inspect the PAR archive)"
 rc=0; unzip -qq -o "$BIN" -d "$work/archive" >/dev/null 2>&1 || rc=$?   # 1 = bytes before the zip
 [ "$rc" -le 1 ] && [ -d "$work/archive/lib" ] || fail "cannot unpack the PAR archive (unzip exit $rc)"
-missing=""
-for f in $(cd "$root/lib" && find Locale -name '*.pm' | sort) \
-         Locale/gettext_pp.pm Locale/gettext_dumb.pm Locale/Messages.pm Locale/TextDomain.pm \
-         Moo.pm Parser/MGC.pm Try/Tiny.pm curry.pm JSON/PP.pm Getopt/Long.pm; do
-  [ -f "$work/archive/lib/$f" ] || missing="$missing $f"
+perl -I"$root/lib" "$root/scripts/loaded-modules.pl" >"$work/loaded" 2>"$work/loaded.err" \
+  || fail "scripts/loaded-modules.pl failed: $(cat "$work/loaded.err")"
+[ "$(wc -l <"$work/loaded")" -gt 25 ] || fail "loaded set suspiciously small ($(wc -l <"$work/loaded") modules)"
+# EXTRA_PACKED_CHECK="Not::Packed" adds names to the list (used to prove the check can fail).
+for m in $(cat "$work/loaded") ${EXTRA_PACKED_CHECK:-}; do
+  f="$(echo "$m" | sed 's#::#/#g').pm"
+  [ -f "$work/archive/lib/$f" ] || [ -f "$work/archive/arch/$f" ] || missing="${missing:-} $f"
 done
-[ -z "$missing" ] || fail "modules missing inside the PAR archive:$missing"
-echo "packed module set: OK"
+[ -z "${missing:-}" ] || fail "modules missing inside the PAR archive:$missing (run verify where the binary was built)"
+echo "packed module set: OK ($(wc -l <"$work/loaded") modules)"
 echo "verify: OK"
