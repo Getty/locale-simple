@@ -1209,6 +1209,8 @@ pl => /t/60-N-markers.t
 - discarded COUNT characters of noise
 pl => /t/71-cli.t
 - discarded COUNT characters of noise
+pl => /t/72-release-pypi.t
+- discarded COUNT characters of noise
 go => /t/data/dummy.go
 - discarded COUNT characters of noise
 - found func l at line LINE
