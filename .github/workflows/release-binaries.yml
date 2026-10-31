@@ -139,8 +139,8 @@ jobs:
       matrix:
         include:
           - {os: linux, arch: x86_64, runner: ubuntu-latest, image: 'almalinux:9', pkg: dnf}
-          - {os: linux, arch: x86_64, runner: ubuntu-latest, image: 'ubuntu:22.04', pkg: apt}
-          - {os: linux, arch: x86_64, runner: ubuntu-latest, image: 'debian:bullseye-slim', pkg: apt}
+          - {os: linux, arch: x86_64, runner: ubuntu-latest, image: 'ubuntu:22.04'}
+          - {os: linux, arch: x86_64, runner: ubuntu-latest, image: 'debian:bullseye-slim'}
           - {os: linux, arch: aarch64, runner: ubuntu-24.04-arm, image: 'almalinux:9', pkg: dnf}
           - {os: macos, arch: arm64, runner: macos-14}
           - {os: macos, arch: arm64, runner: macos-15}
@@ -149,14 +149,24 @@ jobs:
     env:
       PLATFORM: ${{ matrix.os }}-${{ matrix.arch }}
     steps:
-      - name: Install runtime lib and checkout tools (dnf)
+      - name: Install runtime lib and tools (dnf)
         if: matrix.pkg == 'dnf'
-        run: dnf install -y libxcrypt-compat git tar diffutils
-      - name: Install checkout tools (apt)
-        if: matrix.pkg == 'apt'
         run: |
-          apt-get update
-          apt-get install -y git ca-certificates
+          # A mirror answers badly now and then; three tries keep one bad response from failing the run.
+          ok=
+          for _try in 1 2 3; do
+            if dnf install -y libxcrypt-compat tar gzip diffutils; then ok=1; break; fi
+            sleep 10
+          done
+          [ -n "$ok" ] || { echo '::error::dnf install failed three times' >&2; exit 1; }
+      - name: Assert no build Perl library tree on the machine (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          # The bullseye build image compiles /usr/local/lib/perl5 into the binary's @INC.
+          if [ -e /usr/local/lib/perl5 ]; then
+            echo '::error::/usr/local/lib/perl5 exists; the smoke test would prove nothing' >&2
+            exit 1
+          fi
       - name: Assert no build Perl on the machine (macOS)
         if: matrix.os == 'macos'
         run: |
@@ -165,9 +175,6 @@ jobs:
             exit 1
           fi
       - uses: actions/checkout@v5
-      - name: Fix safe.directory (Linux)
-        if: matrix.os == 'linux'
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/download-artifact@v4
         with:
           pattern: locale-simple-*-${{ env.PLATFORM }}
