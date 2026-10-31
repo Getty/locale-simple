@@ -21,7 +21,7 @@ everywhere.
 - **Same API across languages.** A function called `lnp` in JavaScript
   behaves identically in the other five runtimes. No mental context switch
   when jumping between server, CLI tool and frontend.
-- **One `.po` file for everything.** One scraper reads the sources of all six
+- **One `.po` file for everything.** One scraper (`locale-simple scrape`) reads the sources of all six
   languages, so one translation bundle covers the whole stack.
 - **`sprintf` baked in.** Both classic (`%s`) and positional (`%1$s`)
   placeholders — exactly like Perl's `sprintf` and gettext's `xgettext`
@@ -40,12 +40,17 @@ npm install locale-simple
 
 ## Quick start
 
-For browser / bundler use, convert your `.po` files to JSON once with the
-`po2json` tool that ships in the sibling Perl distribution:
+For browser / bundler use, convert your `.po` files to JSON once with
+`locale-simple po2json`. Get `locale-simple` as a standalone binary from the
+[GitHub release](https://github.com/Getty/locale-simple#binary-no-perl-needed)
+(no Perl needed) or with `cpanm Locale::Simple`:
 
 ```bash
-po2json locale/de_DE/LC_MESSAGES/myapp.po > locale/de_DE/myapp.json
+locale-simple po2json locale/de_DE/LC_MESSAGES/myapp.po > locale/de_DE/myapp.json
 ```
+
+The output is wrapped as `{ "myapp": ... }`, the domain being the file name
+without `.po`.
 
 then load the resulting bundle; the language and the plural rule come from
 its header:
@@ -54,7 +59,7 @@ its header:
 import { l, ln, lp, ld, loadLocaleData, l_lang, ltd } from 'locale-simple';
 import bundle from './locale/de_DE/myapp.json' with { type: 'json' };
 
-loadLocaleData('myapp', { myapp: bundle });
+loadLocaleData('myapp', bundle);
 ltd('myapp');
 l_lang('de_DE');
 
@@ -91,7 +96,7 @@ An empty msgid returns an empty string without a lookup.
 | Call | Purpose |
 |---|---|
 | `loadTranslations(domain, lang, data, pluralForms?)` | Register a translation bundle (plain `{msgid: msgstr}` map; arrays for plurals). `pluralForms` is the `Plural-Forms` header value; omitted means `n != 1` |
-| `loadLocaleData(domain, data)` | Register `po2json` output (`{ [domain]: bundle }`, Gettext.js format); the `Language` and `Plural-Forms` headers of the bundle select the language and the plural form |
+| `loadLocaleData(domain, data)` | Register `locale-simple po2json` output (`{ [domain]: bundle }`, Gettext.js format); the `Language` and `Plural-Forms` headers of the bundle select the language and the plural form |
 | `l_lang(code)` | Set the language (`de_DE`, `pt-BR`, …); a list like `de_AT:fr` tries `de_AT`, `de`, `fr`, then a bundle loaded without language |
 | `ltd(domain)` | Default text domain |
 | `l_dir(path)` | Accepted for API symmetry; the browser has no locale directory |

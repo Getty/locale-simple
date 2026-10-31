@@ -100,7 +100,12 @@ jobs:
       - name: Check runtime libs
         env:
           BASE: ${{ steps.v.outputs.base }}
-        run: ./scripts/check-binary-libs.sh "$BASE"
+        run: |
+          ./scripts/check-binary-libs.sh "$BASE"
+          for lib in $(./scripts/check-binary-libs.sh --list); do
+            grep -qF "\`$lib\`" README.md \
+              || { printf '::error::README.md does not list runtime lib %s\n' "$lib" >&2; exit 1; }
+          done
       - name: Package
         env:
           BASE: ${{ steps.v.outputs.base }}

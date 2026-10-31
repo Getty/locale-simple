@@ -70,8 +70,9 @@ each `.mo` header; a broken header falls back to `n != 1` with one `log` warning
 
 ## Compiling .po → .mo
 
-`msgfmt myapp.po -o myapp.mo`. The Perl `locale_simple_scraper` scans `.go` files
-(strings in `"..."` and backticks) for the extraction step.
+`msgfmt myapp.po -o myapp.mo`. `locale-simple scrape` scans `.go` files
+(strings in `"..."` and backticks) for the extraction step. `locale-simple`
+comes from the [release binary](https://github.com/Getty/locale-simple#binary-no-perl-needed) (no Perl needed) or `cpanm Locale::Simple`.
 
 ## Common mistakes
 

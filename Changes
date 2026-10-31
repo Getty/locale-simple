@@ -13,10 +13,14 @@ Revision history for Locale-Simple
    header carries lang, and keys come in a fixed order.
  - bin/po2json uses the new module: po2json FILE, po2json -p FILE for
    indented output wrapped in the file name as domain.
+ - Binary: each GitHub release carries locale-simple as a standalone binary
+   for Linux x86_64, Linux aarch64 and macOS arm64 (Perl and modules packed
+   with PAR::Packer), as .tar.gz with LICENSE and README, and a SHA-256
+   checksums file. Linux needs glibc 2.31+ and libcrypt.so.1.
  - Scraper: --output json goes through JSON::PP with sorted keys and
    writes UTF-8 msgids as they stand in the source; --output yaml uses the
    optional YAML module (recommended in the cpanfile).
-   locale_simple_scraper is the one scraper command.
+   The scraper runs as locale-simple scrape and as locale_simple_scraper.
  - Perl: l_lang() translates again in a process started under the C locale
    on a system without a locale for the language (a minimal container, a
    daemon without LANG). libintl-perl 1.36 and later ignore LANGUAGE under

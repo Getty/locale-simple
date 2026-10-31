@@ -51,15 +51,15 @@ console.log(ln('You have %d message',
 
 ### `loadLocaleData` — po2json format
 
-`po2json` from the Perl distribution turns a `.po` file into a bundle.
-`loadLocaleData` takes it keyed by the domain and reads the language and the
-plural rule from the bundle's header:
+`locale-simple po2json` turns a `.po` file into a bundle wrapped as
+`{ "<domain>": ... }`. `loadLocaleData` takes that object and reads the
+language and the plural rule from the bundle's header:
 
 ```js
 import { loadLocaleData } from 'locale-simple';
 import de from './locale/de_DE.json' with { type: 'json' };
 
-loadLocaleData('myapp', { myapp: de });
+loadLocaleData('myapp', de);
 ```
 
 ## Translation calls
@@ -78,27 +78,30 @@ strings stay compatible with the Perl/Python sides; it meets the shared rows
 of `t/data/sprintf.json`, `'` plus a pad character (`%'*8s`) included. A
 placeholder without an argument stays as it is.
 
-## Workflow with the Perl scraper
+## Extracting msgids
 
-Even in a pure-JS project, the easiest way to extract msgids is still the
-Perl scraper — it reads `.js` next to the sources of the five sibling
-languages, and `--js ts` adds TypeScript:
+Even in a pure-JS project, the easiest way to extract msgids is
+`locale-simple scrape` — it reads `.js` next to the sources of the five
+sibling languages, and `--js ts` adds TypeScript. `locale-simple` is a
+standalone binary from the
+[GitHub release](https://github.com/Getty/locale-simple#binary-no-perl-needed) (no Perl needed), or
+`cpanm Locale::Simple` installs the same command:
 
 ```bash
-cpanm Locale::Simple                  # one-time
-locale_simple_scraper \
+locale-simple scrape \
     --ignore node_modules --ignore dist --ignore build \
     > po/myapp.pot
 
 # Translate → de_DE.po, then:
-po2json de_DE.po > src/locale/de_DE.json   # ships with Locale::Simple
+locale-simple po2json --domain myapp de_DE.po > src/locale/de_DE.json
 ```
 
-Then in the app:
+`--domain` sets the wrapper key; without it the domain is the file name
+without `.po`. Then in the app:
 
 ```js
 import de from './locale/de_DE.json' with { type: 'json' };
-loadLocaleData('myapp', { myapp: de });
+loadLocaleData('myapp', de);
 ```
 
 No runtime Perl needed — scraping is build-time only.
@@ -130,7 +133,7 @@ language, then the msgid. For SPAs:
 async function setLanguage(lang) {
   if (!hasLoaded(lang)) {
     const data = await fetch(`/locale/${lang}.json`).then(r => r.json());
-    loadLocaleData('myapp', { myapp: data });
+    loadLocaleData('myapp', data);
   }
   l_lang(lang);
   rerender();

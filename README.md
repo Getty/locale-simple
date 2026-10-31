@@ -204,7 +204,48 @@ the domain wrapper; hand it to `loadLocaleData` as `{ myapp: data }`.
 `po2json -p FILE` writes it indented and wrapped in the file name as the
 domain.
 
-<!-- Binary downloads: a later subsection of "Command line tools" goes here. -->
+### Binary (no Perl needed)
+
+Each GitHub release carries `locale-simple` as one standalone binary per
+platform. It is the same command as above (`scrape`, `po2json`, `help`,
+`--version`) with Perl and every module packed in.
+
+| Platform | Asset (`<V>` is the release version, e.g. `0.200.0`) |
+|---|---|
+| Linux x86_64 | `locale-simple-<V>-linux-x86_64` |
+| Linux aarch64 | `locale-simple-<V>-linux-aarch64` |
+| macOS arm64 (Apple Silicon) | `locale-simple-<V>-macos-arm64` |
+
+Each asset also comes as `.tar.gz` (a directory `locale-simple-<V>-<platform>/`
+with `locale-simple`, `LICENSE` and `README`), and `locale-simple-<V>-checksums.txt`
+holds the `sha256sum` line of every asset. The bare binary arrives without the
+executable bit, as HTTP downloads carry no file mode; `install -m 755` (or
+`chmod +x`) sets it, and the `.tar.gz` keeps it.
+
+```bash
+V=0.200.0 P=linux-x86_64
+base=https://github.com/Getty/locale-simple/releases/download/v$V
+curl -fLO "$base/locale-simple-$V-$P"
+curl -fLO "$base/locale-simple-$V-checksums.txt"
+grep " locale-simple-$V-$P\$" "locale-simple-$V-checksums.txt" | sha256sum -c
+install -m 755 "locale-simple-$V-$P" ~/.local/bin/locale-simple
+locale-simple --version
+```
+
+On macOS, `shasum -a 256 -c` takes the place of `sha256sum -c`.
+
+Linux needs glibc 2.31 or newer (Debian 11+, Ubuntu 20.04+, RHEL/Rocky/Alma 9)
+and `libcrypt.so.1` (`libcrypt`). Debian and Ubuntu always carry it; on RHEL,
+Rocky, Alma, Fedora, Amazon Linux and Arch install `libxcrypt-compat`. The
+macOS binary runs on Apple Silicon (checked on macOS 14 and 15) and needs
+nothing installed. It is unsigned: after a browser download clear the
+quarantine flag with `xattr -d com.apple.quarantine locale-simple` (a `curl`
+download sets no flag).
+
+The first start unpacks the packed Perl into a cache under the temp
+directory; later starts reuse it. Other systems (Windows, older glibc, Intel
+Macs) use the Perl distribution: `cpanm Locale::Simple` installs the same
+`locale-simple` command.
 
 ## License
 

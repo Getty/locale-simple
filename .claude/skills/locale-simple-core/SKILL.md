@@ -49,7 +49,8 @@ the full parity table and the accepted asymmetries are `.claude/rules/language-p
 | `t/`, `t/data/` | Perl suite and the fixtures every suite shares (`locale/de_DE/LC_MESSAGES/*.mo`, `plural-forms.json`) |
 | `xbin/release.pl` | Python version bump, build and upload, called from `dist.ini` |
 | `xbin/run-sibling-tests.pl` | runs the PHP, Go and Rust suites, skips a missing toolchain visibly |
-| `.github/workflows/` | `test.yml` (all six suites), `publish-js.yml`, `publish-rust.yml` |
+| `.github/workflows/` | `test.yml` (all six suites), `publish-js.yml`, `publish-rust.yml`, `release-binaries.yml` |
+| `scripts/` | `build-binary.sh`, `verify-binary.sh`, `check-binary-libs.sh`, `loaded-modules.pl`, `smoke-binary.sh`: build, verify and smoke-test the binary |
 | `dist.ini`, `cpanfile`, `Changes` | the `[@Author::GETTY]` release config and the changelog |
 
 ## Build and test
@@ -81,6 +82,13 @@ One tag publishes all six. The tag is `v%v.0` (`tag_format`), so Perl `0.200` is
 4. **On the tag push** — `publish-js.yml` (npm) and `publish-rust.yml` (crates.io)
    take the version from the tag and publish with Trusted Publishing (OIDC).
    Packagist follows through its GitHub hook, the Go module proxy on the first fetch.
+5. **On the published GitHub release** — `release-binaries.yml` builds the binary for
+   linux-x86_64 (container `perl:5.40-bullseye`), linux-aarch64 (same image) and
+   macos-arm64 (`macos-14`), verifies it where it was built, smoke-tests each on clean
+   machines (almalinux:9, ubuntu:22.04, debian:bullseye-slim, macOS 14 and 15) and
+   attaches binaries, tarballs and one checksums file. `workflow_dispatch` with `tag`
+   rebuilds a release's assets; without `tag` it is a probe run that keeps the results
+   as Actions artifacts.
 
 The Python bump runs before the release commit on purpose:
 `commit_files_after_release = python/locale_simple.py` folds it into that commit.

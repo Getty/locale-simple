@@ -70,9 +70,10 @@ name). A missing or broken header falls back to `n != 1` with one
 
 ## Compiling .po → .mo
 
-The package only reads `.mo`: `msgfmt myapp.po -o myapp.mo`. The Perl
-`locale_simple_scraper` scans `.php` files (heredoc/nowdoc and
-namespace-qualified calls included) for the extraction step.
+The package only reads `.mo`: `msgfmt myapp.po -o myapp.mo`. `locale-simple scrape`
+scans `.php` files (heredoc/nowdoc and namespace-qualified calls included) for
+the extraction step. `locale-simple` comes from the
+[release binary](https://github.com/Getty/locale-simple#binary-no-perl-needed) (no Perl needed) or `cpanm Locale::Simple`.
 
 ## Common mistakes
 

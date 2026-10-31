@@ -20,8 +20,9 @@ everywhere.
 - **Same API across languages.** A function called `lnp` in Python behaves
   identically in the other five runtimes. No mental context switch when
   jumping between server, CLI tool and frontend.
-- **One `.po` file for everything.** One scraper reads the sources of all six
-  languages, so one translation bundle covers the whole stack.
+- **One `.po` file for everything.** One scraper (`locale-simple scrape`)
+  reads the sources of all six languages, so one translation bundle covers
+  the whole stack.
 - **`sprintf` baked in.** Both classic (`%s`) and positional (`%1$s`)
   placeholders — exactly like Perl's `sprintf` and gettext's `xgettext`
   format strings expect, `%b` and the `'` pad flag (`%'*8s`) included.
@@ -55,6 +56,18 @@ print(ln("You have %d message", "You have %d messages", 5))
 
 print(lp("button", "Open"))           # context-disambiguated
 print(ld("emails", "Welcome, %s", name))  # explicit domain
+```
+
+## Extracting msgids
+
+`locale-simple scrape` walks your sources (`.py` next to the other five
+languages) and writes the `.pot` template to STDOUT. Get `locale-simple` as a
+standalone binary from the
+[GitHub release](https://github.com/Getty/locale-simple#binary-no-perl-needed)
+(no Perl needed) or with `cpanm Locale::Simple`:
+
+```bash
+locale-simple scrape --ignore venv > messages.pot
 ```
 
 ## API at a glance

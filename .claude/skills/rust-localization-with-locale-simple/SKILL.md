@@ -69,8 +69,10 @@ Missing sprintf arguments leave the placeholder unchanged.
 
 ## Compiling .po → .mo
 
-`msgfmt myapp.po -o myapp.mo`. The Perl `locale_simple_scraper` scans `.rs`
+`msgfmt myapp.po -o myapp.mo`. `locale-simple scrape` scans `.rs`
 files (the macros with round brackets, `"..."` and raw strings) for extraction.
+`locale-simple` comes from the [release binary](https://github.com/Getty/locale-simple#binary-no-perl-needed) (no Perl needed) or
+`cpanm Locale::Simple`.
 
 ## Common mistakes
 

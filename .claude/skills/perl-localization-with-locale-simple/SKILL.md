@@ -79,10 +79,11 @@ l_dir(dist_dir('MyApp') . '/locale');
 
 ## Extracting msgids from source
 
-Run the scraper shipped with the distribution:
+Run the scraper shipped with the distribution (the dist installs the
+`locale-simple` command; `locale_simple_scraper` keeps working under its name):
 
 ```bash
-locale_simple_scraper \
+locale-simple scrape \
     --ignore node_modules --ignore .build --ignore local \
     > po/myapp.pot
 ```
