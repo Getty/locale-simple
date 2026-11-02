@@ -173,8 +173,8 @@ listed by `locale-simple scrape --help`. The exit code is `0`, also when the
 parser reports problems in a source file, `1` when the scrape itself fails and
 `2` for a bad call (unknown option, unknown `--output` format).
 
-`locale_simple_scraper` takes the same options and remains available under
-its name.
+`locale_simple_scraper` is a deprecated alias with the same options; it
+prints a deprecation notice on STDERR.
 
 ### `locale-simple po2json`
 
@@ -204,10 +204,10 @@ ltd('myapp');
 l_lang('de_DE');
 ```
 
-The `po2json FILE` command remains as well and writes the bare data without
-the domain wrapper; hand it to `loadLocaleData` as `{ myapp: data }`.
-`po2json -p FILE` writes it indented and wrapped in the file name as the
-domain.
+The older `po2json` command is deprecated and prints a notice on STDERR.
+`po2json -p FILE` writes the same as `locale-simple po2json --pretty FILE`;
+plain `po2json FILE` writes the data without the domain wrapper, which no
+`locale-simple po2json` call reproduces.
 
 ### Binary (no Perl needed)
 

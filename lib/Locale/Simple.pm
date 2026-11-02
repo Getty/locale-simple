@@ -441,21 +441,25 @@ request time, when the language is already known.
 
 =head1 STRING EXTRACTION
 
-The distribution ships C<bin/locale_simple_scraper>, a static-analysis tool
-that walks your source tree and writes a C<.pot> template. It understands
-C<.pl>, C<.pm>, C<.t>, C<.py>, C<.js>, C<.php>, C<.go>, C<.rs> and C<.tx>
-files, so one extraction run covers a polyglot project.
+The distribution ships the L<locale-simple> command. C<locale-simple scrape>
+is a static-analysis tool that walks your source tree and writes a C<.pot>
+template. It understands C<.pl>, C<.pm>, C<.t>, C<.py>, C<.js>, C<.php>,
+C<.go>, C<.rs> and C<.tx> files, so one extraction run covers a polyglot
+project.
 
-  locale_simple_scraper --ignore node_modules --ignore build \
-                        > po/myapp.pot
+  locale-simple scrape --ignore node_modules --ignore build \
+                       > po/myapp.pot
 
 See L<Locale::Simple::Scraper> for the programmatic interface and supported
 options.
 
-C<bin/po2json> converts a C<.po> file into the JSON the JavaScript package
-loads with C<loadLocaleData>:
+C<locale-simple po2json> converts a C<.po> file into the JSON the JavaScript
+package loads with C<loadLocaleData>:
 
-  po2json share/locale/de_DE/LC_MESSAGES/myapp.po > myapp.de_DE.json
+  locale-simple po2json share/locale/de_DE/LC_MESSAGES/myapp.po > myapp.de_DE.json
+
+The older commands C<locale_simple_scraper> and C<po2json> still work but are
+deprecated.
 
 =head1 SEE ALSO
 

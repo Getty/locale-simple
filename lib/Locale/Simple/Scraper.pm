@@ -275,7 +275,7 @@ C<l()>/C<ln()>/C<lp()>/C<lnp()>/C<ld()>/C<ldn()>/C<ldp()>/C<ldnp()> call
 it can resolve statically, and writes a C<.pot> (gettext template) or one
 of a few alternative output formats.
 
-Usually invoked through C<bin/locale_simple_scraper>; the C<scrape>
+Usually invoked through C<locale-simple scrape>; the C<scrape>
 function is exported so build tools can drive it directly.
 
 =head1 EXPORTED FUNCTIONS

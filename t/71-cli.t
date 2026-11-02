@@ -97,6 +97,88 @@ like $err, qr/Cannot read PO file/, 'bin/po2json message';
 ( $out, undef, $rc ) = capture { system $^X, '-I' . path('lib')->absolute, path('bin/locale-simple')->absolute, '--version' };
 like $out, qr/^locale-simple /, 'bin/locale-simple runs';
 
+# --- deprecation notices of the two legacy commands
+my $n_scraper = "locale_simple_scraper is deprecated, use: locale-simple scrape\n";
+my $n_pretty  = "po2json is deprecated, use: locale-simple po2json --pretty FILE.po\n";
+my $n_plain   = "po2json is deprecated, use: locale-simple po2json FILE.po (no exact equivalent: it wraps the data as { \"FILE\": ... })\n";
+my $run = sub {
+    my ( $script, @args ) = @_;
+    my ( $o, $e ) = capture { system $^X, '-Ilib', "bin/$script", @args };
+    return ( $o, $e, $? >> 8 );
+};
+my $notice_count = sub { my ( $e, $n ) = @_; my $c = () = $e =~ /\Q$n\E/g; $c };
+
+{
+    my ( $lib, $bin ) = ( path('lib')->absolute, path('bin/locale_simple_scraper')->absolute );
+    my $g = pushd('t/data/n-fixtures');
+    my ( $o, $e ) = capture { system $^X, "-I$lib", $bin, '--only', 'N-calls\.pl' };
+    my $x = $? >> 8;
+    is $x, 0, 'bin/locale_simple_scraper run exits 0';
+    like $o, qr/^msgid "/m, 'bin/locale_simple_scraper run still prints the template';
+    unlike $o, qr/deprecated/, 'bin/locale_simple_scraper run: no notice on STDOUT';
+    is( ( split /^/, $e )[0], $n_scraper, 'bin/locale_simple_scraper run: the notice is the first STDERR line' );
+    is $notice_count->( $e, $n_scraper ), 1, 'bin/locale_simple_scraper run: the notice appears once';
+}
+for my $args ( [ '--help' ], [ '--bogus' ] ) {
+    ( $out, $err, $rc ) = $run->( 'locale_simple_scraper', @{$args} );
+    is( ( split /^/, $err )[0], $n_scraper, "bin/locale_simple_scraper @{$args}: the notice is the first STDERR line" );
+    is $notice_count->( $err, $n_scraper ), 1, "bin/locale_simple_scraper @{$args}: the notice appears once";
+    unlike $out, qr/deprecated/, "bin/locale_simple_scraper @{$args}: no notice on STDOUT";
+}
+like $err, qr/Unknown option: bogus.*Usage: locale-simple scrape/s, 'bin/locale_simple_scraper --bogus: the usage follows the notice';
+
+( $out, $err, $rc ) = $run->( 'po2json', $po );
+is $rc, 0, 'bin/po2json FILE exits 0';
+is( ( split /^/, $err )[0], $n_plain, 'bin/po2json FILE: the plain notice is the first STDERR line' );
+is $err, $n_plain, 'bin/po2json FILE: the notice is all of STDERR, once';
+unlike $out, qr/deprecated/, 'bin/po2json FILE: no notice on STDOUT';
+ok eval { decode_json($out); 1 }, 'bin/po2json FILE: STDOUT is still JSON';
+is $out, data2json( po2data($po) ) . "\n", 'bin/po2json FILE: STDOUT unchanged';
+
+( $out, $err, $rc ) = $run->( 'po2json', '-p', $po );
+my $pretty_out = $out;
+is $rc, 0, 'bin/po2json -p FILE exits 0';
+is $err, $n_pretty, 'bin/po2json -p FILE: the --pretty notice is all of STDERR, once';
+ok eval { decode_json($out); 1 }, 'bin/po2json -p FILE: STDOUT is still JSON';
+is $out, data2json( po2data( $po, domain => 'test' ), pretty => 1 ) . "\n", 'bin/po2json -p FILE: STDOUT unchanged';
+( my $new_pretty ) = capture { Locale::Simple::CLI::run( 'po2json', '--pretty', $po ) };
+is $pretty_out, $new_pretty, 'po2json -p FILE and locale-simple po2json --pretty FILE write the same bytes';
+
+( $out, $err, $rc ) = $run->( 'po2json', '-p', '-h' );
+is $rc, 1, 'bin/po2json -p -h exits 1';
+is( ( split /^/, $err )[0], $n_pretty, 'bin/po2json -p -h: the --pretty notice comes first' );
+is $notice_count->( $err, $n_pretty ), 1, 'bin/po2json -p -h: the notice appears once';
+
+for my $args ( [ '-h' ], [ '--help' ], [], [ $po, $po ], [ 'nope.po' ] ) {
+    my $name = join ' ', 'bin/po2json', @{$args} ? map { $_ eq $po ? 'FILE' : $_ } @{$args} : '(no args)';
+    ( $out, $err, $rc ) = $run->( 'po2json', @{$args} );
+    is $rc, 1, "$name exits 1";
+    is( ( split /^/, $err )[0], $n_plain, "$name: the plain notice is the first STDERR line" );
+    is $notice_count->( $err, $n_plain ), 1, "$name: the notice appears once";
+    is $notice_count->( $err, $n_pretty ), 0, "$name: no --pretty notice";
+    unlike $out, qr/deprecated/, "$name: no notice on STDOUT";
+}
+like $err, qr/Cannot read PO file/, 'bin/po2json nope.po: the reason follows the notice';
+
+# the new command is silent about deprecation
+( undef, $err ) = capture { Locale::Simple::CLI::run( 'po2json', $po ) };
+unlike $err, qr/deprecated/i, 'run(po2json) prints no deprecation notice';
+( undef, $err ) = capture { Locale::Simple::CLI::run( 'po2json', '--pretty', $po ) };
+unlike $err, qr/deprecated/i, 'run(po2json --pretty) prints no deprecation notice';
+( undef, $err ) = capture { Locale::Simple::CLI::run( 'scrape', '--help' ) };
+unlike $err, qr/deprecated/i, 'run(scrape --help) prints no deprecation notice';
+{
+    my $g = pushd('t/data/n-fixtures');
+    ( undef, $err ) = capture { Locale::Simple::CLI::run( 'scrape', '--only', 'N-calls\.pl' ) };
+    unlike $err, qr/deprecated/i, 'run(scrape) prints no deprecation notice';
+}
+my $cmd = sub { my @a = @_; capture { system $^X, '-I' . path('lib')->absolute, path('bin/locale-simple')->absolute, @a } };
+( undef, $err ) = $cmd->( 'scrape', '--help' );
+unlike $err, qr/deprecated/i, 'bin/locale-simple scrape --help prints no deprecation notice';
+( $out, $err ) = $cmd->( 'po2json', $po );
+unlike $err, qr/deprecated/i, 'bin/locale-simple po2json FILE prints no deprecation notice';
+ok exists decode_json($out)->{test}, 'bin/locale-simple po2json FILE still writes the data';
+
 {
     my $g = pushd('t/data/n-fixtures');
     ( $out, undef, $rc ) = capture { Locale::Simple::CLI::run( 'scrape', '--output', 'json', '--only', 'N-calls\.pl' ) };

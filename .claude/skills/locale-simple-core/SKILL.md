@@ -38,7 +38,7 @@ the full parity table and the accepted asymmetries are `.claude/rules/language-p
 | `lib/Locale/Simple.pm` | Perl implementation and the exported helpers |
 | `lib/Locale/Simple/Scraper.pm`, `Scraper/Parser.pm`, `Scraper/ParserShortcuts.pm` | the source scraper on `Parser::MGC` |
 | `bin/locale-simple` | the `locale-simple` command (`Locale::Simple::CLI`), holds the POD of every subcommand |
-| `bin/locale_simple_scraper`, `bin/po2json` | the older commands: `.pot` extraction, `.po` → JSON for JavaScript |
+| `bin/locale_simple_scraper`, `bin/po2json` | the deprecated older commands: one notice line on STDERR, otherwise unchanged. Use `locale-simple scrape` (same options) and `locale-simple po2json` (`--pretty` = `po2json -p`; plain `po2json`, without domain wrapper, has no equivalent) |
 | `lib/Locale/Simple/CLI.pm` | `run(@argv)` of the `locale-simple` command: `scrape`, `po2json`, `help` |
 | `lib/Locale/Simple/PO2JSON.pm` | `po2data` / `data2json`: the `.po` → JSON conversion, on `JSON::PP` |
 | `python/` | `locale_simple.py`, `test.py`, `pyproject.toml`, `LICENSE` |

@@ -79,8 +79,8 @@ l_dir(dist_dir('MyApp') . '/locale');
 
 ## Extracting msgids from source
 
-Run the scraper shipped with the distribution (the dist installs the
-`locale-simple` command; `locale_simple_scraper` keeps working under its name):
+Run the scraper shipped with the distribution, the `locale-simple` command
+(`locale_simple_scraper` is a deprecated alias):
 
 ```bash
 locale-simple scrape \

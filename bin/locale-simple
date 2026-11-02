@@ -35,7 +35,7 @@ Finds the C<l()> family of calls in the Perl, Python, JavaScript, PHP, Go,
 Rust and Text::Xslate sources below the current directory and writes the
 result to STDOUT, a C<.pot> template by default. Parse problems are reported
 on STDERR and do not change the exit code. The options are the ones of
-L<locale_simple_scraper> (C<locale-simple scrape --help> lists them):
+L<Locale::Simple::Scraper> (C<locale-simple scrape --help> lists them):
 
 =over 4
 

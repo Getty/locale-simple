@@ -5,6 +5,10 @@ our $VERSION = '0.200';
 
 =head1 SYNOPSIS
 
+B<Deprecated:> use C<locale-simple scrape> (L<locale-simple>) instead, the
+same scraper with the same options. Every call prints a deprecation notice on
+STDERR; the output and the exit codes are unchanged.
+
   # ignoring specific regexps for the filename
   # please be aware that you must escape the . and because we use bash here you
   # must also be aware to escape the \ for escaping the .
@@ -64,6 +68,8 @@ use strict;
 use warnings;
 
 use Locale::Simple::Scraper 'scrape';
+
+print STDERR "locale_simple_scraper is deprecated, use: locale-simple scrape\n";
 
 eval { scrape(@ARGV); 1 } or do {
     my $err = $@;

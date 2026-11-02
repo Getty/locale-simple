@@ -11,7 +11,9 @@ Revision history for Locale-Simple
     writes po, perl and json everywhere; --output yaml needs the Perl
     install with the YAML module.
   - Scraper command: locale-simple scrape and locale_simple_scraper are the
-    same scraper (bin/locale_simple_scraper_old is removed). --help (and
+    same scraper (bin/locale_simple_scraper_old is removed);
+    locale_simple_scraper is deprecated and prints one notice on STDERR
+    naming locale-simple scrape, output and exit codes unchanged. --help (and
     -h) prints the options; an unknown option, a stray argument or an
     unknown --output format ends with the usage on STDERR and exit code 2,
     nothing on STDOUT. --output json goes through JSON::PP with sorted keys
@@ -24,7 +26,10 @@ Revision history for Locale-Simple
     line joined (msgid "a" "b" is "ab"), indented comment lines accepted.
     Header values are trimmed, the header carries lang, keys come in a
     fixed order. bin/po2json uses it: po2json FILE, po2json -p FILE for
-    indented output wrapped in the file name as domain.
+    indented output wrapped in the file name as domain. bin/po2json is
+    deprecated and prints one notice on STDERR naming the replacement,
+    output and exit codes unchanged: locale-simple po2json --pretty FILE
+    for -p; plain po2json FILE has no locale-simple equivalent.
   - Scraper: recognise PHP (.php, --php), Go (.go, --go) and Rust (.rs,
     --rs) sources besides Perl, Python, JavaScript and .tx templates. PHP:
     heredoc, nowdoc and namespace-qualified calls. Go: the capitalised

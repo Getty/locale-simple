@@ -17,6 +17,12 @@ if ( @ARGV and $ARGV[0] eq '-p' ) {
     shift @ARGV;
     $pretty = 1;
 }
+# Deprecated: one line on STDERR, STDOUT stays the clean JSON. Only -p has an
+# exact replacement; the plain form has none, the notice says what differs.
+my $instead = $pretty
+  ? 'locale-simple po2json --pretty FILE.po'
+  : 'locale-simple po2json FILE.po (no exact equivalent: it wraps the data as { "FILE": ... })';
+print STDERR 'po2json is deprecated, use: ' . $instead . "\n";
 if ( !@ARGV or $ARGV[0] =~ /^(?:-h|--help)$/ or @ARGV > 1 ) {
     print STDERR $usage;
     exit 1;
@@ -39,6 +45,13 @@ __END__
 =encoding utf8
 
 =head1 SYNOPSIS
+
+B<Deprecated:> use L<locale-simple> instead. C<locale-simple po2json --pretty
+FILE.po> writes exactly what C<po2json -p FILE.po> writes. C<po2json FILE.po>
+has no exact equivalent: C<locale-simple po2json FILE.po> writes the same data
+wrapped as C<{ "FILE": ... }> (C<--domain NAME> sets the key), the shape the
+JavaScript C<loadLocaleData> takes. Every call prints a deprecation notice on
+STDERR; the output and the exit codes are unchanged.
 
   po2json messages.po > messages.json
   po2json -p messages.po > messages.json

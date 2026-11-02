@@ -68,7 +68,7 @@ Not drift; the parity check must not report these. Each is deliberate and has a 
   operations for per-request languages in a concurrent server. Both share one catalog
   cache with the package functions. The other runtimes have no such value.
 - **Own `.mo` reader in PHP, Go and Rust.** Perl and Python use libc gettext. JavaScript
-  reads JSON produced by `bin/po2json` and never touches `.mo` bytes, but shares the
+  reads JSON produced by `locale-simple po2json` and never touches `.mo` bytes, but shares the
   plural evaluator and the locale chain of mo-reader.md.
 - **JavaScript ends the locale chain with `''`:** a bundle loaded without a language
   answers last, before the msgid. The `.mo` runtimes have no language-less catalog.
