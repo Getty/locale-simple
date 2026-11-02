@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 # PODNAME: locale-simple
 # ABSTRACT: Scrape translation calls and convert PO files to JSON
+our $VERSION = '0.200';
 
 use strict;
 use warnings;

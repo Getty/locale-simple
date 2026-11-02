@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 # PODNAME: locale_simple_scraper
 # ABSTRACT: Command line tool for finding tokens in code
+our $VERSION = '0.200';
 
 =head1 SYNOPSIS
 

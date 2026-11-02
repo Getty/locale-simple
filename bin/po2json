@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 # PODNAME: po2json
 # ABSTRACT: Convert a PO file to the JSON data for Locale::Simple in the browser
+our $VERSION = '0.200';
 
 use strict;
 use warnings;
