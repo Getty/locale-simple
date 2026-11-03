@@ -1,0 +1,21 @@
+---
+class: standard
+created: 2026-11-03T20:24:49Z
+id: 29
+priority: high
+status: backlog
+tags:
+- binary
+- ci
+title: 'release-binaries.yml: macos-14 runner retired 2026-11-02 — the macOS build
+  and smoke legs cannot start'
+updated: 2026-11-03T20:24:49Z
+---
+
+Found from p5-mcp-wiki (binary release design, 2026-11-03). GitHub retired the macos-14 runner image on 2026-11-02; .github/workflows/release-binaries.yml still names it in the build matrix (runner: macos-14, ~line 41) and in the smoke matrix (~line 158). The next release run fails on the macOS legs, so the release gets no macos-arm64 binary.
+
+Current arm64 labels: macos-15, macos-26 (= macos-latest). Pinning macos-15 for build and macos-26 for the extra smoke cell keeps a build and a different-generation smoke.
+
+Related, not urgent: the Linux legs build in perl:5.40-bullseye; Debian bullseye left LTS on 2026-08-31. The shared skill perl-par-binary-release names the same two (macos-14, bullseye); it is being updated in Getty/skills. The planned bundle form ([@Author::GETTY] binary = ..., spec ~/dev/p5-mcp-wiki/docs/superpowers/specs/2026-11-03-binary-release-design.md) builds its own no-crypt perl on almalinux:8; moving locale-simple onto it is a later, separate decision — not this card.
+
+Lane: locale-simple-binary-worker.
