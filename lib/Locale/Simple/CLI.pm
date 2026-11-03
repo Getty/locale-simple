@@ -1,6 +1,6 @@
 package Locale::Simple::CLI;
 # ABSTRACT: Command line interface behind the locale-simple command
-our $VERSION = '0.200';
+our $VERSION = '0.201';
 
 use strict;
 use warnings;

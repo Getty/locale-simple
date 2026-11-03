@@ -1,6 +1,6 @@
 package Locale::Simple::PO2JSON;
 # ABSTRACT: Convert a gettext PO file to the JSON data Locale::Simple reads in the browser
-our $VERSION = '0.200';
+our $VERSION = '0.201';
 
 use strict;
 use warnings;

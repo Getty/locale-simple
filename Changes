@@ -1,5 +1,7 @@
 Revision history for Locale-Simple
 
+{{$NEXT}}
+
 0.200     2026-11-03 00:08:19Z
   - New command locale-simple with the subcommands scrape and po2json
     (locale-simple help lists them; --version prints the version). It exits

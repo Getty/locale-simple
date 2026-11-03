@@ -1,6 +1,6 @@
 package Locale::Simple;
 # ABSTRACT: Short gettext helpers with one API for Perl, Python, JavaScript, PHP, Go and Rust
-our $VERSION = '0.200';
+our $VERSION = '0.201';
 use strict;
 use warnings;
 
