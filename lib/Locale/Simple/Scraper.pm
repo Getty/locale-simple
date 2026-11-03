@@ -206,6 +206,7 @@ sub scrape {
         }
     }
     elsif ( $output eq 'perl' ) {
+        local $Data::Dumper::Sortkeys = 1;
         print Dumper \@found;
     }
     elsif ( $output eq 'json' ) {
@@ -315,7 +316,7 @@ Repeatable; combines with C<--ignore>.
 
 =item C<--output=FORMAT>
 
-Output format — C<po> (default), C<perl> (L<Data::Dumper>),
+Output format — C<po> (default), C<perl> (L<Data::Dumper>, keys sorted),
 C<json> (through L<JSON::PP>, keys sorted) or C<yaml> (needs the optional
 L<YAML> module).
 

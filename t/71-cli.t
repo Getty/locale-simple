@@ -208,4 +208,39 @@ ok exists decode_json($out)->{test}, 'bin/locale-simple po2json FILE still write
     is $out, '', 'nothing on STDOUT';
 }
 
+# --- scrape --output perl is byte-stable: the keys of every entry are sorted,
+# whatever Perl's hash order is. The entries are compared as text, not eval'd.
+{
+    my @seeds = ( 1 .. 6 );
+    my $lib   = path('lib')->absolute;
+    my $bin   = path('bin/locale-simple')->absolute;
+    my $with_seed = sub {
+        my ( $seed, @cmd ) = @_;
+        local $ENV{PERL_HASH_SEED}    = $seed;
+        return scalar capture { system $^X, @cmd };
+    };
+
+    # precondition: these seeds really do change Perl's key order here, so a
+    # missing Sortkeys cannot go unnoticed
+    my %orders = map { $_ => 1 }
+      map { $with_seed->( $_, '-e', 'my %h = map { $_ => 1 } qw( msgid line file type domain msgctxt ); print join ",", keys %h' ) } @seeds;
+    cmp_ok scalar keys %orders, '>', 1, 'PERL_HASH_SEED changes the hash order of the test seeds';
+
+    my $g = pushd('t/data/n-fixtures');
+    my %out = map { $_ => $with_seed->( $_, "-I$lib", $bin, 'scrape', '--output', 'perl', '--only', 'N-calls\.pl' ) } @seeds;
+    like $out{ $seeds[0] }, qr/^\$VAR1 = \[/, 'scrape --output perl prints a Data::Dumper array';
+    my %bytes = map { $_ => 1 } values %out;
+    is scalar keys %bytes, 1, 'scrape --output perl is byte-identical across PERL_HASH_SEED values';
+
+    my @entries = split /^ {10}\{\n/m, $out{ $seeds[0] };
+    shift @entries;
+    cmp_ok scalar @entries, '>', 1, 'the fixture yields several entries';
+    my $unsorted = grep {
+        my @keys = /^ {12}'([^']+)' =>/mg;
+        "@keys" ne join ' ', sort @keys;
+    } @entries;
+    is $unsorted, 0, 'the keys of every entry are sorted';
+    ok scalar( grep { ( () = /^ {12}'[^']+' =>/mg ) > 2 } @entries ), 'some entry has several keys, so the order check means something';
+}
+
 done_testing;

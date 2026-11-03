@@ -17,8 +17,9 @@ Revision history for Locale-Simple
     -h) prints the options; an unknown option, a stray argument or an
     unknown --output format ends with the usage on STDERR and exit code 2,
     nothing on STDOUT. --output json goes through JSON::PP with sorted keys
-    and UTF-8 msgids as they stand in the source; --output yaml uses the
-    optional YAML module (recommended in the cpanfile).
+    and UTF-8 msgids as they stand in the source; --output perl sorts the
+    keys too; --output yaml uses the optional YAML module (recommended in
+    the cpanfile).
   - po2json is own code (Locale::Simple::PO2JSON, with po2data() and
     data2json()) and needs only JSON::PP. It selects entries like msgfmt:
     no untranslated, fuzzy or obsolete ones, any number of plural forms,
