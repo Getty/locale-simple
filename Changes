@@ -6,7 +6,7 @@ Revision history for Locale-Simple
   - The scraper reads on after a call whose arguments do not parse on perl
     5.32 too; there such a call used to end the scrape of its file.
   - On a perl with a 32-bit IV, b, o, u, x and X show a negative number as
-    unsigned 64-bit, as on a 64-bit perl and in the other five packages.
+    unsigned 64-bit, as on a 64-bit perl.
   - l_lang judges each attempt to set LC_MESSAGES (the language, then
     C.UTF-8, then en_US.UTF-8) by the messages locale it leaves, and goes on
     while that is still C. The tests that need a translation skip, with the
