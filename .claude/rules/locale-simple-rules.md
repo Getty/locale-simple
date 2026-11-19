@@ -17,12 +17,20 @@ helpers of every runtime you touch.
 
 | Task | Agent |
 |---|---|
-| Implement / refactor / debug the Perl, Python or JavaScript runtime, the scraper, the Perl code of the commands (`Locale::Simple::CLI`, `bin/*`) | `locale-simple-worker` (default) |
-| The PHP, Go or Rust port | `locale-simple-php-worker`, `locale-simple-go-worker`, `locale-simple-rust-worker` |
-| The standalone binary (packing `bin/locale-simple` with PAR, shipping it, `scripts/*binary*`, `release-binaries.yml`) | `locale-simple-binary-worker` |
-| Write and extend the tests of the six suites | `locale-simple-test-writer` |
+| Perl runtime, the scraper (reads all six languages), `Locale::Simple::CLI`, `PO2JSON`, Perl code of `bin/*` | `locale-simple-worker` (default) |
+| Python port: `python/`, the Python bump and build path | `locale-simple-python-worker` |
+| JavaScript port: `js/`, `publish-js.yml` | `locale-simple-js-worker` |
+| PHP, Go or Rust port | `locale-simple-php-worker`, `locale-simple-go-worker`, `locale-simple-rust-worker` |
+| The standalone binary (PAR, `scripts/*binary*`, `release-binaries.yml`) | `locale-simple-binary-worker` |
+| Tests of the six suites, `.github/workflows/test.yml` | `locale-simple-test-writer` |
+| `README.md`, per-language READMEs, POD prose, the six usage skills | `locale-simple-doc-writer` |
+| Review of a diff — spec, parity, quality (read-only) | `locale-simple-reviewer` |
 | Commits, `Changes`, card → done, pre-release audit | `locale-simple-release-manager` |
 | Read-only research, audit, gap analysis | `locale-simple-worker` ("read-only, change nothing") |
+
+Each lane has exactly one owner; the `publish-rust.yml` workflow belongs to
+`locale-simple-rust-worker`. `dist.ini`, `xbin/` and `.gitattributes` are the
+release-manager's to audit; a change needed there goes to the main agent as a note.
 
 Behavior-relevant = runtime behavior, the public helper API of the six packages, the
 scraper's output, the tests. Pure prose docs and `Changes` notes are not. The lane split
@@ -38,10 +46,12 @@ audit goes through `locale-simple-release-manager`, which reports and never rele
 `bugs` fields of all six packages point at the GitHub issues, so every issue is visible to
 every consumer.
 
-## Deviations from the house rules
+## Hazards
 
-- **No new card for a finding outside the current card** — write it as a note on the card
-  in hand.
+- **A finding outside the current card is a note on the card in hand,** not a new card.
+- **Nobody but the release-manager commits;** the reviewer changes nothing at all.
+- **A new lane gets one agent and one row here;** a file with two owners is a bug in
+  this table.
 
 ## Runtime specifics — reference, don't restate
 

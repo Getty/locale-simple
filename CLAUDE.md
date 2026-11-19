@@ -26,12 +26,16 @@ yourself — the principle is a shared house rule (skilletor bundle
 
 | Task | Agent |
 |---|---|
-| Implement / refactor / debug the Perl, Python or JavaScript runtime, the scraper, the Perl code of the commands (`Locale::Simple::CLI`, `bin/*`) | `locale-simple-worker` (default) |
+| Implement / refactor / debug the Perl runtime, the scraper (it reads all six languages), the Perl code of the commands (`Locale::Simple::CLI`, `PO2JSON`, `bin/*`) | `locale-simple-worker` (default) |
+| The Python port (`python/`, the Python bump and build path) | `locale-simple-python-worker` |
+| The JavaScript port (`js/`, `publish-js.yml`) | `locale-simple-js-worker` |
 | The PHP port (`php/`, `composer.json`) | `locale-simple-php-worker` |
 | The Go port (`go/`, `go.mod`) | `locale-simple-go-worker` |
 | The Rust port (`rust/`) | `locale-simple-rust-worker` |
 | The standalone binary (packing `bin/locale-simple` with PAR, shipping it, `scripts/*binary*`, `release-binaries.yml`) | `locale-simple-binary-worker` |
-| Write/extend the tests of the six suites | `locale-simple-test-writer` |
+| Write/extend the tests of the six suites, `test.yml` | `locale-simple-test-writer` |
+| READMEs, POD prose, the six usage skills `*-localization-with-locale-simple` | `locale-simple-doc-writer` |
+| Review a diff against brief, parity and house rules (read-only) | `locale-simple-reviewer` |
 | Commits, `Changes`, card → done, pre-release audit | `locale-simple-release-manager` |
 
 The agents carry their skills via `briefing.skills` (see `.claude/agents/`); the

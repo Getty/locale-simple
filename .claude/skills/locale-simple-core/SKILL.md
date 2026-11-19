@@ -166,7 +166,11 @@ The quirks that carry weight:
 `.claude/skills/{perl,python,js,php,go,rust}-localization-with-locale-simple` are
 skills for *consumers* of locale-simple; other projects install them from here with
 skilletor. A change to the public API updates the implementation and these six skills
-together.
+together; `locale-simple-doc-writer` owns them.
+
+## Lanes
+
+One owner per file; the lane table is in `.claude/rules/locale-simple-rules.md`.
 
 ## References
 
