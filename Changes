@@ -5,6 +5,8 @@ Revision history for Locale-Simple
     and 26; GitHub retired the macOS 14 runner.
   - The scraper reads on after a call whose arguments do not parse on perl
     5.32 too; there such a call used to end the scrape of its file.
+  - On a perl with a 32-bit IV, b, o, u, x and X show a negative number as
+    unsigned 64-bit, as on a 64-bit perl and in the other five packages.
 
 0.200     2026-11-03 00:08:19Z
   - New command locale-simple with the subcommands scrape and po2json

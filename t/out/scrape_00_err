@@ -969,6 +969,13 @@ pl => /t/23-locale-simple-c-locale.t
 - discarded COUNT characters of noise
 pl => /t/24-l-lang-without-lc-messages.t
 - discarded COUNT characters of noise
+pl => /t/25-sprintf-small-iv.t
+- discarded COUNT characters of noise
+- found func l at line LINE
+- Expected "(":
+ |my $translate = \&l;
+ |-------------------^
+- discarded COUNT characters of noise
 pl => /t/25-sprintf.t
 - discarded COUNT characters of noise
 - found func l at line LINE

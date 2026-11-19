@@ -116,6 +116,14 @@ sub _placeholder {
 	my $tail = ( defined $precision ? '.'.$precision : '' ).$conversion;
 	my $pad;
 	$pad = $1 while $flags =~ s/'(.)//s;
+	if ( $conversion =~ /[bouxX]/ && _ivsize() < 8 ) {
+		# Numify a copy: CORE::sprintf below still gets the untouched argument
+		# and warns about a string that is not a number as it always did.
+		my $value = $values[-1];
+		my $number = do { no warnings qw( numeric uninitialized ); int( 0 + $value ) };
+		return _unsigned64( $number, $flags, $pad, $width, $precision, $conversion, @values[ 0 .. $#values - 1 ] )
+			if $number < 0 && $number != -9**9**9;
+	}
 	return CORE::sprintf( '%'.$flags.( defined $width ? $width : '' ).$tail, @values )
 		unless defined $pad && defined $width;
 	# '<char>: the formatted value is filled up to the width with that character.
@@ -126,6 +134,51 @@ sub _placeholder {
 	my $fill = abs($size) - length $body;
 	return $body if $fill <= 0;
 	return $left ? $body.( $pad x $fill ) : ( $pad x $fill ).$body;
+}
+
+# The IV size of this perl: pack j is a Perl IV (no Config_heavy.pl to load).
+# b o u x X show a negative number as unsigned 64-bit (mo-reader.md §5);
+# CORE::sprintf does that only with an IV of 8 bytes and shows 32 bits with
+# one of 4. t/25-sprintf-small-iv.t answers 4 here to run that path on a
+# 64-bit perl.
+sub _ivsize { length pack 'j', 0 }
+
+# A negative $number under b o u x X where the IV is too small: formats
+# 2**64 + $number (-2**63 below that, as a 64-bit perl takes it) the way
+# CORE::sprintf of a 64-bit perl does. The precision is the minimum digit
+# count and turns 0 off, # sets the prefix 0, 0x, 0X or 0b, + and space do
+# nothing, and the width fills with the '<char> pad, with zeros or spaces.
+sub _unsigned64 {
+	my ( $number, $flags, $pad, $width, $precision, $conversion, @stars ) = @_;
+	no warnings qw( numeric uninitialized );
+	$width = int shift @stars if defined $width && $width eq '*';
+	$precision = int shift @stars if defined $precision && $precision eq '*';
+	$precision = undef if defined $precision && $precision < 0;
+	# require, not use: only this rare path of a perl with a 4-byte IV needs
+	# Math::BigInt, every other caller never loads it.
+	require Math::BigInt;
+	# -$number in two halves of 32 bits, which an NV holds exactly
+	my $magnitude = $number < -2**63 ? 2**63 : -$number;
+	my $high = int( $magnitude / 2**32 );
+	my $value = Math::BigInt->new('18446744073709551616')
+		->bsub( Math::BigInt->new($high)->blsft(32)->badd( $magnitude - $high * 2**32 ) );
+	my $digits = $conversion eq 'u' ? $value->bstr
+		: $conversion eq 'o' ? substr( $value->as_oct, 1 )
+		: $conversion eq 'b' ? substr( $value->as_bin, 2 )
+		: $conversion eq 'x' ? substr( $value->as_hex, 2 )
+		: uc substr( $value->as_hex, 2 );
+	$digits = '0' x ( $precision - length $digits ).$digits
+		if defined $precision && $precision > length $digits;
+	my $prefix = $flags !~ /#/ || $conversion eq 'u' ? ''
+		: $conversion eq 'o' ? ( $digits =~ /^0/ ? '' : '0' )
+		: '0'.$conversion;
+	my $body = $prefix.$digits;
+	my $fill = defined $width ? abs($width) - length $body : 0;
+	return $body if $fill <= 0;
+	return $flags =~ /-/ || $width < 0 ? $body.( ( defined $pad ? $pad : ' ' ) x $fill )
+		: defined $pad ? ( $pad x $fill ).$body
+		: $flags =~ /0/ && !defined $precision ? $prefix.( '0' x $fill ).$digits
+		: ( ' ' x $fill ).$body;
 }
 
 sub coderef_hash {{
