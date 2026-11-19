@@ -244,7 +244,7 @@ On macOS, `shasum -a 256 -c` takes the place of `sha256sum -c`.
 Linux needs glibc 2.31 or newer (Debian 11+, Ubuntu 20.04+, RHEL/Rocky/Alma 9)
 and `libcrypt.so.1` (`libcrypt`). Debian and Ubuntu always carry it; on RHEL,
 Rocky, Alma, Fedora, Amazon Linux and Arch install `libxcrypt-compat`. The
-macOS binary runs on Apple Silicon (checked on macOS 14 and 15) and needs
+macOS binary runs on Apple Silicon (checked on macOS 15 and 26) and needs
 nothing installed. It is unsigned: after a browser download clear the
 quarantine flag with `xattr -d com.apple.quarantine locale-simple` (a `curl`
 download sets no flag).

@@ -87,8 +87,8 @@ One tag publishes all six. The tag is `v%v.0` (`tag_format`), so Perl `0.200` is
    Packagist follows through its GitHub hook, the Go module proxy on the first fetch.
 5. **On the published GitHub release** — `release-binaries.yml` builds the binary for
    linux-x86_64 (container `perl:5.40-bullseye`), linux-aarch64 (same image) and
-   macos-arm64 (`macos-14`), verifies it where it was built, smoke-tests each on clean
-   machines (almalinux:9, ubuntu:22.04, debian:bullseye-slim, macOS 14 and 15) and
+   macos-arm64 (`macos-15`), verifies it where it was built, smoke-tests each on clean
+   machines (almalinux:9, ubuntu:22.04, debian:bullseye-slim, macOS 15 and 26) and
    attaches binaries, tarballs and one checksums file. `workflow_dispatch` with `tag`
    rebuilds a release's assets; without `tag` it is a probe run that keeps the results
    as Actions artifacts. A dispatch with a tag runs the workflow file from the

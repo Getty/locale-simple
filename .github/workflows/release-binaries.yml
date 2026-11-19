@@ -38,7 +38,7 @@ jobs:
             image: perl:5.40-bullseye
           - os: macos
             arch: arm64
-            runner: macos-14
+            runner: macos-15
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     # Linux builds run in the pinned bullseye image (glibc 2.31 sets the floor of the packed XS
@@ -155,8 +155,8 @@ jobs:
           - {os: linux, arch: x86_64, runner: ubuntu-latest, image: 'ubuntu:22.04'}
           - {os: linux, arch: x86_64, runner: ubuntu-latest, image: 'debian:bullseye-slim'}
           - {os: linux, arch: aarch64, runner: ubuntu-24.04-arm, image: 'almalinux:9', pkg: dnf}
-          - {os: macos, arch: arm64, runner: macos-14}
           - {os: macos, arch: arm64, runner: macos-15}
+          - {os: macos, arch: arm64, runner: macos-26}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     env:
