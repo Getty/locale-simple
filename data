@@ -1,0 +1,24 @@
+---
+claimed_at: 2026-11-19T05:01:14Z
+claimed_by: agent-team
+class: standard
+completed: 2026-11-19T05:01:14Z
+created: 2026-11-19T04:53:18Z
+id: 31
+priority: medium
+started: 2026-11-19T04:55:25Z
+status: done
+tags:
+- agents
+title: 'Agent team: own workers for Python and JavaScript, a reviewer, a doc-writer;
+  briefing per the house preset'
+updated: 2026-11-19T05:01:14Z
+---
+
+Brief: ~/dev/perl-developer/docs/locale-simple-2026-11-19/brief-agents.md. Report: same dir, report-agents.md.
+
+Decisions: no extra CI agent - workflows follow the language lanes (publish-js.yml -> js-worker, publish-rust.yml -> rust-worker, test.yml -> test-writer); a separate CI agent would own no files of its own. Commits 6c96299 d6ddb63 0146d12 on agent-team. ack-team check ok (only the pre-existing OWNERS warn), fleet-housecheck 0 errors. Live check of the new agents NOT run: the session agent list was fixed at start, the new types did not resolve. Repeat in a new session.
+
+Ready for review, see notes
+
+Merged ff into main (6c96299..22eb964), pushed. Hub live check in a fresh headless session: python-worker, js-worker, reviewer, doc-writer spawn and quote their briefed skills verbatim. Hazards reworded positively (22eb964).
