@@ -1,0 +1,27 @@
+---
+claimed_at: 2026-11-19T06:02:16Z
+claimed_by: cpantesters-0200
+class: standard
+completed: 2026-11-19T06:02:16Z
+created: 2026-11-19T04:53:13Z
+id: 30
+priority: high
+started: 2026-11-19T04:55:56Z
+status: done
+tags:
+- cpantesters
+- tests
+title: 'CPAN Testers 0.200: scraper on perl 5.32, negative %x on 4-byte IV, t/72 temp
+  paths and shell ENV, OpenBSD without LC_MESSAGES, t/71 hash-seed precondition'
+updated: 2026-11-19T06:02:16Z
+---
+
+Brief: ~/dev/perl-developer/docs/locale-simple-2026-11-19/brief-cpantesters.md. Report: same dir, report-cpantesters.md. 19 FAIL of 173 reports for 0.200; the brief lists each class with report GUIDs.
+
+Worktree cpantesters-0200 from local main 06700b9. Split: item 1 (scraper 5.32) locale-simple-worker; items 2+4 runtime (_sprintf 4-byte IV, l_lang query-judged fallbacks, POD) a second locale-simple-worker; items 3, 4 test helper, 5 locale-simple-test-writer; commits locale-simple-release-manager. Decision: the runtime worker writes the unit tests of its own seams (4-byte path, fake-setlocale l_lang test) because the seam is its design; the test-writer owns the shared t/lib skip helper and the t/71, t/72 changes. Container runs serialized: only the scraper worker runs cpanm containers.
+
+Item 1 root cause: Parser::MGC 0.23 checks caught failures with the infix isa operator from 5.32 on; on 5.32.x that leaves the ->isa method unresolvable for the class ('Can't locate object method isa'), so our call() catch (eval { $_->isa(...) }) rethrew real failures and the first failing call ended the file. Fix: UNIVERSAL::isa as a function. Red->green on perl:5.32 (t/50,52,54,55), green on 5.30, 5.34, 5.40, host. Hazard note in locale-simple-core, own section. ANDK 5.28.0 DEBUGGING SIGABRT: not addressed by this fix (no infix isa on 5.28), unproven, no such image. Item 5: old t/71 test 116 also fails in the official perl:5.30 image (seeds 1..6 give one order on 5.30.3/5.32.1/5.34.3); the hub's 5.30 PASS came from a different 5.30 build. Item 2 parity finding: below -2**63 the runtimes disagree on %x (Perl 8000000000000000, Python -3f0000000000000000, JS 0); the spec does not define that range; nothing changed.
+
+Done on cpantesters-0200: 76cd788 scraper 5.32 (UNIVERSAL::isa), 0e16f64 sprintf 4-byte IV, 459363d l_lang query + LocaleMessages skip helper, d6531bc t/71 seeds + t/72 realpath/ENV, 28f4036 Changes wording. Tarball green in perl:5.30, 5.32, 5.34, 5.40 (530 tests each); host prove -lr t/ green, also under LC_ALL=C LANG=C LOCPATH=<empty>. Reviewer verdict approve. Not run: real i686 perl (hub: bin/smoke --perl 32int), OpenBSD, NetBSD sh, perl 5.28 DEBUGGING (fix unrelated to that abort, unproven). Merges clean onto main 22eb964. Report: docs/locale-simple-2026-11-19/report-cpantesters.md in perl-developer.
+
+Merged to main 7fa48d5 and pushed. bin/smoke of main: 5.20 (min), 5.32, 5.34, 5.40, 32int, ld, quadmath all PASS. Real NetBSD, OpenBSD, macOS and Haiku confirmation comes with the next CPAN Testers round after the release.
