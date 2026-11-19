@@ -2,9 +2,9 @@ Revision history for Locale-Simple
 
 {{$NEXT}}
   - The macOS arm64 binary is built on macOS 15 and checked on macOS 15
-    and 26; GitHub retired the macOS 14 runner.
-  - The scraper reads on after a call whose arguments do not parse on perl
-    5.32 too; there such a call used to end the scrape of its file.
+    and 26.
+  - The scraper reads on after a call whose arguments do not parse, on
+    perl 5.32 as on every other perl.
   - On a perl with a 32-bit IV, b, o, u, x and X show a negative number as
     unsigned 64-bit, as on a 64-bit perl.
   - l_lang judges each attempt to set LC_MESSAGES (the language, then

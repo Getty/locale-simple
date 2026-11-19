@@ -155,16 +155,10 @@ The quirks that carry weight:
 
 ## Perl-version traps
 
-- **Test a `Parser::MGC::Failure` with `ref $e and UNIVERSAL::isa( $e, 'Parser::MGC::Failure' )`,
-  never with the `->isa` method.** The `ref` guard is there because the function also
-  answers for a plain string, as a class name: an error that is just the text
-  `Parser::MGC::Failure` would pass without it. On perl 5.32 and later, Parser::MGC 0.23 checks every
-  failure it catches with the infix `isa` operator. On 5.32.x, once that operator has run
-  on a class, `$obj->isa(...)` dies with "Can't locate object method" for that class.
-  5.34 still does this when the class already has an empty `isa` glob, and 5.40 is
-  clean. In the scraper, a method-call check made the first call whose arguments
-  fail stop the whole file (`Expected end of input`). `t/50`, `t/52`, `t/54` and `t/55`
-  show it only on a 5.32 perl.
+- **Test a `Parser::MGC::Failure` with `ref $e and UNIVERSAL::isa( $e, 'Parser::MGC::Failure' )`.**
+  On perl 5.32.x, once Parser::MGC 0.23's infix `isa` has run on a class, the `->isa`
+  method no longer resolves for it; the function form works on every perl, and `ref`
+  keeps a plain-string error out. `t/50`, `t/52`, `t/54` and `t/55` catch it on a 5.32 perl.
 
 ## House rules for this repository
 
