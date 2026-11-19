@@ -24,12 +24,13 @@ $root->child('python/dist/locale_simple-0.200-py3-none-any.whl')->spew('x');
 $root->child('python/locale_simple.py')->spew(qq{__version__ = "0.1"\n});
 
 my $twine = $root->child('fakebin/twine');
-$twine->spew("#!/bin/sh\necho \"fake twine: \$*\" >&2\nexit 1\n");
+# Both fakes also report the shell start-file variables they inherit.
+$twine->spew("#!/bin/sh\necho \"fake twine: \$*\" >&2\necho \"fake twine env: ENV=[\${ENV-unset}] BASH_ENV=[\${BASH_ENV-unset}]\" >&2\nexit 1\n");
 $twine->chmod(0755);
 
 # python stops the credential-pass cases at `python -m build`, whatever python the box has.
 my $python = $root->child('fakebin/python');
-$python->spew("#!/bin/sh\necho \"fake python: \$*\" >&2\nexit 1\n");
+$python->spew("#!/bin/sh\necho \"fake python: \$*\" >&2\necho \"fake python env: ENV=[\${ENV-unset}] BASH_ENV=[\${BASH_ENV-unset}]\" >&2\nexit 1\n");
 $python->chmod(0755);
 
 # The temp dir may be mounted noexec: run the fake once and skip when it does not answer.
@@ -40,6 +41,14 @@ $python->chmod(0755);
 }
 
 my $home   = Path::Tiny->tempdir;    # no .pypirc
+
+# A smoker's start file, like the one that sources $HOME/.cargo/env: it fails once HOME is the
+# empty temp dir. A sh that reads $ENV (NetBSD does, for every script) dies on it before the fake
+# twine or python runs; dash and bash read it for interactive shells only, so the fakes report
+# what they inherit and release() has to hand them neither ENV nor BASH_ENV.
+my $start = Path::Tiny->tempfile;
+$start->spew(qq{. "\$HOME/.cargo/env"\n});
+$ENV{ENV} = $ENV{BASH_ENV} = "$start";
 my $script = $root->child('xbin/release.pl')->stringify;
 my $path   = join $Config{path_sep}, $root->child('fakebin')->stringify, $ENV{PATH};
 
@@ -47,7 +56,7 @@ my $path   = join $Config{path_sep}, $root->child('fakebin')->stringify, $ENV{PA
 sub release {
     my ( $args, %env ) = @_;
     local %ENV = ( %ENV, HOME => "$home", PATH => $path );
-    delete @ENV{qw( TWINE_USERNAME TWINE_PASSWORD )};
+    delete @ENV{qw( TWINE_USERNAME TWINE_PASSWORD ENV BASH_ENV )};
     @ENV{ keys %env } = values %env;
     my ( $out, $err ) = capture { system $^X, $script, @{$args} };
     return ( $out, $err, $? >> 8 );
@@ -59,9 +68,15 @@ is $rc, 0, 'python-upload exits 0 although twine failed';
 like $err, qr{fake twine: upload dist/locale_simple-0\.200-py3-none-any\.whl dist/locale_simple-0\.200\.tar\.gz},
   'twine got the dist files';
 like $err, qr/PyPI upload FAILED/, 'the failure is announced on STDERR';
+# release.pl prints the resolved directory (Cwd::abs_path): /private/var/... for /var/... on
+# darwin, /boot/system/cache/tmp/... for /tmp/... on Haiku.
+my $real = $root->realpath;
 like $err,
-  qr{cd \Q$root\E && twine upload python/dist/locale_simple-0\.200-py3-none-any\.whl python/dist/locale_simple-0\.200\.tar\.gz},
+  qr{cd \Q$real\E && twine upload python/dist/locale_simple-0\.200-py3-none-any\.whl python/dist/locale_simple-0\.200\.tar\.gz},
   'the retry command names the repo root and the exact files';
+
+like $err, qr/fake twine env: ENV=\[unset\] BASH_ENV=\[unset\]/,
+  'the child sh gets no ENV or BASH_ENV start file';
 
 # python-upload with no dist files is not fatal either
 {
@@ -87,6 +102,7 @@ $home->child('.pypirc')->spew("[pypi]\nusername = __token__\npassword = pypi-SEC
 ( undef, $err ) = release( [ 'python-prep', '0.200' ] );
 unlike $err, qr/no PyPI credentials/, '~/.pypirc [pypi] password is enough';
 like $err, qr/fake python: -m build/, 'and the run went on to python -m build, which the fake stopped';
+like $err, qr/fake python env: ENV=\[unset\] BASH_ENV=\[unset\]/, 'python runs without an ENV or BASH_ENV start file';
 unlike $err, qr/SECRET/,              'no secret is printed';
 
 $home->child('.pypirc')->spew("[testpypi]\npassword = x\n");

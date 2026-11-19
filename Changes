@@ -13,6 +13,10 @@ Revision history for Locale-Simple
     reason, on a perl that cannot move LC_MESSAGES off C (OpenBSD builds with
     -DNO_LOCALE_MESSAGES); there libintl-perl 1.36 and later translates
     nothing.
+  - t/72 accepts the resolved temp directory (macOS, Haiku) and runs its
+    fake tools without the shell start files of ENV and BASH_ENV (NetBSD);
+    t/71 picks PERL_HASH_SEED values that change the key order on the running
+    perl and skips the byte-identity check, with the reason, where none does.
 
 0.200     2026-11-03 00:08:19Z
   - New command locale-simple with the subcommands scrape and po2json

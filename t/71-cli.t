@@ -212,7 +212,6 @@ ok exists decode_json($out)->{test}, 'bin/locale-simple po2json FILE still write
 # --- scrape --output perl is byte-stable: the keys of every entry are sorted,
 # whatever Perl's hash order is. The entries are compared as text, not eval'd.
 {
-    my @seeds = ( 1 .. 6 );
     my $lib   = path('lib')->absolute;
     my $bin   = path('bin/locale-simple')->absolute;
     my $with_seed = sub {
@@ -221,17 +220,36 @@ ok exists decode_json($out)->{test}, 'bin/locale-simple po2json FILE still write
         return scalar capture { system $^X, @cmd };
     };
 
-    # precondition: these seeds really do change Perl's key order here, so a
-    # missing Sortkeys cannot go unnoticed
-    my %orders = map { $_ => 1 }
-      map { $with_seed->( $_, '-e', 'my %h = map { $_ => 1 } qw( msgid line file type domain msgctxt ); print join ",", keys %h' ) } @seeds;
-    cmp_ok scalar keys %orders, '>', 1, 'PERL_HASH_SEED changes the hash order of the test seeds';
+    # Which seeds change Perl's key order depends on the perl: 5.30 to 5.34 give
+    # the same order for every short seed (1 .. 20), only long hex seeds move it,
+    # while 5.40 moves it with every seed. Probe the candidates, keep one seed per
+    # distinct order. PERL_PERTURB_KEYS stays at its default: with a seed set it is
+    # DETERMINISTIC, so a seed gives the same order on every run.
+    my @candidates = qw( 0123456789abcdef deadbeef fedcba9876543210 a1b2c3d4e5f60718 1 2 3 );
+    my ( %seen, @seeds );
+    for my $seed (@candidates) {
+        my $order = $with_seed->( $seed, '-e', 'my %h = map { $_ => 1 } qw( msgid line file type domain msgctxt ); print join ",", keys %h' );
+        # a probe that printed nothing (perl did not start, capture broke) is no order
+        is join( ',', sort split /,/, $order ), 'domain,file,line,msgctxt,msgid,type', "the hash-order probe for seed $seed read back the six keys"
+          or BAIL_OUT 'the hash-order probe printed no keys';
+        push @seeds, $seed if !$seen{$order}++ && @seeds < 4;
+    }
+    my $moves = @seeds > 1;
+    @seeds = ( $candidates[0] ) unless $moves;
+    my $no_move = 'PERL_HASH_SEED does not change the hash order on this perl ('.$^V.')';
+
+    # Report what was picked, so a smoker report shows it. Where no seed changes the
+    # order, the byte-identity check below proves nothing and is skipped.
+    note 'PERL_HASH_SEED seeds picked: '.join( ' ', @seeds ).' ('.scalar( keys %seen ).' distinct key order(s) among '.scalar(@candidates).' candidates)';
 
     my $g = pushd('t/data/n-fixtures');
     my %out = map { $_ => $with_seed->( $_, "-I$lib", $bin, 'scrape', '--output', 'perl', '--only', 'N-calls\.pl' ) } @seeds;
     like $out{ $seeds[0] }, qr/^\$VAR1 = \[/, 'scrape --output perl prints a Data::Dumper array';
     my %bytes = map { $_ => 1 } values %out;
-    is scalar keys %bytes, 1, 'scrape --output perl is byte-identical across PERL_HASH_SEED values';
+  SKIP: {
+        skip $no_move, 1 unless $moves;
+        is scalar keys %bytes, 1, 'scrape --output perl is byte-identical across PERL_HASH_SEED values';
+    }
 
     my @entries = split /^ {10}\{\n/m, $out{ $seeds[0] };
     shift @entries;
