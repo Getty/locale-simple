@@ -1,0 +1,35 @@
+---
+claimed_at: 2026-11-19T06:02:16Z
+claimed_by: cpantesters-0200
+class: standard
+completed: 2026-11-19T06:02:16Z
+created: 2026-11-03T20:24:49Z
+id: 29
+priority: high
+started: 2026-11-19T04:56:01Z
+status: done
+tags:
+- binary
+- ci
+title: 'release-binaries.yml: macos-14 runner retired 2026-11-02 — the macOS build
+  and smoke legs cannot start'
+updated: 2026-11-19T06:02:16Z
+---
+
+Found from p5-mcp-wiki (binary release design, 2026-11-03). GitHub retired the macos-14 runner image on 2026-11-02; .github/workflows/release-binaries.yml still names it in the build matrix (runner: macos-14, ~line 41) and in the smoke matrix (~line 158). The next release run fails on the macOS legs, so the release gets no macos-arm64 binary.
+
+Current arm64 labels: macos-15, macos-26 (= macos-latest). Pinning macos-15 for build and macos-26 for the extra smoke cell keeps a build and a different-generation smoke.
+
+Related, not urgent: the Linux legs build in perl:5.40-bullseye; Debian bullseye left LTS on 2026-08-31. The shared skill perl-par-binary-release names the same two (macos-14, bullseye); it is being updated in Getty/skills. The planned bundle form ([@Author::GETTY] binary = ..., spec ~/dev/p5-mcp-wiki/docs/superpowers/specs/2026-11-03-binary-release-design.md) builds its own no-crypt perl on almalinux:8; moving locale-simple onto it is a later, separate decision — not this card.
+
+Lane: locale-simple-binary-worker.
+
+Worktree cpantesters-0200. locale-simple-binary-worker pins macos-15 (build) / macos-26 (smoke) per card and the updated skill perl-par-binary-release; probe run on branch cpantesters-0200 after the commit.
+
+Committed b58fc70 on cpantesters-0200: build macos-15, smoke macos-15 + macos-26; README binary section and locale-simple-core release path follow. Linux leg unchanged: perl:5.40-bullseye still resolves (frozen 2026-08-25, perl 5.40.5, glibc 2.31) and the workflow has no apt step. Branch pushed; probe run https://github.com/Getty/locale-simple/actions/runs/44463305527 (tag empty: build + smoke, release skipped). Note: the shared skill perl-par-binary-release (Getty/skills) still names macos-14 — skilletor sync did not change it.
+
+Probe run 44463305527 (b58fc70) green: build linux-x86_64, linux-aarch64 (perl:5.40-bullseye), macos-arm64 (macos-15); smoke alma9/ubuntu22.04/bullseye-slim x86_64, alma9 aarch64, macos-15, macos-26 (macOS 26.7.2) all pass; release skipped. Artifacts locale-simple-probe-b58fc70-{linux-x86_64,linux-aarch64,macos-arm64}. Annotations: actions/upload-artifact@v4 and download-artifact@v4 forced from Node 20 to Node 24 (deprecation, still works).
+
+Done on cpantesters-0200: b58fc70 (build macos-15; smoke macos-15 + macos-26; README binary section and locale-simple-core release path). Probe run 44463305527 green on every cell, release skipped. Open for later decisions (report): Linux build on almalinux:8 (glibc 2.28 floor), macOS minimum 15.7 inherited from actions-setup-perl, upload/download-artifact@v4 Node 20 deprecation; shared skill perl-par-binary-release in Getty/skills still names macos-14.
+
+Merged to main 7fa48d5 and pushed. Probe run https://github.com/Getty/locale-simple/actions/runs/44463305527 green on every cell (build macos-15, smoke macos-15 and macos-26).
