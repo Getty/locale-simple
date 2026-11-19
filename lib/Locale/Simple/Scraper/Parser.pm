@@ -71,7 +71,11 @@ sub call {
         push @{ $self->found }, { func => $func, args => $arguments, line => $line };
     }
     catch {
-        die $_ if !eval { $_->isa( "Parser::MGC::Failure" ) };
+        # UNIVERSAL::isa as a function, not the isa method: once the infix
+        # isa operator has run on a class, perl 5.32 no longer finds that
+        # method for it ("Can't locate object method"), and Parser::MGC
+        # runs that operator on every failure it catches from perl 5.32 on.
+        die $_ if !( ref $_ and UNIVERSAL::isa( $_, "Parser::MGC::Failure" ) );
         $self->warn_failure( $_ );
     };
 

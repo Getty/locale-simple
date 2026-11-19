@@ -3,6 +3,8 @@ Revision history for Locale-Simple
 {{$NEXT}}
   - The macOS arm64 binary is built on macOS 15 and checked on macOS 15
     and 26; GitHub retired the macOS 14 runner.
+  - The scraper reads on after a call whose arguments do not parse on perl
+    5.32 too; there such a call used to end the scrape of its file.
 
 0.200     2026-11-03 00:08:19Z
   - New command locale-simple with the subcommands scrape and po2json
