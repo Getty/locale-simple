@@ -8,6 +8,7 @@ briefing:
     - getty-git-usage
     - getty-perl-core
     - perl-release-dist-ini
+    - getty-perl-release-author-getty
     - locale-simple-core
     - kanban-issues-karr-ticket
 ---

@@ -1,6 +1,6 @@
 ---
 name: locale-simple-rust-worker
-description: "Worker for the Rust port of locale-simple — rust/Cargo.toml, rust/src (lib.rs, mo.rs, plural.rs, sprintf.rs, macros.rs), the integration tests in rust/tests and rust/README.md. Macros l!, ln!, ... and lower-case markers n_!, nn_!, own .mo reader, Translator value. Leaves a commit-ready tree; never commits — commits belong to locale-simple-release-manager."
+description: "Worker for the Rust port of locale-simple — rust/Cargo.toml, rust/src (lib.rs, mo.rs, plural.rs, sprintf.rs, macros.rs), the integration tests in rust/tests rust/README.md and the crates.io publish workflow .github/workflows/publish-rust.yml. Macros l!, ln!, ... and lower-case markers n_!, nn_!, own .mo reader, Translator value. Leaves a commit-ready tree; never commits — commits belong to locale-simple-release-manager."
 model: inherit
 briefing:
   skills:
@@ -48,6 +48,9 @@ to `locale-simple-release-manager`.
   and `t/data/plural-forms.json`. Port new cases of `python/test.py` here, and iterate
   every row of the JSON vectors.
 - **Zero runtime dependencies.** Test-only dependencies are fine.
+
+- **`.github/workflows/publish-rust.yml` is yours:** it takes the crate version from the
+  tag and publishes with Trusted Publishing (OIDC); never `cargo publish` from a machine.
 
 ## Verification
 
