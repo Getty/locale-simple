@@ -48,10 +48,10 @@ every consumer.
 
 ## Hazards
 
-- **A finding outside the current card is a note on the card in hand,** not a new card.
-- **Nobody but the release-manager commits;** the reviewer changes nothing at all.
-- **A new lane gets one agent and one row here;** a file with two owners is a bug in
-  this table.
+- **A finding outside the current card goes as a note on the card in hand.**
+- **The release-manager writes every commit;** the reviewer reads and reports.
+- **Every file has exactly one owner in this table;** a new lane gets one agent and
+  one row here.
 
 ## Runtime specifics — reference, don't restate
 
