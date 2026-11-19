@@ -5,6 +5,11 @@ use warnings;
 use Test::More;
  
 use FindBin qw($Bin);
+use lib "$Bin/lib";
+use LocaleMessages;
+
+# Every assertion here compares a translation.
+LocaleMessages::skip_all_unless_translatable('de_DE');
 
 use Locale::Simple;
 use utf8;

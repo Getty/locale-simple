@@ -967,6 +967,8 @@ pl => /t/23-locale-simple-c-locale.t
 - found func ln at line LINE
 - found 3 arguments
 - discarded COUNT characters of noise
+pl => /t/24-l-lang-fallback.t
+- discarded COUNT characters of noise
 pl => /t/24-l-lang-without-lc-messages.t
 - discarded COUNT characters of noise
 pl => /t/25-sprintf-small-iv.t
@@ -982,6 +984,8 @@ pl => /t/25-sprintf.t
 - Expected "(":
  |my $translate = \&l;
  |-------------------^
+- discarded COUNT characters of noise
+pl => /t/26-locale-messages-helper.t
 - discarded COUNT characters of noise
 pl => /t/30-locale-simple-other.t
 - discarded COUNT characters of noise
@@ -1437,4 +1441,6 @@ py => /t/data/test.py
 - discarded COUNT characters of noise
 - found func lp at line LINE
 - found 2 arguments
+- discarded COUNT characters of noise
+pl => /t/lib/LocaleMessages.pm
 - discarded COUNT characters of noise

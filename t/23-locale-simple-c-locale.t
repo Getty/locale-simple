@@ -11,6 +11,7 @@ use Test::More;
 
 use File::Temp qw( tempdir );
 use FindBin qw( $Bin );
+use lib "$Bin/lib";
 use POSIX ();
 
 plan skip_all => 'no LC_MESSAGES on this platform'
@@ -24,7 +25,7 @@ delete @ENV{qw( LANG LANGUAGE LC_MESSAGES )};
 $ENV{LC_ALL}  = 'C';
 $ENV{LOCPATH} = $no_locales;
 
-my @inc = map { "-I$_" } grep { !ref } @INC;
+my @inc = map { "-I$_" } grep { !ref } @INC;    # includes t/lib
 
 sub run_perl {
 	my ( $code, @args ) = @_;
@@ -36,12 +37,22 @@ sub run_perl {
 	return $out;
 }
 
+# The helper decides in the child, where LOCPATH hides the locales: on a perl
+# whose LC_MESSAGES never leaves C no fallback helps and nothing translates.
 my $usable = run_perl( <<'PERL' );
-use POSIX qw( setlocale LC_MESSAGES );
-print setlocale( LC_MESSAGES, 'C.UTF-8' ) || setlocale( LC_MESSAGES, 'en_US.UTF-8' ) ? 1 : 0;
+use LocaleMessages;
+my ( $ok, $why ) = LocaleMessages::can_translate('de_DE');
+print $ok ? 1 : "0 $why";
 PERL
-plan skip_all => 'neither C.UTF-8 nor en_US.UTF-8 can be set here'
-  unless $usable;
+# Only the helper's own "0 <reason>" answer skips; anything else is a broken child.
+if ( defined $usable && $usable =~ /^0 (.*)/s ) {
+	plan skip_all => $1;
+}
+elsif ( !defined $usable || $usable ne '1' ) {
+	plan tests => 1;
+	fail( 'the child asking LocaleMessages answered neither 1 nor "0 <reason>": ' . ( defined $usable ? "'$usable'" : 'undef' ) );
+	exit 1;
+}
 
 my $out = run_perl( <<'PERL', "$Bin/data/locale" );
 use Locale::Simple;

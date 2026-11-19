@@ -216,14 +216,16 @@ sub l_lang {
 	# POSIX knows LC_MESSAGES only where the system has it; Locale::gettext_pp
 	# answers its own LC_MESSAGES with a stand-in number everywhere.
 	return unless defined eval { POSIX::LC_MESSAGES() };
-	setlocale( LC_MESSAGES, $primary );
 	# Under the C or POSIX messages locale gettext ignores LANGUAGE and
 	# translates nothing. Without an installed locale for $primary, move
 	# LC_MESSAGES to one that is not C, so the language set here still wins.
-	my $now = setlocale( LC_MESSAGES );
-	return if defined $now && $now ne 'C' && $now ne 'POSIX';
-	for my $fallback ( 'C.UTF-8', 'en_US.UTF-8' ) {
-		return if setlocale( LC_MESSAGES, $fallback );
+	# Each attempt counts by what LC_MESSAGES is afterwards, not by what the
+	# set returns: a perl built without the category (-DNO_LOCALE_MESSAGES,
+	# OpenBSD) takes the set and stays at C.
+	for my $locale ( $primary, 'C.UTF-8', 'en_US.UTF-8' ) {
+		setlocale( LC_MESSAGES, $locale );
+		my $now = setlocale( LC_MESSAGES );
+		return if defined $now && $now ne 'C' && $now ne 'POSIX';
 	}
 	return;
 }
@@ -362,7 +364,9 @@ C<$ENV{LANG}>, C<$ENV{LC_ALL}>, C<$ENV{LC_MESSAGES}> and calls C<setlocale>.
 The system does not need a locale for C<$lang> installed. gettext translates
 nothing while the messages locale is C<C> or C<POSIX>, so when C<$lang> cannot
 be set and the process runs under one of those, C<l_lang> sets C<LC_MESSAGES>
-to C<C.UTF-8> (or C<en_US.UTF-8>) instead.
+to C<C.UTF-8> (or C<en_US.UTF-8>) instead. On a perl whose C<LC_MESSAGES>
+category is compiled out, the messages locale stays C<C>, and libintl-perl 1.36
+and later translates nothing.
 
 On a platform whose L<POSIX> has no C<LC_MESSAGES> category (Windows),
 C<l_lang> sets the environment variables only.

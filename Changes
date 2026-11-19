@@ -7,6 +7,12 @@ Revision history for Locale-Simple
     5.32 too; there such a call used to end the scrape of its file.
   - On a perl with a 32-bit IV, b, o, u, x and X show a negative number as
     unsigned 64-bit, as on a 64-bit perl and in the other five packages.
+  - l_lang judges each attempt to set LC_MESSAGES (the language, then
+    C.UTF-8, then en_US.UTF-8) by the messages locale it leaves, and goes on
+    while that is still C. The tests that need a translation skip, with the
+    reason, on a perl that cannot move LC_MESSAGES off C (OpenBSD builds with
+    -DNO_LOCALE_MESSAGES); there libintl-perl 1.36 and later translates
+    nothing.
 
 0.200     2026-11-03 00:08:19Z
   - New command locale-simple with the subcommands scrape and po2json

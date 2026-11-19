@@ -6,12 +6,21 @@ use Test::More;
 use utf8;
 
 use FindBin qw($Bin);
+use lib "$Bin/lib";
+use LocaleMessages;
 
 use Locale::Simple;
 
 l_dir($Bin.'/data/locale');
 ltd('test');
 l_lang('de_DE');
+
+# Where LC_MESSAGES cannot leave C nothing translates: the assertions that
+# compare a translation skip, the untranslated ones still run.
+my ( $translates, $why ) = LocaleMessages::can_translate('de_DE');
+
+SKIP: {
+skip $why, 10 unless $translates;
 
 is(
 	l('Hello'),
@@ -73,6 +82,8 @@ is(
 	'simple test with context'
 );
 
+}
+
 is(
 	l(''),
 	'',
@@ -85,11 +96,14 @@ is(l('%1$s','100%'),'100%','positional value with a percent sign');
 is(l('%s','100%'),'100%','plain value with a percent sign');
 is(l('%s and %s','%s','50%'),'%s and 50%','plain values that look like formats');
 is(l('%2$s / %1$s','%1$s','5%'),'5% / %1$s','positional values that look like formats');
+SKIP: {
+skip $why, 1 unless $translates;
 is(
 	ln('%2$s has %1$d message','%2$s has %1$d messages',3,'%d%%'),
 	'%d%% hat 3 Nachrichten',
 	'translated plural with a percent value',
 );
+}
 is(l('100%% of %s','%s','extra'),'100% of %s','percent escape in the format, extra argument');
 is(l('%%s %s %%','x'),'%s x %','percent escapes around a placeholder');
 

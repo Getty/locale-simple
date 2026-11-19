@@ -5,9 +5,10 @@ use warnings;
 use Test::More 0.98;
 
 use FindBin qw($Bin);
+use lib "$Bin/lib";
+use LocaleMessages;
 
 use Locale::gettext_dumb qw(:locale_h :libintl_h);
-use POSIX qw( setlocale );
 
 bindtextdomain('test',$Bin.'/data/locale');
 bind_textdomain_codeset('test','utf-8');
@@ -17,22 +18,10 @@ $ENV{LANG} = 'de_DE';
 $ENV{LANGUAGE} = 'de_DE';
 $ENV{LC_ALL} = 'de_DE';
 
-# gettext ignores LANGUAGE while the messages locale is C or POSIX
-# (libintl-perl >= 1.36, like GNU gettext), and most smokers start there.
-# Set LC_MESSAGES the way l_lang() does: to the language, or else to a
-# locale that is not C, so LANGUAGE picks the catalog.
-if ( defined eval { POSIX::LC_MESSAGES() } ) {
-	setlocale( LC_MESSAGES, 'de_DE' );
-	my $now = setlocale( LC_MESSAGES );
-	if ( !defined $now || $now eq 'C' || $now eq 'POSIX' ) {
-		my $set;
-		for my $fallback ( 'C.UTF-8', 'en_US.UTF-8' ) {
-			last if $set = setlocale( LC_MESSAGES, $fallback );
-		}
-		plan skip_all => 'LC_MESSAGES stays C here: neither de_DE, C.UTF-8 nor en_US.UTF-8 can be set'
-		  unless $set;
-	}
-}
+# gettext ignores LANGUAGE while the messages locale is C or POSIX, and a perl
+# without a usable LC_MESSAGES cannot leave it: skip there, with the reason.
+# keep: gettext is called directly, so the locale that worked stays set.
+LocaleMessages::skip_all_unless_translatable( 'de_DE', keep => 1 );
 
 is(gettext("Hello"),"Hallo","simple");
 is(sprintf(ngettext("You have %d message","You have %d messages",4),4),'Du hast 4 Nachrichten',"simple plural test with plural");
