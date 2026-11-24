@@ -38,7 +38,7 @@ yourself — the principle is a shared house rule (skilletor bundle
 | Review a diff against brief, parity and house rules (read-only) | `locale-simple-reviewer` |
 | Commits, `Changes`, card → done, pre-release audit | `locale-simple-release-manager` |
 
-The agents carry their skills via `briefing.skills` (see `.claude/agents/`); the
+The agents carry their skills via `skills:` (see `.claude/agents/`); the
 main agent delegates rather than loading them. Skill sources live under
 `.claude/skills/`.
 

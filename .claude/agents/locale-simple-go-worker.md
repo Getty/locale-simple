@@ -2,11 +2,10 @@
 name: locale-simple-go-worker
 description: "Worker for the Go port of locale-simple — go/*.go (simple.go, translator.go, mo.go, plural.go, sprintf.go), go/simple_test.go, the root go.mod (github.com/Getty/locale-simple) and go/README.md. Capitalised names L, Ln, ..., own .mo reader, Translator value. Leaves a commit-ready tree; never commits — commits belong to locale-simple-release-manager."
 model: inherit
-briefing:
-  skills:
-    - locale-simple-core
-    - go-localization-with-locale-simple
-    - kanban-issues-karr-ticket
+skills:
+  - locale-simple-core
+  - go-localization-with-locale-simple
+  - kanban-issues-karr-ticket
 ---
 
 You are the `locale-simple-go-worker` for **locale-simple**, the gettext wrapper

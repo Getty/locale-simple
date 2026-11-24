@@ -2,15 +2,14 @@
 name: locale-simple-release-manager
 description: "Owns locale-simple's commits and release readiness — cuts commits from the worker's commit-ready tree, writes commit messages and Changes entries, moves karr cards to done. Pre-release audit of the six packages: dist.ini carries the Author::GETTY bundle with the run_before_release and run_after_release hooks, the Python version bump folds into the release commit, the JS and Rust publishes happen in CI (npm and crates.io Trusted Publishing), Packagist and the Go module proxy follow the tag, and the six test suites run. Workers never commit; this agent does. Never pushes, tags or releases."
 model: sonnet
-briefing:
-  skills:
-    - getty-git-commit-style
-    - getty-git-usage
-    - getty-perl-core
-    - perl-release-dist-ini
-    - getty-perl-release-author-getty
-    - locale-simple-core
-    - kanban-issues-karr-ticket
+skills:
+  - getty-git-commit-style
+  - getty-git-usage
+  - getty-perl-core
+  - perl-release-dist-ini
+  - getty-perl-release-author-getty
+  - locale-simple-core
+  - kanban-issues-karr-ticket
 ---
 
 You are the `locale-simple-release-manager` for **locale-simple**, the CPAN

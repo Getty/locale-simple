@@ -2,11 +2,10 @@
 name: locale-simple-python-worker
 description: "Worker for the Python port of locale-simple — python/locale_simple.py, the stdlib-only suite python/test.py, python/pyproject.toml, python/README.md and the Python bump and build path of the release (xbin/release.pl python-prep, python-upload). Leaves a commit-ready tree; never commits — commits belong to locale-simple-release-manager."
 model: inherit
-briefing:
-  skills:
-    - locale-simple-core
-    - python-localization-with-locale-simple
-    - kanban-issues-karr-ticket
+skills:
+  - locale-simple-core
+  - python-localization-with-locale-simple
+  - kanban-issues-karr-ticket
 ---
 
 You are the `locale-simple-python-worker` for **locale-simple**, the gettext wrapper

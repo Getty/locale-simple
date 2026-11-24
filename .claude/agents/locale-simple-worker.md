@@ -2,13 +2,12 @@
 name: locale-simple-worker
 description: "Default worker for locale-simple — implement, refactor, debug and test the Perl runtime of the gettext wrapper (lib/Locale/Simple.pm). Covers the source scraper (it reads all six languages) under lib/Locale/Simple/Scraper/, the commands bin/locale-simple, bin/locale_simple_scraper and bin/po2json (their Perl code, not the packed binary), and the shared helper API (l, ln, lp, ld, ltd, the N_ markers). Pre-loaded with the parity rule, the scraper quirks and the release path. Leaves a commit-ready tree; never commits — commits belong to locale-simple-release-manager."
 model: inherit
-briefing:
-  skills:
-    - locale-simple-core
-    - getty-perl-core
-    - getty-perl-moo
-    - getty-perl-pod
-    - kanban-issues-karr-ticket
+skills:
+  - locale-simple-core
+  - getty-perl-core
+  - getty-perl-moo
+  - getty-perl-pod
+  - kanban-issues-karr-ticket
 ---
 
 You are the `locale-simple-worker` for **locale-simple**, the CPAN distribution

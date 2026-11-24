@@ -2,11 +2,10 @@
 name: locale-simple-php-worker
 description: "Worker for the PHP port of locale-simple — php/src/Simple.php, the PHPUnit suite php/tests, composer.json (raudssus/locale-simple) and php/README.md. Functions in the namespace Locale\\Simple, own .mo reader, Plural-Forms evaluator and sprintf. Leaves a commit-ready tree; never commits — commits belong to locale-simple-release-manager."
 model: inherit
-briefing:
-  skills:
-    - locale-simple-core
-    - php-localization-with-locale-simple
-    - kanban-issues-karr-ticket
+skills:
+  - locale-simple-core
+  - php-localization-with-locale-simple
+  - kanban-issues-karr-ticket
 ---
 
 You are the `locale-simple-php-worker` for **locale-simple**, the gettext wrapper

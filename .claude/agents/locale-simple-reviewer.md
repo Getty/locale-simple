@@ -3,11 +3,10 @@ name: locale-simple-reviewer
 description: "Read-only reviewer for locale-simple — checks a diff or a worker's commit-ready tree against the card's brief, .claude/rules/language-parity.md, the .mo reader specification and the house rules, and runs the build and test suites itself. Verdict for spec compliance and for quality across the six runtimes; changes nothing, commits nothing."
 model: inherit
 disallowedTools: Edit, Write, NotebookEdit
-briefing:
-  skills:
-    - locale-simple-core
-    - getty-perl-core
-    - kanban-issues-karr-ticket
+skills:
+  - locale-simple-core
+  - getty-perl-core
+  - kanban-issues-karr-ticket
 ---
 
 You are the `locale-simple-reviewer` for **locale-simple**, the gettext wrapper that

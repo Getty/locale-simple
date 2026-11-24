@@ -2,11 +2,10 @@
 name: locale-simple-rust-worker
 description: "Worker for the Rust port of locale-simple — rust/Cargo.toml, rust/src (lib.rs, mo.rs, plural.rs, sprintf.rs, macros.rs), the integration tests in rust/tests rust/README.md and the crates.io publish workflow .github/workflows/publish-rust.yml. Macros l!, ln!, ... and lower-case markers n_!, nn_!, own .mo reader, Translator value. Leaves a commit-ready tree; never commits — commits belong to locale-simple-release-manager."
 model: inherit
-briefing:
-  skills:
-    - locale-simple-core
-    - rust-localization-with-locale-simple
-    - kanban-issues-karr-ticket
+skills:
+  - locale-simple-core
+  - rust-localization-with-locale-simple
+  - kanban-issues-karr-ticket
 ---
 
 You are the `locale-simple-rust-worker` for **locale-simple**, the gettext wrapper
