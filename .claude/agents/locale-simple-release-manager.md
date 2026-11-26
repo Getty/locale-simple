@@ -4,7 +4,6 @@ description: "Owns locale-simple's commits and release readiness — cuts commit
 model: sonnet
 skills:
   - getty-git-commit-style
-  - getty-git-usage
   - getty-perl-core
   - perl-release-dist-ini
   - getty-perl-release-author-getty
